@@ -3,7 +3,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 import main as cli
-from operations.models import ProposedName
+from operations.models import NameAssessment, ProposedName
 
 
 class _LLMStub:
@@ -12,21 +12,21 @@ class _LLMStub:
         self.model = model
         self.name_map = name_map or {}
         self.default_payload = {"stem": "default-image", "extension": ".png"}
+        self._proposal_call_count = 0
 
     def generate_object(self, messages, object_model):
-        if object_model is ProposedName:
-            # Try to extract filename from messages to return specific proposals
-            # For testing, we'll use a simple counter-based approach
-            if hasattr(self, '_call_count'):
-                self._call_count += 1
-            else:
-                self._call_count = 1
+        if object_model is NameAssessment:
+            # Always return unsuitable so tests proceed with renaming
+            return NameAssessment(suitable=False)
+        elif object_model is ProposedName:
+            # Increment proposal counter
+            self._proposal_call_count += 1
 
             # Use name_map if provided, otherwise use default
-            if self._call_count in self.name_map:
-                return ProposedName(**self.name_map[self._call_count])
+            if self._proposal_call_count in self.name_map:
+                return ProposedName(**self.name_map[self._proposal_call_count])
             return ProposedName(**self.default_payload)
-        raise AssertionError("Unexpected object_model")
+        raise AssertionError(f"Unexpected object_model: {object_model}")
 
 
 runner = CliRunner()
@@ -45,6 +45,11 @@ def should_process_folder_flat(tmp_path: Path, mocker) -> None:
     )
     mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: stub)
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
+    # Disable caching in tests
+    mocker.patch("operations.cache.load_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_to_cache", return_value=None)
+    mocker.patch("operations.cache.load_assessment_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_assessment_to_cache", return_value=None)
 
     result = runner.invoke(cli.app, ["folder", str(tmp_path), "--apply"])
 
@@ -69,6 +74,10 @@ def should_process_folder_recursively(tmp_path: Path, mocker) -> None:
     )
     mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: stub)
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
+    mocker.patch("operations.cache.load_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_to_cache", return_value=None)
+    mocker.patch("operations.cache.load_assessment_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_assessment_to_cache", return_value=None)
 
     result = runner.invoke(cli.app, ["folder", str(tmp_path), "--recursive", "--apply"])
 
@@ -100,6 +109,10 @@ def should_handle_collisions_in_folder(tmp_path: Path, mocker) -> None:
     )
     mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: stub)
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
+    mocker.patch("operations.cache.load_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_to_cache", return_value=None)
+    mocker.patch("operations.cache.load_assessment_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_assessment_to_cache", return_value=None)
 
     result = runner.invoke(cli.app, ["folder", str(tmp_path), "--apply"])
 
@@ -125,6 +138,10 @@ def should_be_idempotent_in_folder(tmp_path: Path, mocker) -> None:
     )
     mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: stub)
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
+    mocker.patch("operations.cache.load_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_to_cache", return_value=None)
+    mocker.patch("operations.cache.load_assessment_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_assessment_to_cache", return_value=None)
 
     result = runner.invoke(cli.app, ["folder", str(tmp_path), "--apply"])
 
@@ -146,6 +163,10 @@ def should_show_summary_table_in_dry_run(tmp_path: Path, mocker) -> None:
     )
     mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: stub)
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
+    mocker.patch("operations.cache.load_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_to_cache", return_value=None)
+    mocker.patch("operations.cache.load_assessment_from_cache", return_value=None)
+    mocker.patch("operations.cache.save_assessment_to_cache", return_value=None)
 
     result = runner.invoke(cli.app, ["folder", str(tmp_path)])  # default is dry-run
 

@@ -18,8 +18,9 @@ from rich.table import Table
 
 from operations.find_references import find_references
 from operations.generate_name import generate_name
+from operations.models import ProposedName
 from operations.update_references import update_references
-from utils.fs import next_available_name
+from utils.fs import ensure_cache_layout, next_available_name
 
 # Runtime Python version enforcement (see REVIEW.md #12)
 if sys.version_info < (3, 13):  # pragma: no cover - defensive
@@ -173,7 +174,10 @@ def _collect_image_files(path: Path, recursive: bool) -> list[Path]:
 def _process_single_image(
     img_path: Path,
     llm: LLMBroker,
-    planned_names: set[str]
+    planned_names: set[str],
+    cache_root: Path,
+    provider: str,
+    model: str,
 ) -> dict:
     """Process a single image file to determine its new name.
 
@@ -181,20 +185,74 @@ def _process_single_image(
         img_path: Path to the image file.
         llm: LLM broker for name generation.
         planned_names: Set of already planned filenames to avoid collisions.
+        cache_root: Path to the cache root directory (.image_namer).
+        provider: LLM provider name for cache key.
+        model: Model name for cache key.
 
     Returns:
         Dictionary with processing result.
     """
-    try:
-        proposed = generate_name(img_path, llm=llm)
-    except Exception as e:
-        console.print(f"[red]Error processing {img_path.name}: {e}[/red]")
+    from operations.assess_name import assess_name
+    from operations.cache import (
+        load_assessment_from_cache,
+        load_from_cache,
+        save_assessment_to_cache,
+        save_to_cache,
+    )
+
+    analysis_cache_dir = cache_root / "cache" / "analysis"
+    names_cache_dir = cache_root / "cache" / "names"
+
+    # First, assess if the current filename is already suitable
+    current_name = img_path.name
+    current_proposed = ProposedName(stem=img_path.stem, extension=img_path.suffix)
+
+    assessment = load_assessment_from_cache(
+        analysis_cache_dir, img_path, current_name, provider, model
+    )
+
+    if assessment is None:
+        # Cache miss - assess current filename
+        try:
+            assessment = assess_name(img_path, current_proposed, llm=llm)
+            save_assessment_to_cache(
+                analysis_cache_dir, img_path, current_name, provider, model, assessment
+            )
+        except Exception as e:
+            console.print(f"[red]Error assessing {img_path.name}: {e}[/red]")
+            return {
+                "source": img_path.name,
+                "proposed": "ERROR",
+                "final": img_path.name,
+                "status": "error",
+            }
+
+    # If current name is suitable, skip generation entirely
+    if assessment.suitable:
         return {
             "source": img_path.name,
-            "proposed": "ERROR",
+            "proposed": img_path.name,
             "final": img_path.name,
-            "status": "error",
+            "status": "unchanged",
+            "path": img_path,
         }
+
+    # Current name unsuitable - try to load proposed name from cache
+    proposed = load_from_cache(names_cache_dir, img_path, provider, model)
+
+    if proposed is None:
+        # Cache miss - generate name using LLM
+        try:
+            proposed = generate_name(img_path, llm=llm)
+            save_to_cache(names_cache_dir, img_path, provider, model, proposed)
+        except Exception as e:
+            console.print(f"[red]Error processing {img_path.name}: {e}[/red]")
+            return {
+                "source": img_path.name,
+                "proposed": "ERROR",
+                "final": img_path.name,
+                "status": "error",
+            }
 
     proposed_stem = proposed.stem
     proposed_ext = _normalize_extension(proposed.extension, img_path.suffix)
@@ -460,21 +518,69 @@ def file(
     _validate_file_type(path)
     _validate_provider(provider)
 
-    # Prepare LLM and propose name
+    # Set up cache and LLM
+    cache_root = ensure_cache_layout(Path.cwd())
+    analysis_cache_dir = cache_root / "cache" / "analysis"
+    names_cache_dir = cache_root / "cache" / "names"
+
     try:
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
         llm = LLMBroker(gateway=gateway, model=model)
-        proposed = generate_name(path, llm=llm)
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    # Normalize proposed name
-    proposed_stem = proposed.stem
-    proposed_ext = _normalize_extension(proposed.extension, path.suffix)
+    # First, assess if current filename is already suitable
+    from operations.assess_name import assess_name
+    from operations.cache import (
+        load_assessment_from_cache,
+        load_from_cache,
+        save_assessment_to_cache,
+        save_to_cache,
+    )
 
-    # Determine final name (idempotency + collision resolution)
-    final_name, mode_label = _determine_final_name(path, proposed_stem, proposed_ext)
+    current_name = path.name
+    current_proposed = ProposedName(stem=path.stem, extension=path.suffix)
+
+    assessment = load_assessment_from_cache(
+        analysis_cache_dir, path, current_name, provider, model
+    )
+
+    if assessment is None:
+        try:
+            assessment = assess_name(path, current_proposed, llm=llm)
+            save_assessment_to_cache(
+                analysis_cache_dir, path, current_name, provider, model, assessment
+            )
+        except Exception as e:
+            console.print(f"[red]Error assessing filename: {e}[/red]")
+            raise typer.Exit(1)
+
+    # If current name is suitable, no need to generate a new one
+    if assessment.suitable:
+        final_name = path.name
+        mode_label = "unchanged"
+        proposed_stem = path.stem
+        proposed_ext = path.suffix
+    else:
+        # Current name unsuitable - check cache for proposed name
+        proposed = load_from_cache(names_cache_dir, path, provider, model)
+
+        if proposed is None:
+            # Cache miss - generate name using LLM
+            try:
+                proposed = generate_name(path, llm=llm)
+                save_to_cache(names_cache_dir, path, provider, model, proposed)
+            except Exception as e:
+                console.print(f"[red]Error: {e}[/red]")
+                raise typer.Exit(1)
+
+        # Normalize proposed name
+        proposed_stem = proposed.stem
+        proposed_ext = _normalize_extension(proposed.extension, path.suffix)
+
+        # Determine final name (idempotency + collision resolution)
+        final_name, mode_label = _determine_final_name(path, proposed_stem, proposed_ext)
 
     # Show output panel
     console.print(
@@ -542,6 +648,9 @@ def folder(
 
     console.print(f"[dim]Found {len(image_files)} image(s) to process...[/dim]")
 
+    # Set up cache
+    cache_root = ensure_cache_layout(Path.cwd())
+
     # Prepare LLM
     try:
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
@@ -552,7 +661,10 @@ def folder(
 
     # Process all images
     planned_names: set[str] = set()
-    results = [_process_single_image(img, llm, planned_names) for img in image_files]
+    results = [
+        _process_single_image(img, llm, planned_names, cache_root, provider, model)
+        for img in image_files
+    ]
 
     # Display results
     _display_results_table(results, dry_run)

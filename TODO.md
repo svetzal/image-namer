@@ -40,10 +40,36 @@ Done:
   - Comprehensive test coverage (32 tests across both operations)
   - Integrated into both `file` and `folder` commands
 
-Next Up:
+- ✅ Cache implementation
+  - Store LLM results by image hash in `.image_namer/cache/names/`
+  - Key format: `{sha256}__{provider}__{model}__v{rubric_version}.json`
+  - Avoid re-analyzing unchanged images with same provider/model
+  - Simple JSON files per cache entry using pydantic models
+  - Integrated into both `file` and `folder` commands
+  - Comprehensive test coverage (14 tests in cache_spec.py)
+  - Automatically invalidates cache when image, provider, model, or rubric version changes
 
-- [ ] Cache implementation
-  - Store LLM results by image hash in `.image_namer/cache/`
-  - Key: `sha256(image)__provider__model__rubric_version`
-  - Avoid re-analyzing unchanged images
-  - Simple JSON files per cache entry
+- ✅ Pre-flight suitability assessment (fix unnecessary rename attempts)
+  - **Problem**: Files with already-suitable names were being processed through rename logic
+    - Example: `pycharm-todo-list-implementation.png` → proposed same name → collision with `-2` suffix
+    - Cache stored proposed names but not suitability assessments
+    - Second runs still called LLM even though current names were already good
+  - **Solution**: Added assessment step before name generation (per SPEC.md §5.4, §5.11)
+    - Call `assess_name()` operation first to check if current filename is suitable
+    - Skip name generation entirely if current name passes rubric and matches content
+    - Cache both assessments AND proposals separately in `.image_namer/cache/`
+    - Assessment cache: `.image_namer/cache/analysis/{key}.json` (stores `NameAssessment`)
+    - Proposal cache: `.image_namer/cache/names/{key}.json` (stores `ProposedName`)
+  - **Implementation completed**:
+    - ✅ Created cache operations for assessments (`load_assessment_from_cache`, `save_assessment_to_cache`)
+    - ✅ Modified `_process_single_image()` to assess current filename first
+    - ✅ Only calls `generate_name()` if assessment returns `suitable: false`
+    - ✅ Updated `file` command to follow same pattern
+    - ✅ Added 15 comprehensive tests for assessment caching
+    - ✅ Added 2 integration tests for skip logic (main_assessment_spec.py)
+    - ✅ "unchanged" status now means "already suitable" (not just "stem matches")
+  - **Outcome achieved**:
+    - Second run with `--apply` shows all files as "unchanged" when names are already suitable
+    - No collision warnings for files that don't need renaming
+    - Fewer LLM calls overall (assessment before generation)
+    - Total test coverage: 94 tests (29 cache tests, 2 assessment integration tests)

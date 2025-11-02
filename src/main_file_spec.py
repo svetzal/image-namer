@@ -4,7 +4,7 @@ import pytest
 from typer.testing import CliRunner
 
 import main as cli
-from operations.models import ProposedName
+from operations.models import NameAssessment, ProposedName
 
 
 class _LLMStub:
@@ -14,9 +14,12 @@ class _LLMStub:
         self.payload = payload or {"stem": "cat--sitting", "extension": ".png"}
 
     def generate_object(self, messages, object_model):
-        if object_model is ProposedName:
+        if object_model is NameAssessment:
+            # Always return unsuitable so tests proceed with renaming
+            return NameAssessment(suitable=False)
+        elif object_model is ProposedName:
             return ProposedName(**self.payload)
-        raise AssertionError("Unexpected object_model")
+        raise AssertionError(f"Unexpected object_model: {object_model}")
 
 
 runner = CliRunner()
