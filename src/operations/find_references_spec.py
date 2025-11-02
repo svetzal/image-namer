@@ -243,3 +243,30 @@ def should_distinguish_standard_image_from_link(tmp_path):
     assert len(refs) == 2
     assert refs[0].ref_type == "image"
     assert refs[1].ref_type == "link"
+
+
+def should_find_url_encoded_references(tmp_path):
+    image_path = tmp_path / "Screenshot 2025-11-02 at 1.00.29 PM.png"
+    image_path.touch()
+
+    md_file = tmp_path / "doc.md"
+    md_file.write_text("![One](Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png)\n")
+
+    refs = find_references(image_path, tmp_path, recursive=False)
+
+    assert len(refs) == 1
+    assert refs[0].ref_type == "image"
+    assert refs[0].original_text == "![One](Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png)"
+
+
+def should_find_references_with_spaces_in_paths(tmp_path):
+    image_path = tmp_path / "my photo.jpg"
+    image_path.touch()
+
+    md_file = tmp_path / "spaces.md"
+    md_file.write_text("![Photo](my%20photo.jpg)\n")
+
+    refs = find_references(image_path, tmp_path, recursive=False)
+
+    assert len(refs) == 1
+    assert refs[0].ref_type == "image"

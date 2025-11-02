@@ -340,3 +340,42 @@ def should_report_correct_replacement_counts(tmp_path):
     file2_update = next(u for u in updates if u.file_path == file2)
     assert file1_update.replacement_count == 2
     assert file2_update.replacement_count == 1
+
+
+def should_update_url_encoded_references(tmp_path):
+    md_file = tmp_path / "doc.md"
+    md_file.write_text("![One](Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png)\n")
+
+    refs = [MarkdownReference(
+        file_path=md_file,
+        line_number=1,
+        original_text="![One](Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png)",
+        image_path=Path("Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png"),
+        ref_type="image"
+    )]
+
+    updates = update_references(refs, "Screenshot 2025-11-02 at 1.00.29 PM.png", "new-name.png")
+
+    assert len(updates) == 1
+    content = md_file.read_text()
+    assert "new-name.png" in content
+    assert "Screenshot" not in content
+
+
+def should_preserve_url_encoding_in_updates(tmp_path):
+    md_file = tmp_path / "encoded.md"
+    md_file.write_text("![Image](my%20photo.jpg)\n")
+
+    refs = [MarkdownReference(
+        file_path=md_file,
+        line_number=1,
+        original_text="![Image](my%20photo.jpg)",
+        image_path=Path("my%20photo.jpg"),
+        ref_type="image"
+    )]
+
+    updates = update_references(refs, "my photo.jpg", "renamed-photo.jpg")
+
+    assert len(updates) == 1
+    content = md_file.read_text()
+    assert "renamed-photo.jpg" in content or "renamed%2Dphoto.jpg" in content

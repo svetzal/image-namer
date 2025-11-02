@@ -336,9 +336,10 @@ def _handle_batch_reference_updates(
     if not dry_run:
         updates_by_file = {}
         for old_name, new_name in rename_map.items():
+            # Match refs by decoding URL-encoded paths and normalizing spaces
             file_refs = [
                 r for r in all_refs
-                if r.image_path.name == old_name or r.image_path.stem == Path(old_name).stem
+                if _ref_matches_filename(r, old_name)
             ]
             if file_refs:
                 file_updates = update_references(file_refs, old_name, new_name)
@@ -358,6 +359,55 @@ def _handle_batch_reference_updates(
             f"[dim]Would update {len(all_refs)} reference(s) "
             f"across {unique_files} file(s)[/dim]"
         )
+
+
+def _ref_matches_filename(ref, filename: str) -> bool:
+    """Check if a reference matches a filename.
+
+    Handles URL-encoded paths and Unicode whitespace normalization.
+
+    Args:
+        ref: MarkdownReference object.
+        filename: The filename to match against.
+
+    Returns:
+        True if the reference matches the filename.
+    """
+    from urllib.parse import unquote
+    import unicodedata
+
+    ref_name = str(ref.image_path.name)
+    ref_stem = str(ref.image_path.stem)
+
+    # Try direct match
+    if ref_name == filename:
+        return True
+
+    # Try with stem
+    if ref_stem == Path(filename).stem:
+        return True
+
+    # Try URL-decoded match
+    try:
+        decoded_name = unquote(ref_name)
+        if decoded_name == filename:
+            return True
+
+        # Normalize Unicode spaces for comparison
+        def normalize_spaces(text):
+            normalized = unicodedata.normalize('NFKC', text)
+            return ' '.join(normalized.split())
+
+        if normalize_spaces(decoded_name) == normalize_spaces(filename):
+            return True
+
+        # Try stem match with decoding
+        if normalize_spaces(unquote(ref_stem)) == normalize_spaces(Path(filename).stem):
+            return True
+    except Exception:
+        pass
+
+    return False
 
 
 def _apply_renames(results: list[dict]) -> None:

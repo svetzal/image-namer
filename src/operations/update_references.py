@@ -1,6 +1,7 @@
 """Update markdown references to renamed images."""
 import re
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 from .models import MarkdownReference, ReferenceUpdate
 
@@ -121,13 +122,88 @@ def _generate_replacement(
     return ref.original_text
 
 
+def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
+    """Replace filename in a path string, handling URL encoding.
+
+    Args:
+        path_str: The path string (may be URL-encoded).
+        old_name: Original filename.
+        new_name: New filename.
+
+    Returns:
+        Updated path string with same encoding as original.
+    """
+    # Check if path is URL-encoded by trying to decode it
+    try:
+        decoded = unquote(path_str)
+        # If decoded is different, the path was encoded
+        if decoded != path_str:
+            # Try direct replacement first
+            if old_name in decoded:
+                new_decoded = decoded.replace(old_name, new_name)
+                # Re-encode using the same encoding scheme
+                # Quote special chars but keep forward slashes
+                return quote(new_decoded, safe='/')
+
+            # Try with space normalization (handle Unicode spaces)
+            normalized_decoded = _normalize_spaces_for_replacement(decoded)
+            normalized_old = _normalize_spaces_for_replacement(old_name)
+            if normalized_old in normalized_decoded:
+                new_decoded = decoded.replace(
+                    _find_substring_with_different_spaces(decoded, old_name),
+                    new_name
+                )
+                return quote(new_decoded, safe='/')
+    except Exception:
+        pass
+
+    # Fall back to simple string replacement
+    return path_str.replace(old_name, new_name)
+
+
+def _normalize_spaces_for_replacement(text: str) -> str:
+    """Normalize spaces for comparison purposes.
+
+    Args:
+        text: Text to normalize.
+
+    Returns:
+        Text with normalized spaces.
+    """
+    import unicodedata
+    normalized = unicodedata.normalize('NFKC', text)
+    return ' '.join(normalized.split())
+
+
+def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
+    """Find a substring that matches after space normalization.
+
+    Args:
+        haystack: String to search in.
+        needle: String to search for (with regular spaces).
+
+    Returns:
+        The actual substring from haystack, or needle if not found.
+    """
+    # Normalize the needle for comparison
+    normalized_needle = _normalize_spaces_for_replacement(needle)
+
+    # Slide through haystack to find a match
+    for i in range(len(haystack) - len(needle) + 1):
+        substring = haystack[i:i+len(needle)]
+        if _normalize_spaces_for_replacement(substring) == normalized_needle:
+            return substring
+
+    return needle
+
+
 def _replace_standard_image(original_text: str, old_name: str, new_name: str) -> str | None:
     """Replace filename in standard Markdown image: ![alt](path)."""
     match = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', original_text)
     if match:
         alt_text = match.group(1)
         old_path = match.group(2)
-        new_path = old_path.replace(old_name, new_name)
+        new_path = _replace_in_path(old_path, old_name, new_name)
         return f"![{alt_text}]({new_path})"
     return None
 
@@ -138,7 +214,7 @@ def _replace_standard_link(original_text: str, old_name: str, new_name: str) -> 
     if match:
         link_text = match.group(1)
         old_path = match.group(2)
-        new_path = old_path.replace(old_name, new_name)
+        new_path = _replace_in_path(old_path, old_name, new_name)
         return f"[{link_text}]({new_path})"
     return None
 

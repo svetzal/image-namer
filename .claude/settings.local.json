@@ -9,7 +9,8 @@
       "Bash(pip show:*)",
       "Bash(pytest:*)",
       "Bash(python3:*)",
-      "Bash(image-namer:*)"
+      "Bash(image-namer:*)",
+      "Bash(xxd:*)"
     ],
     "deny": [],
     "ask": []
