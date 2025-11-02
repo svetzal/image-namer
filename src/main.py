@@ -160,11 +160,13 @@ def _collect_image_files(path: Path, recursive: bool) -> list[Path]:
         recursive: Whether to search recursively.
 
     Returns:
-        List of image file paths.
+        List of image file paths, sorted by name for consistent ordering.
     """
     if recursive:
-        return [p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
-    return [p for p in path.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
+        files = [p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
+    else:
+        files = [p for p in path.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
+    return sorted(files)
 
 
 def _process_single_image(
