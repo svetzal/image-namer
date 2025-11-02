@@ -11,3 +11,4 @@ dist/
 *.pyo
 examples/
 .image_namer/
+site/

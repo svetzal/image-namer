@@ -73,3 +73,26 @@ Done:
     - No collision warnings for files that don't need renaming
     - Fewer LLM calls overall (assessment before generation)
     - Total test coverage: 94 tests (29 cache tests, 2 assessment integration tests)
+
+---
+
+## Next: M5 - Polish and Release 0.1.0
+
+**Priority**: Update documentation to match implemented features
+
+- [ ] Update README.md to document all current capabilities:
+  - [ ] Add `folder` command with `--recursive` flag examples
+  - [ ] Document caching behavior (`.image_namer/` directory, cache keys, invalidation)
+  - [ ] Document markdown reference updates (`--update-refs`, `--refs-root`)
+  - [ ] Add performance notes (caching reduces LLM calls)
+  - [ ] Update feature checklist to show M1-M4 complete
+
+- [ ] Verify error handling completeness (SPEC §5.10):
+  - [ ] Unsupported format handling (already in place via `_validate_file_type`)
+  - [ ] LLM/vision errors (already handled with try/except blocks)
+  - [ ] Write permission errors (file/folder commands handle per-file errors)
+  - [ ] Path normalization (already handled in URL decoding logic)
+
+- [ ] Deprecate the `generate` command:
+  - SPEC §5.7 marks it as "legacy, simple proposal only"
+  - `file --dry-run` provides same functionality with better consistency

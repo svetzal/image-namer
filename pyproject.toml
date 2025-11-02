@@ -40,6 +40,8 @@ dev = [
     "flake8>=7.1",
     "flake8-pyproject>=1.2",
     "mypy>=1.13",
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
 ]
 # Install with: pip install ".[gui]"
 # PySide6 provides the Qt-based GUI runtime.
