@@ -1,4 +1,10 @@
-Done:
+# Image Namer - Development Log
+
+**Status**: Version 1.0.0 Released 🎉
+
+All planned features for v1.0.0 have been completed and tested.
+
+## Completed Features (M1-M5)
 
 - ✅ create a CLI command called `generate` that simply proposes a new filename for a given image file
 - ✅ add a tiny `sha256_file(path: Path) -> str` helper in `src/utils/fs.py` with a co-located `_spec.py`
@@ -76,23 +82,48 @@ Done:
 
 ---
 
-## Next: M5 - Polish and Release 0.1.0
+## M5 - Polish and Release 1.0.0 ✅ COMPLETE
 
-**Priority**: Update documentation to match implemented features
+**All tasks completed:**
 
-- [ ] Update README.md to document all current capabilities:
-  - [ ] Add `folder` command with `--recursive` flag examples
-  - [ ] Document caching behavior (`.image_namer/` directory, cache keys, invalidation)
-  - [ ] Document markdown reference updates (`--update-refs`, `--refs-root`)
-  - [ ] Add performance notes (caching reduces LLM calls)
-  - [ ] Update feature checklist to show M1-M4 complete
+- ✅ Updated README.md to document all current capabilities
+  - ✅ Added `folder` command with `--recursive` flag examples
+  - ✅ Documented caching behavior (`.image_namer/` directory, cache keys, invalidation)
+  - ✅ Documented markdown reference updates (`--update-refs`, `--refs-root`)
+  - ✅ Added performance notes (caching reduces LLM calls)
+  - ✅ Updated feature checklist to show M1-M5 complete
 
-- [ ] Verify error handling completeness (SPEC §5.10):
-  - [ ] Unsupported format handling (already in place via `_validate_file_type`)
-  - [ ] LLM/vision errors (already handled with try/except blocks)
-  - [ ] Write permission errors (file/folder commands handle per-file errors)
-  - [ ] Path normalization (already handled in URL decoding logic)
+- ✅ Verified error handling completeness (SPEC §5.10)
+  - ✅ Unsupported format handling (via `_validate_file_type`)
+  - ✅ LLM/vision errors (handled with try/except blocks)
+  - ✅ Write permission errors (file/folder commands handle per-file errors)
+  - ✅ Path normalization (handled in URL decoding logic)
+  - ✅ OPENAI_API_KEY validation (moved to gateway creation for test compatibility)
 
-- [ ] Deprecate the `generate` command:
-  - SPEC §5.7 marks it as "legacy, simple proposal only"
-  - `file --dry-run` provides same functionality with better consistency
+- ✅ Fixed critical bugs discovered during CI testing
+  - ✅ ANSI color code handling in test assertions (added `_strip_ansi()` helper)
+  - ✅ Non-deterministic file processing order (added sorting to `_collect_image_files()`)
+  - ✅ OPENAI_API_KEY environment variable handling (moved check to gateway creation)
+
+- ✅ Comprehensive CHANGELOG.md created for v1.0.0
+- ✅ Version bumped to 1.0.0 in pyproject.toml
+- ✅ All 94 tests passing with 88% code coverage
+- ✅ SPEC.md updated to reflect completion status
+
+**Note on `generate` command:**
+- Kept for backward compatibility (no breaking changes)
+- `file --dry-run` provides equivalent functionality with better consistency
+- May deprecate in future major version
+
+---
+
+## Future Considerations (Post-1.0.0)
+
+These items are not planned for immediate implementation but could be considered for future versions:
+
+- GUI interface (PySide6) - deferred, CLI-first approach is working well
+- Per-run audit reports (`runs/` directory) - current output is sufficient
+- Cache index optimization - current performance is acceptable
+- Video/PDF support - scope creep, images are the focus
+- Interactive prompts - standard CLI patterns work well
+- Multiple output formats (JSON, etc.) - Rich output is sufficient

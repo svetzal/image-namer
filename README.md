@@ -131,10 +131,34 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Project Status
 
-✅ **Version 0.1.0** - Core functionality complete:
-- Single file and batch folder renaming
-- Markdown reference updates (standard + Obsidian)
-- Intelligent caching system
-- Provider abstraction (Ollama/OpenAI)
+🎉 **Version 1.0.0** - Production Ready
 
-See [SPEC.md](SPEC.md) for detailed implementation status and roadmap.
+### Complete Features
+✅ **Core Functionality**
+- Single file and batch folder renaming with AI vision analysis
+- Smart pre-flight assessment to skip already-suitable files
+- Intelligent caching system (dramatically reduces LLM calls)
+- Idempotent operations (won't rename if name already matches content)
+
+✅ **Markdown Integration**
+- Automatic reference updates in standard Markdown and Obsidian
+- Preserves alt text and aliases
+- URL-encoded path handling
+
+✅ **AI Providers**
+- Ollama (local, privacy-focused, default)
+- OpenAI (cloud-based)
+- Easy provider switching via CLI or environment variables
+
+✅ **Developer-Friendly**
+- 94 comprehensive tests with 88% coverage
+- Type-safe with Pydantic models
+- Well-documented code and APIs
+- Flake8 compliant
+
+### What's Not Included (By Design)
+- GUI interface (CLI-first approach)
+- Video or PDF processing (images only)
+- Multi-language filename support (English slugs)
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.

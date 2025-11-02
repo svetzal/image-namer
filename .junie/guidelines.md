@@ -90,7 +90,161 @@ pip install -e ".[dev]"
 
 ## Release Process
 
-1. Update CHANGELOG.md:
+### Tag Naming Convention
+This project uses `RELEASE_X_Y_Z` format for version tags:
+- Version 1.0.0 → Tag: `RELEASE_1_0_0`
+- Version 1.2.3 → Tag: `RELEASE_1_2_3`
+- Version 2.0.0 → Tag: `RELEASE_2_0_0`
+
+### Pre-Release Checklist
+Before creating a release:
+- [ ] All tests passing: `pytest -v`
+- [ ] Linting passes: `flake8 src`
+- [ ] Version updated in `pyproject.toml`
+- [ ] CHANGELOG.md updated with all changes
+- [ ] Documentation built successfully: `mkdocs build`
+- [ ] Manual testing with real images completed
+- [ ] README.md reflects current features
+
+### Creating a Release
+
+**1. Update CHANGELOG.md**
+
+All changes should be documented under appropriate version headings using Keep a Changelog format:
+
+```markdown
+## [1.0.0] - 2025-11-02
+
+### Added
+- New feature descriptions
+
+### Changed
+- Changes to existing functionality
+
+### Fixed
+- Bug fixes
+
+### Deprecated
+- Soon-to-be-removed features
+
+### Removed
+- Removed features
+
+### Security
+- Security vulnerability fixes
+```
+
+**2. Commit Release Changes**
+
+```bash
+# Commit all release changes
+git add -A
+git commit -m "Release vX.Y.Z
+
+- Brief summary of major changes
+- Reference to CHANGELOG for full details"
+```
+
+**3. Create and Push Git Tag**
+
+```bash
+# Create annotated tag (RELEASE_X_Y_Z convention)
+git tag -a RELEASE_X_Y_Z -m "Version X.Y.Z - Release Title
+
+Major changes:
+- Feature 1
+- Feature 2
+- Feature 3
+
+See CHANGELOG.md for full details."
+
+# Push commits and tag
+git push origin main
+git push origin RELEASE_X_Y_Z
+```
+
+**4. Create GitHub Release (using gh CLI)**
+
+Prerequisites:
+```bash
+# Install gh (if needed)
+brew install gh  # macOS
+# or: sudo apt install gh  # Linux
+
+# Authenticate (one-time)
+gh auth login
+
+# Verify
+gh auth status
+```
+
+Create release:
+```bash
+# Option 1: Extract notes from CHANGELOG
+gh release create RELEASE_X_Y_Z \
+  --title "vX.Y.Z - Release Title" \
+  --notes-file <(sed -n '/## \[X.Y.Z\]/,/## \[/p' CHANGELOG.md | sed '$d') \
+  --latest
+
+# Option 2: Interactive mode
+gh release create RELEASE_X_Y_Z --generate-notes
+
+# Verify
+gh release view RELEASE_X_Y_Z
+```
+
+**Alternative (Web Interface)**:
+1. Go to https://github.com/svetzal/image-namer/releases/new
+2. Select tag: `RELEASE_X_Y_Z`
+3. Release title: `vX.Y.Z - Release Title`
+4. Description: Copy from CHANGELOG.md section
+5. Mark as "Latest release"
+6. Publish
+
+**5. Post-Release Verification**
+
+- [ ] GitHub release published and visible
+- [ ] Documentation deployed to GitHub Pages (automatic)
+- [ ] Installation works: `pipx install git+https://github.com/svetzal/image-namer.git`
+- [ ] Tag appears in git: `git tag -l`
+
+### Semantic Versioning
+
+Follow semantic versioning principles:
+- **MAJOR** (X.0.0): Incompatible API changes, breaking changes
+- **MINOR** (0.X.0): New features, backward-compatible
+- **PATCH** (0.0.X): Bug fixes, backward-compatible
+
+### Hotfix Process
+
+For critical issues requiring immediate release:
+
+```bash
+# Create hotfix branch from tag
+git checkout -b hotfix/X.Y.Z+1 RELEASE_X_Y_Z
+
+# Make fixes, update CHANGELOG
+# ... fix code ...
+
+# Commit and tag
+git commit -m "Hotfix: describe critical fix"
+git tag -a RELEASE_X_Y_Z+1 -m "Hotfix vX.Y.Z+1"
+
+# Merge back to main
+git checkout main
+git merge hotfix/X.Y.Z+1
+git push origin main
+git push origin RELEASE_X_Y_Z+1
+
+# Create release
+gh release create RELEASE_X_Y_Z+1 --title "vX.Y.Z+1 - Hotfix" --notes "Critical fix for..."
+```
+
+**Important**: Never delete release tags. If a release has issues, create a new patch version.
+
+### CHANGELOG.md Maintenance
+
+1. Keep CHANGELOG.md up-to-date:
    - All notable changes should be documented under the [Next] section
    - Group changes into categories:
      - Added: New features
@@ -102,27 +256,17 @@ pip install -e ".[dev]"
    - Each entry should be clear and understandable to end-users
    - Reference relevant issue/PR numbers where applicable
 
-2. Creating a Release:
-   - Ensure `pyproject.toml` indicates the next release version
-   - Ensure all changes are documented in CHANGELOG.md
-     - Move [Next] changes to the new version section (e.g., [1.0.0])
-   - Follow semantic versioning:
-     - MAJOR version for incompatible API changes
-     - MINOR version for backward-compatible new functionality
-     - PATCH version for backward-compatible bug fixes
-   - Tag the release commit with the new version number (e.g., `git tag -a RELEASE_1_0_0 -m "Release v1.0.0"`)
-   - Push the tag to the remote repository (e.g., `git push origin RELEASE_1_0_0`)
-   - Using the gh command, create a new release on GitHub:
-     - Use the new version number as the tag version
-     - Use the same title as the tag version
-     - Use the same description as the tag version
-     - Attach the CHANGELOG.md file to the release
-
-3. Best Practices:
-   - Keep entries concise but descriptive
+2. Before creating a release:
+   - Move [Next] changes to the new version section (e.g., [1.0.0])
+   - Add release date
+   - Ensure entries are concise but descriptive
    - Write from the user's perspective
    - Include migration instructions for breaking changes
    - Document API changes thoroughly
+
+---
+
+## Python typing note (policy)
    - Update documentation to reflect the changes
 
 

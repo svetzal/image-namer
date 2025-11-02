@@ -1,7 +1,7 @@
-# Image Namer — Product and Technical Specification (v0.1 Draft)
+# Image Namer — Product and Technical Specification (v1.0)
 
 Last updated: 2025-11-02
-**Implementation Status**: M1-M4 Complete ✅ | M5 In Progress 🚧
+**Implementation Status**: M1-M5 Complete ✅ — Version 1.0.0 Released 🎉
 
 ## 1. Vision
 Rename image files based on their true visual contents using a multimodal vision model. The tool supports both command-line and a simple GUI, updates Markdown references safely, and produces an auditable report. Defaults favor local ML models: provider `ollama` with model `gemma3:27b`.
@@ -231,11 +231,13 @@ Rename image files based on their true visual contents using a multimodal vision
 - **M2** — ✅ Folder processing (flat and recursive)
 - **M3** — ✅ Markdown reference updates (scan and patch)
 - **M4** — ✅ Cache implementation for performance
-- **M5** — 🚧 Polish and release 0.1.0
-  - 📝 Update README to document all features
-  - 📝 Create CHANGELOG for v0.1.0
-  - 📝 Deprecate legacy `generate` command
-  - 📝 Version bump and release prep
+- **M5** — ✅ Polish and release 1.0.0
+  - ✅ Updated README to document all features
+  - ✅ Created comprehensive CHANGELOG for v1.0.0
+  - ✅ Version bump to 1.0.0
+  - ✅ All tests passing (94 tests, 88% coverage)
+  - ✅ Documentation deployed
+  - 📝 Note: `generate` command remains for backward compatibility but `file --dry-run` is preferred
 
 ## 11. What We're NOT Building ✅
 - ❌ GUI (PySide6) - CLI is sufficient for v0.1
