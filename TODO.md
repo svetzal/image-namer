@@ -30,14 +30,17 @@ Done:
   - Reuses collision resolver and idempotency logic from `file` command
   - Tracks planned renames to avoid collisions between multiple files
 
-Next Up:
-
-- [ ] Markdown reference updater
+- ✅ Markdown reference updater
   - Scan `*.md` files under `--refs-root` when `--update-refs` is used
   - Update standard Markdown: `![alt](path)` and `[text](path)`
   - Update Obsidian wiki links: `[[name.png]]`, `![[name.png]]`, `[[name.png|alias]]`
   - Preserve alt text and aliases, only update filename
   - Report which files were updated and how many replacements
+  - Implementation: operations/find_references.py and operations/update_references.py
+  - Comprehensive test coverage (32 tests across both operations)
+  - Integrated into both `file` and `folder` commands
+
+Next Up:
 
 - [ ] Cache implementation
   - Store LLM results by image hash in `.image_namer/cache/`

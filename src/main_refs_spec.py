@@ -7,7 +7,7 @@ import main as cli
 runner = CliRunner()
 
 
-def should_log_placeholder_when_update_refs_flag_used(tmp_path: Path, mocker) -> None:
+def should_search_for_references_when_update_refs_flag_used(tmp_path: Path, mocker) -> None:
     src = tmp_path / "img.png"
     src.write_bytes(b"x")
 
@@ -16,7 +16,7 @@ def should_log_placeholder_when_update_refs_flag_used(tmp_path: Path, mocker) ->
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
     mocker.patch.object(
         cli, "generate_name",
-        lambda path, llm=None: type("PN", (), {"stem": "x", "extension": ".png"})()
+        lambda path, llm=None: type("PN", (), {"stem": "new-name", "extension": ".png"})()
     )
 
     result = runner.invoke(
@@ -24,6 +24,4 @@ def should_log_placeholder_when_update_refs_flag_used(tmp_path: Path, mocker) ->
     )
 
     assert result.exit_code == 0
-    assert "Ref update requested" in result.output
-    # Check for refs_root mention (may be wrapped by Rich)
-    assert "at root" in result.output and tmp_path.name in result.output
+    assert "No markdown references found" in result.output

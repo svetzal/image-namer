@@ -1,3 +1,4 @@
+from pathlib import Path
 from pydantic import BaseModel, Field
 
 
@@ -28,3 +29,31 @@ class ProposedName(BaseModel):
         if ext.startswith('.'):
             return f"{self.stem}{ext}"
         return f"{self.stem}.{ext}"
+
+
+class MarkdownReference(BaseModel):
+    """A reference to an image in a markdown file.
+
+    Attributes:
+        file_path: The path to the markdown file containing the reference.
+        line_number: The line number (1-indexed) where the reference appears.
+        original_text: The original reference text (e.g., '![alt](image.png)').
+        image_path: The path to the image being referenced.
+        ref_type: The type of reference ('image', 'link', 'wiki', 'wiki_embed').
+    """
+    file_path: Path = Field(..., description="Path to the markdown file")
+    line_number: int = Field(..., description="Line number (1-indexed)")
+    original_text: str = Field(..., description="Original reference text")
+    image_path: Path = Field(..., description="Path to the referenced image")
+    ref_type: str = Field(..., description="Type of reference")
+
+
+class ReferenceUpdate(BaseModel):
+    """Result of updating references in markdown files.
+
+    Attributes:
+        file_path: The path to the markdown file that was updated.
+        replacement_count: Number of replacements made in this file.
+    """
+    file_path: Path = Field(..., description="Path to the updated markdown file")
+    replacement_count: int = Field(..., description="Number of replacements made")
