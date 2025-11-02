@@ -60,20 +60,16 @@ def _validate_file_type(path: Path) -> None:
 
 
 def _validate_provider(provider: str) -> None:
-    """Validate that provider is supported and configured.
+    """Validate that provider is supported.
 
     Args:
         provider: The provider name to validate.
 
     Raises:
-        typer.Exit: If provider is invalid or not configured.
+        typer.Exit: If provider is invalid.
     """
     if provider not in SUPPORTED_PROVIDERS:
         console.print(f"[red]Invalid provider: {provider}[/red]")
-        raise typer.Exit(2)
-
-    if provider == "openai" and "OPENAI_API_KEY" not in os.environ:
-        console.print("[red]OPENAI_API_KEY environment variable not set[/red]")
         raise typer.Exit(2)
 
 
@@ -526,6 +522,8 @@ def file(
     try:
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
         llm = LLMBroker(gateway=gateway, model=model)
+    except typer.Exit:
+        raise  # Re-raise typer.Exit to allow proper CLI exit
     except Exception as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
@@ -655,6 +653,8 @@ def folder(
     try:
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
         llm = LLMBroker(gateway=gateway, model=model)
+    except typer.Exit:
+        raise  # Re-raise typer.Exit to allow proper CLI exit
     except Exception as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
@@ -725,10 +725,6 @@ def generate(
         console.print(f"[red]Invalid provider: {provider}[/red]")
         raise typer.Exit(2)
 
-    if provider == "openai" and "OPENAI_API_KEY" not in os.environ:
-        console.print("[red]OPENAI_API_KEY environment variable not set[/red]")
-        raise typer.Exit(2)
-
     # Create gateway and LLM broker
     try:
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
@@ -765,10 +761,16 @@ def _get_gateway(provider: Literal["openai", "ollama"]) -> OllamaGateway | OpenA
 
     Returns:
         Gateway instance for the specified provider
+
+    Raises:
+        typer.Exit: If provider configuration is invalid.
     """
     if provider == "ollama":
         return OllamaGateway()
     else:
+        if "OPENAI_API_KEY" not in os.environ:
+            console.print("[red]OPENAI_API_KEY environment variable not set[/red]")
+            raise typer.Exit(2)
         return OpenAIGateway(api_key=os.environ["OPENAI_API_KEY"])
 
 
