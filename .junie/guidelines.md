@@ -125,3 +125,10 @@ pip install -e ".[dev]"
    - Document API changes thoroughly
    - Update documentation to reflect the changes
 
+
+
+---
+
+## Python typing note (policy)
+- Do NOT add `from __future__ import annotations` in modules.
+- Rationale: this project requires Python 3.13+, where annotations are already stored as strings by default. The import is redundant and can cause inconsistency in runtime `__annotations__` introspection across modules. If backporting becomes necessary later, we can revisit.

@@ -1,12 +1,12 @@
 Done:
 
 - ✅ create a CLI command called `generate` that simply proposes a new filename for a given image file
+- ✅ add a tiny `sha256_file(path: Path) -> str` helper in `src/utils/fs.py` with a co-located `_spec.py`
+- ✅ scaffold cache layout creator `ensure_cache_layout(repo_root: Path)` that makes `.image_namer/{cache/{analysis,names,refs},runs}` and writes `version` if missing
+- ✅ introduce `RUBRIC_VERSION = 1` constant (single source of truth) referenced by cache key logic (no key gen yet)
  
 Pending:
 
-- [ ] add a tiny `sha256_file(path: Path) -> str` helper in `src/utils/fs.py` with a co-located `_spec.py`
-- [ ] scaffold cache layout creator `ensure_cache_layout(repo_root: Path)` that makes `.image_namer/{cache/{analysis,names,refs},runs}` and writes `version` if missing
-- [ ] introduce `RUBRIC_VERSION = 1` constant (single source of truth) referenced by cache key logic (no key gen yet)
 
 Deferred, don't do these yet:
 

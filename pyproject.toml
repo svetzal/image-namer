@@ -56,7 +56,7 @@ Issues = "https://github.com/svetzal/image-namer/issues"
 [tool.setuptools]
 # Map top-level modules/packages to the src directory
 package-dir = { "" = "src" }
-packages = ["operations"]
+packages = ["operations", "utils"]
 
 # Explicitly declare single-file modules that live directly in src/ (without a package dir)
 # This matches the current repo structure that contains src/main.py
