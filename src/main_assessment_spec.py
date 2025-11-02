@@ -1,6 +1,7 @@
 """Integration tests for assessment-first logic."""
 
 from pathlib import Path
+import re
 
 from typer.testing import CliRunner
 
@@ -8,6 +9,11 @@ import main as cli
 from operations.models import NameAssessment, ProposedName
 
 runner = CliRunner()
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
 
 class _LLMStubWithSuitableAssessment:
@@ -58,5 +64,6 @@ def should_skip_all_suitable_files_in_folder(tmp_path: Path, mocker):
     assert result.exit_code == 0
     assert (tmp_path / "cat--sitting.png").exists()
     assert (tmp_path / "dog--running.jpg").exists()
-    assert "2 unchanged" in result.output
-    assert "0 renamed" in result.output
+    output = _strip_ansi(result.output)
+    assert "2 unchanged" in output
+    assert "0 renamed" in output

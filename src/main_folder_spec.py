@@ -1,9 +1,15 @@
 from pathlib import Path
+import re
 
 from typer.testing import CliRunner
 
 import main as cli
 from operations.models import NameAssessment, ProposedName
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
 
 class _LLMStub:
@@ -148,7 +154,7 @@ def should_be_idempotent_in_folder(tmp_path: Path, mocker) -> None:
     assert result.exit_code == 0
     assert (tmp_path / "cat--sitting.png").exists()
     assert (tmp_path / "dog--running.jpg").exists()
-    assert "2 unchanged" in result.output
+    assert "2 unchanged" in _strip_ansi(result.output)
 
 
 def should_show_summary_table_in_dry_run(tmp_path: Path, mocker) -> None:
