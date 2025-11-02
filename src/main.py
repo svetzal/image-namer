@@ -71,10 +71,6 @@ def _validate_provider(provider: str) -> None:
         console.print(f"[red]Invalid provider: {provider}[/red]")
         raise typer.Exit(2)
 
-    if provider == "openai" and "OPENAI_API_KEY" not in os.environ:
-        console.print("[red]OPENAI_API_KEY environment variable not set[/red]")
-        raise typer.Exit(2)
-
 
 def _normalize_extension(proposed_ext: str, fallback_ext: str) -> str:
     """Normalize extension to include leading dot.
@@ -653,11 +649,18 @@ def _get_gateway(provider: Literal["openai", "ollama"]) -> OllamaGateway | OpenA
 
     Returns:
         Gateway instance for the specified provider
+
+    Raises:
+        KeyError: If OPENAI_API_KEY environment variable is not set for openai provider
     """
     if provider == "ollama":
         return OllamaGateway()
     else:
-        return OpenAIGateway(api_key=os.environ["OPENAI_API_KEY"])
+        try:
+            api_key = os.environ["OPENAI_API_KEY"]
+        except KeyError:
+            raise KeyError("OPENAI_API_KEY environment variable not set") from None
+        return OpenAIGateway(api_key=api_key)
 
 
 def main() -> None:
