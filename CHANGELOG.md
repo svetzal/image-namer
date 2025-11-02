@@ -4,12 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Next]
 ### Added
-- GitHub Actions CI: pytest with coverage and flake8 on push/PR (#15)
-- MyPy configuration in `pyproject.toml` (strict mode) [quality of life]
-- Environment variable support for defaults: `IMGN_PROVIDER`, `IMGN_MODEL` (#10)
+- New `image-namer file` subcommand to rename a single file with `--dry-run/--apply` (#TODO)
+- Minimal collision resolver utility `next_available_name()` with macOS case-insensitive handling (#TODO)
+- Idempotency heuristic: if current stem equals proposed stem, no rename occurs (#TODO)
+- Placeholder flags `--update-refs/--no-update-refs` and `--refs-root` for future Markdown/wiki link updates (#TODO)
+- Environment variable support for defaults: `LLM_PROVIDER`, `LLM_MODEL` (flags > env > defaults) (#10)
 
 ### Changed
-- Documentation updated to recommend uv for environment setup and installation; aligns with CI using uv (#16)
+- Documentation updated to include new `file` subcommand, refs flags, and environment variable precedence; recommend uv for setup (aligns with CI) (#16)
 - Package metadata updated with correct author and URLs in `pyproject.toml` (#2, #3)
 - Pytest discovery configured to pick up `should_*` tests in `*_spec.py` files (#1, #6)
 

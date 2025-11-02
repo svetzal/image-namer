@@ -28,15 +28,36 @@ pip install -e ".[dev]"
 
 ## Usage
 
-Single-image proposal (dry-run by default):
+Single-image rename (dry-run by default):
 ```bash
-image-namer generate path/to/image.jpg
+# Preview (no changes)
+image-namer file path/to/image.jpg
+
+# Apply rename
+image-namer file path/to/image.jpg --apply
 ```
 
-Select provider/model:
+Select provider/model (flags > env > defaults):
 ```bash
-image-namer generate path/to/image.jpg --provider ollama --model gemma3:27b
-image-namer generate path/to/image.jpg --provider openai --model gpt-4o
+image-namer file path/to/image.jpg --provider ollama --model gemma3:27b
+image-namer file path/to/image.jpg --provider openai --model gpt-4o
+```
+
+Environment variables for defaults:
+```bash
+export LLM_PROVIDER=ollama
+export LLM_MODEL=gemma3:27b
+```
+
+Reference updates (placeholder):
+```bash
+image-namer file path/to/image.jpg --update-refs --refs-root /path/to/repo
+# Currently just logs intention; does not modify Markdown/wiki links yet.
+```
+
+Propose-only (legacy demo):
+```bash
+image-namer generate path/to/image.jpg
 ```
 
 OpenAI requires `OPENAI_API_KEY` in the environment.
