@@ -14,13 +14,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up uv and Python
-        uses: astral-sh/setup-uv@v3
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
       - name: Create virtual environment (uv)
-        run: uv venv
+        run: uv venv --python 3.13
 
       - name: Install project (dev extras)
         run: |
