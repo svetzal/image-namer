@@ -167,6 +167,52 @@ Rename image files based on their true visual contents using a multimodal vision
 - Reference update failures → partial success flagged in report.
 - Path normalization across OS, preserve case-insensitivity on macOS where relevant.
 
+### 5.12 Cache of Vision Results and Planning (Repository-local)
+- Purpose: Avoid repeated, slow LLM/vision calls by caching deterministic inputs and outputs per repo.
+- Location: A hidden folder named `.image_namer/` at the repository root (i.e., the current working directory by default).
+- Substructure:
+  - `.image_namer/`
+    - `version`: text file containing cache schema version (e.g., `1`)
+    - `cache/`
+      - `analysis/` — one JSON per image content hash and model config
+      - `names/` — one JSON per image content hash and model config (final naming plan)
+      - `refs/` — optional, per-run reference update summaries indexed by run id
+    - `runs/` — per-run manifests for auditing and reporting
+      - `<timestamp>--<short-run-id>.json` — serialized `RunReport`
+    - `index.json` — a light-weight map for quick lookups (hash -> files)
+- Cache keys (fingerprints):
+  - `content_sha256` of the image bytes
+  - `provider` (e.g., `ollama` | `openai`)
+  - `model` (e.g., `gemma3:27b`)
+  - `rubric_version` (bump if naming rules materially change)
+  - Optional: `endpoint`, provider-specific parameters that affect output
+  - Composite cache key example: `<sha256>__<provider>__<model>__v<rubric>`
+- Files:
+  - `analysis/<key>.json` — stores the `ImageAnalysis` payload and metadata:
+    - `{ key, content_sha256, provider, model, rubric_version, created_at, confidence, primary_subject, specific_detail, key_terms, fail_reason }`
+  - `names/<key>.json` — stores the naming decision (proposed basename and rationale):
+    - `{ key, proposed_basename, reason, confidence, rubric_version }`
+  - `runs/<timestamp>--<id>.json` — stores a `RunReport` for that invocation.
+  - `index.json` — maps `content_sha256` and known file paths to last-seen keys and run ids to speed up lookups.
+- Read/Write policy:
+  - On processing an image, compute `content_sha256` and form the composite key.
+  - If `analysis/<key>.json` exists, reuse it; otherwise call the model and write it.
+  - If `names/<key>.json` exists and rubric version matches, reuse the naming plan; otherwise recompute from analysis and write.
+  - If the provider or model differs, treat as a new key; cache entries coexist.
+- Invalidation:
+  - Changing the image bytes → new `content_sha256` → naturally bypasses cache.
+  - Bump `rubric_version` when naming rules change to avoid stale names.
+  - Periodic pruning of orphaned entries is optional and non-blocking.
+- Privacy & portability:
+  - Cache is local to the repo, not uploaded.
+  - JSON entries avoid embedding full image bytes; only hashes and minimal metadata.
+
+### 5.13 Repository Root Assumptions (Markdown References)
+- Default working directory is assumed to be the root of the Markdown/code repository.
+- By default, `refs_root` is `.` (the current working directory), and Markdown scanning occurs under this root.
+- Users can override `refs_root` via CLI `--refs-root` and, later, via GUI controls.
+- The tool does not traverse outside the chosen root when updating references.
+
 ## 6. Data Model (Pydantic)
 - `ProviderConfig`: provider, model, endpoint, api_key
 - `JobConfig`:
