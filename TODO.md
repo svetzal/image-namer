@@ -7,9 +7,31 @@ Done:
  
 Pending:
 
+- [ ] Implement `image-namer file` CLI subcommand (single-file rename) with `--dry-run/--apply`.
+  - Validates supported image types; provider/model flags (default: ollama + gemma3:27b).
+  - Calls vision naming, enforces idempotency, resolves collisions, and when `--apply` performs `Path.rename`.
+  - Rich output panel/table showing source, proposed, final (post-collision), mode, and confidence when available.
+  - Specs: happy path, unsupported type, invalid provider, idempotent no-op, collision suffixing.
+
+- [ ] Add minimal collision resolver utility in `src/utils/fs.py`.
+  - `next_available_name(dir: Path, stem: str, ext: str) -> str` using `-2`, `-3`, ... suffixes.
+  - Specs: existing names 1..N, case-insensitivity on macOS.
+
+- [ ] Basic idempotency check.
+  - Heuristic: if current stem already equals proposed stem → treat as unchanged.
+  - Leave full semantic check via LLM for a later milestone; cover with specs.
+
+- [ ] Wire `--update-refs/--no-update-refs` and `--refs-root` flags for `file`.
+  - Implement as a no-op placeholder that logs intention; add plumbing and specs.
+  - Do not scan/modify Markdown yet.
+
+- [ ] Align env vars for provider/model names.
+  - Accept `IMGN_PROVIDER`/`IMGN_MODEL` in addition to existing `LLM_*` for backward compatibility.
+  - Update README examples; add a spec asserting precedence shape (flags > env > defaults).
 
 Deferred, don't do these yet:
 
-- [ ] minimal `ProviderConfig` pydantic model with defaults and a `_spec.py` to assert env/flag precedence shape (behavior TBD)
-- [ ] add `--dry-run / --apply` flags to CLI (wire to no-op placeholder)
-- [ ] expose `--provider` and `--model` flags in the CLI with defaults `ollama` and `gemma3:27b` (no behavior change yet)
+- [ ] Full Markdown reference updater that patches `*.md` links/wiki links and reports replacements.
+- [ ] JSON `--report` file and repo-local cache read/write paths.
+- [ ] `image-namer folder` subcommand (flat by default) with `--recursive`, `--include/--exclude`.
+- [ ] OpenAI provider polish and endpoint configuration.
