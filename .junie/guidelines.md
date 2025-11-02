@@ -32,16 +32,30 @@ src/
 ```
 
 ## Development Setup
+Recommended: use uv (fast Python package manager). CI uses uv as well.
+
 1. Install Python 3.13 or higher
-2. Ensure python venv is set up:
+2. Install uv (https://docs.astral.sh/uv/)
+3. Create and activate virtual environment
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
+   uv venv
+   . .venv/bin/activate
    ```
-2. Install dependencies:
+4. Install dependencies (dev extras)
    ```bash
-   pip install -e ".[dev]"
+   uv pip install -e ".[dev]"
    ```
+5. Optional: GUI extras
+   ```bash
+   uv pip install -e ".[gui]"
+   ```
+
+Alternative (pip):
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
 
 ## Testing Guidelines
 - Tests are co-located with implementation files (test file must be in the same folder as the implementation)

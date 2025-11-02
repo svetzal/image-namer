@@ -54,16 +54,28 @@ llm = LLMBroker(gateway=gateway, model=model)
 ## Development Commands
 
 ### Environment Setup
+
+Recommended: use uv (fast Python package manager). CI uses uv as well.
+
 ```bash
+# Install uv: https://docs.astral.sh/uv/
+
 # Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # On macOS/Linux
+uv venv
+. .venv/bin/activate  # On macOS/Linux
 
 # Install with dev dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 
 # Install with GUI dependencies (future)
-pip install -e ".[gui]"
+uv pip install -e ".[gui]"
+```
+
+Alternative (pip):
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
 ### Testing

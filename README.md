@@ -8,16 +8,23 @@ Rename image files based on their visual contents using a multimodal model.
 
 ## Install
 
-1. Python 3.13+
-2. Create and activate a virtualenv:
+Recommended: use uv (fast Python package manager)
+
+1. Install Python 3.13+
+2. Install uv (see https://docs.astral.sh/uv/)
+3. Create a virtualenv and install with dev extras:
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
+   uv venv
+   . .venv/bin/activate
+   uv pip install -e ".[dev]"
    ```
-3. Install (dev extras include pytest/flake8):
-   ```bash
-   pip install -e ".[dev]"
-   ```
+
+Alternative (pip):
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
 
 ## Usage
 

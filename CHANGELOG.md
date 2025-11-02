@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Environment variable support for defaults: `IMGN_PROVIDER`, `IMGN_MODEL` (#10)
 
 ### Changed
+- Documentation updated to recommend uv for environment setup and installation; aligns with CI using uv (#16)
 - Package metadata updated with correct author and URLs in `pyproject.toml` (#2, #3)
 - Pytest discovery configured to pick up `should_*` tests in `*_spec.py` files (#1, #6)
 
