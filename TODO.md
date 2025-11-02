@@ -1,0 +1,1 @@
+- ✅ create a CLI command called `generate` that simply proposes a new filename for a given image file
