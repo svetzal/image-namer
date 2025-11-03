@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "image-namer"
-version = "2.0.1"
+version = "2.0.2"
 description = "Rename image files based on their visual contents using AI vision models."
 readme = "README.md"
 keywords = ["images", "renamer", "cli", "gui"]
@@ -62,8 +62,8 @@ package-dir = { "" = "src" }
 packages = ["operations", "utils", "ui", "ui.models", "ui.widgets", "ui.workers", "ui.dialogs", "ui.resources"]
 
 # Explicitly declare single-file modules that live directly in src/ (without a package dir)
-# This matches the current repo structure that contains src/main.py
-py-modules = ["main"]
+# This matches the current repo structure that contains src/main.py and src/constants.py
+py-modules = ["main", "constants"]
 
 [project.scripts]
 image-namer = "main:main"
