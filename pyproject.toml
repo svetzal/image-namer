@@ -59,7 +59,7 @@ Issues = "https://github.com/svetzal/image-namer/issues"
 [tool.setuptools]
 # Map top-level modules/packages to the src directory
 package-dir = { "" = "src" }
-packages = ["operations", "utils"]
+packages = ["operations", "utils", "ui", "ui.models", "ui.widgets", "ui.workers", "ui.dialogs", "ui.resources"]
 
 # Explicitly declare single-file modules that live directly in src/ (without a package dir)
 # This matches the current repo structure that contains src/main.py
@@ -67,6 +67,7 @@ py-modules = ["main"]
 
 [project.scripts]
 image-namer = "main:main"
+image-namer-ui = "ui.main:main"
 
 [tool.pytest.ini_options]
 minversion = "8.0"

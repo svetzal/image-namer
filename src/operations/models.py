@@ -31,6 +31,28 @@ class ProposedName(BaseModel):
         return f"{self.stem}.{ext}"
 
 
+class ImageAnalysis(BaseModel):
+    """Combined assessment and naming for an image in a single LLM call.
+
+    Attributes:
+        current_name_suitable: Whether the current filename already follows the rubric.
+        proposed_name: The recommended filename (may match current if suitable).
+        reasoning: Optional explanation of the assessment and naming decision.
+    """
+    current_name_suitable: bool = Field(
+        ...,
+        description="Whether the current filename already follows the rubric and matches image content"
+    )
+    proposed_name: ProposedName = Field(
+        ...,
+        description="The recommended filename components (stem and extension)"
+    )
+    reasoning: str = Field(
+        default="",
+        description="Brief explanation of the assessment and naming choice"
+    )
+
+
 class MarkdownReference(BaseModel):
     """A reference to an image in a markdown file.
 

@@ -7,7 +7,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from constants import RUBRIC_VERSION
-from operations.models import NameAssessment, ProposedName
+from operations.models import ImageAnalysis, NameAssessment, ProposedName
 from utils.fs import sha256_file
 
 
@@ -238,6 +238,109 @@ def save_assessment_to_cache(
         model=model,
         rubric_version=RUBRIC_VERSION,
         assessment=assessment,
+    )
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(
+        entry.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+class AnalysisCacheEntry(BaseModel):
+    """A cached unified analysis result for an image.
+
+    Attributes:
+        image_hash: SHA-256 hash of the image file.
+        filename: The filename that was analyzed.
+        provider: LLM provider name.
+        model: Model name.
+        rubric_version: Version of the naming rubric used.
+        analysis: The complete analysis result.
+    """
+    image_hash: str = Field(..., description="SHA-256 hash of the image")
+    filename: str = Field(..., description="Filename that was analyzed")
+    provider: str = Field(..., description="LLM provider name")
+    model: str = Field(..., description="Model name")
+    rubric_version: int = Field(..., description="Rubric version")
+    analysis: ImageAnalysis = Field(..., description="Complete analysis result")
+
+
+def load_analysis_from_cache(
+    cache_dir: Path,
+    image_path: Path,
+    filename: str,
+    provider: str,
+    model: str,
+) -> Optional[ImageAnalysis]:
+    """Load a cached unified analysis result if it exists and is valid.
+
+    Args:
+        cache_dir: Path to the cache/unified directory.
+        image_path: Path to the image file.
+        filename: The filename to check against cache.
+        provider: LLM provider name.
+        model: Model name.
+
+    Returns:
+        Cached ImageAnalysis if found and valid, None otherwise.
+    """
+    try:
+        image_hash = sha256_file(image_path)
+        key = assessment_cache_key(image_hash, filename, provider, model)
+        cache_file = cache_dir / f"{key}.json"
+
+        if not cache_file.exists():
+            return None
+
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        entry = AnalysisCacheEntry.model_validate(data)
+
+        # Validate cache entry matches current parameters
+        if (
+            entry.image_hash != image_hash
+            or entry.filename != filename
+            or entry.provider != provider
+            or entry.model != model
+            or entry.rubric_version != RUBRIC_VERSION
+        ):
+            return None
+
+        return entry.analysis
+
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+
+
+def save_analysis_to_cache(
+    cache_dir: Path,
+    image_path: Path,
+    filename: str,
+    provider: str,
+    model: str,
+    analysis: ImageAnalysis,
+) -> None:
+    """Save a unified analysis result to the cache.
+
+    Args:
+        cache_dir: Path to the cache/unified directory.
+        image_path: Path to the image file.
+        filename: The filename that was analyzed.
+        provider: LLM provider name.
+        model: Model name.
+        analysis: The analysis result to cache.
+    """
+    image_hash = sha256_file(image_path)
+    key = assessment_cache_key(image_hash, filename, provider, model)
+    cache_file = cache_dir / f"{key}.json"
+
+    entry = AnalysisCacheEntry(
+        image_hash=image_hash,
+        filename=filename,
+        provider=provider,
+        model=model,
+        rubric_version=RUBRIC_VERSION,
+        analysis=analysis,
     )
 
     cache_dir.mkdir(parents=True, exist_ok=True)

@@ -10,7 +10,10 @@
       "Bash(pytest:*)",
       "Bash(python3:*)",
       "Bash(image-namer:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "Bash(. .venv/bin/activate)",
+      "Bash(curl:*)",
+      "Read(//Users/svetzal/**)"
     ],
     "deny": [],
     "ask": []
