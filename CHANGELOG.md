@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-11-02
+
+### Added
+- **Qt6 Graphical User Interface**
+  - New `image-namer-ui` command launches full GUI application
+  - Visual workflow: select folder → process images → review/edit → apply renames
+  - **Preview panel** with image display and automatic scaling
+  - **Results table** showing final names and processing status
+  - **Metadata panel** displaying source name, suitability, cache status, proposed name, reasoning
+  - **Toolbar** with provider/model selectors, recursive scanning toggle, markdown reference updates toggle
+  - **Menu bar** with File (Open Folder, Clear Cache, Quit), Help (About)
+  - **Background processing** with progress bar and status updates
+  - **Manual name editing** via double-click in results table
+  - **Cache integration** automatically loads cached assessments and proposals
+  - Built with PySide6 (Qt6 for Python)
+
+- **Installation options**
+  - Base install: `pipx install image-namer` (CLI only)
+  - GUI install: `pipx install image-namer[gui]` (includes PySide6)
+  - Optional dependency group `[gui]` for Qt6 interface
+
+### Changed
+- PySide6 moved to optional `[gui]` dependency to keep base install lightweight
+- Updated documentation to cover both CLI and GUI workflows
+- Project structure expanded with `ui/` package containing GUI components
+
+### Technical
+- New packages: `ui.models`, `ui.widgets`, `ui.workers`, `ui.dialogs`, `ui.resources`
+- Background workers for non-blocking processing (RenameWorker, CacheLoaderWorker)
+- Settings persistence for provider/model selection
+- Responsive layout with resizable splitter between preview and results
+
 ## [1.0.1] - 2025-11-02
 
 ### Fixed

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "image-namer"
-version = "1.0.1"
+version = "2.0.0"
 description = "Rename image files based on their visual contents using AI vision models."
 readme = "README.md"
 keywords = ["images", "renamer", "cli", "gui"]

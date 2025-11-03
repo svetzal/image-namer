@@ -56,6 +56,7 @@ nav:
   - Installation: installation.md
   - Getting Started: getting-started.md
   - How-To Guides:
+      - Using the GUI: how-to/using-gui.md
       - Single File Rename: how-to/single-file.md
       - Batch Folder Processing: how-to/batch-folder.md
       - Updating Markdown References: how-to/markdown-refs.md

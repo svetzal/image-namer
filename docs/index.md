@@ -2,21 +2,36 @@
 
 **Rename image files based on their visual contents using AI vision models.**
 
-Image Namer is a Python CLI tool that analyzes images using multimodal vision models and generates meaningful, descriptive filenames. No more `IMG_2347.jpg` or `screenshot-23.png`—get names like `golden-retriever-puppy--running-in-park.jpg` or `sales-chart--2024-quarterly-results.png`.
+Image Namer is a Python tool that analyzes images using multimodal vision models and generates meaningful, descriptive filenames. No more `IMG_2347.jpg` or `screenshot-23.png`—get names like `golden-retriever-puppy--running-in-park.jpg` or `sales-chart--2024-quarterly-results.png`.
+
+Choose your workflow:
+- **GUI**: Visual interface with image preview and table editing
+- **CLI**: Command-line tool for scripting and automation
 
 ## Key Features
 
 - **Vision-based naming**: Uses AI models (Ollama/OpenAI) to analyze image content and generate descriptive filenames
+- **Dual interface**: Choose graphical (Qt6) or command-line workflow
 - **Local-first**: Defaults to Ollama with `gemma3:27b` for privacy-conscious users
 - **Intelligent caching**: Avoids repeated API calls by caching results per image content hash
 - **Idempotent**: Won't rename files that already have suitable names
-- **Batch processing**: Process entire folders with `--recursive` option
+- **Batch processing**: Process entire folders with recursive scanning
 - **Markdown reference updates**: Automatically updates links in your markdown/Obsidian notes
-- **Dry-run mode**: Preview changes before applying them
+- **Manual editing**: Double-click names in GUI to customize before applying
+- **Dry-run mode** (CLI): Preview changes before applying them
 - **Smart collision handling**: Automatically resolves filename conflicts
 
 ## Quick Example
 
+**Graphical Interface:**
+```bash
+# Launch GUI
+image-namer-ui
+
+# Then: Open Folder → Process → Review → Apply
+```
+
+**Command Line:**
 ```bash
 # Preview what a file would be renamed to
 image-namer file vacation-photo.jpg
@@ -40,9 +55,9 @@ image-namer folder ~/Documents/notes --recursive --apply --update-refs
 
 ## Getting Started
 
-1. [Install Image Namer](installation.md) using `pipx` (recommended)
+1. [Install Image Namer](installation.md) - Choose CLI-only or with GUI
 2. [Set up your AI provider](getting-started.md#provider-setup) (Ollama or OpenAI)
-3. [Run your first rename](getting-started.md#your-first-rename)
+3. [Run your first rename](getting-started.md#your-first-rename) - Try CLI or GUI workflow
 
 ## Philosophy
 

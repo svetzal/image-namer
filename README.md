@@ -10,17 +10,19 @@ Transform generic filenames like `IMG_2347.jpg` into descriptive names like `gol
 ## Features
 
 - 🤖 **AI-powered naming** using Ollama (local) or OpenAI (cloud)
+- 🖥️ **Dual interface** - Choose command-line (CLI) or graphical (GUI) workflow
 - 🏠 **Local-first** with Ollama for privacy
 - ⚡ **Intelligent caching** to avoid redundant API calls
 - 🔄 **Idempotent** - won't rename already-suitable files
 - 📁 **Batch processing** with recursive folder support
 - 📝 **Markdown reference updates** for Obsidian and standard markdown
-- 🔍 **Dry-run mode** to preview changes safely
+- 🔍 **Dry-run mode** to preview changes safely (CLI)
+- ✏️ **Manual editing** via table double-click (GUI)
 - 🎯 **Smart collision handling**
 
 ## Quick Start
 
-### Installation (Recommended: pipx)
+### Installation
 
 Install Image Namer using [pipx](https://pipx.pypa.io/) for a clean, isolated installation:
 
@@ -29,11 +31,15 @@ Install Image Namer using [pipx](https://pipx.pypa.io/) for a clean, isolated in
 brew install pipx  # macOS
 # or: python3 -m pip install --user pipx
 
-# Install image-namer
-pipx install git+https://github.com/svetzal/image-namer.git
+# CLI only (lightweight)
+pipx install image-namer
+
+# With GUI (includes Qt6 interface)
+pipx install 'image-namer[gui]'
 
 # Verify installation
-image-namer --help
+image-namer --help         # CLI commands
+image-namer-ui             # Launch GUI (if installed with [gui])
 ```
 
 **Why pipx?** It installs Python CLI tools in isolated environments, preventing dependency conflicts with other projects.
@@ -55,6 +61,7 @@ export OPENAI_API_KEY='sk-proj-...'
 
 ### Basic Usage
 
+**Command Line (CLI)**
 ```bash
 # Preview rename (dry-run)
 image-namer file photo.jpg
@@ -67,6 +74,18 @@ image-namer folder ~/Pictures/screenshots --apply
 
 # Update markdown references
 image-namer folder ~/Documents/notes/images --apply --update-refs
+```
+
+**Graphical Interface (GUI)**
+```bash
+# Launch GUI application
+image-namer-ui
+
+# Then use the visual workflow:
+# 1. Click "Open Folder" to select directory
+# 2. Click "Process" to analyze images
+# 3. Review/edit names in table (double-click to edit)
+# 4. Click "Apply" to rename files
 ```
 
 ## Documentation
@@ -91,10 +110,10 @@ cd image-namer
 # Install with development dependencies (using uv)
 uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-uv pip install -e ".[dev]"
+uv pip install -e ".[dev,gui]"  # Includes GUI for testing
 
 # Or with pip
-pip install -e ".[dev]"
+pip install -e ".[dev,gui]"
 ```
 
 ### Testing
@@ -131,7 +150,7 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Project Status
 
-🎉 **Version 1.0.0** - Production Ready
+🎉 **Version 2.0.0** - Production Ready with GUI
 
 ### Complete Features
 ✅ **Core Functionality**
@@ -139,6 +158,10 @@ MIT License - see [LICENSE](LICENSE)
 - Smart pre-flight assessment to skip already-suitable files
 - Intelligent caching system (dramatically reduces LLM calls)
 - Idempotent operations (won't rename if name already matches content)
+
+✅ **Dual Interface**
+- **CLI**: Command-line workflow with dry-run/apply modes
+- **GUI**: Qt6 graphical interface with visual preview and editing
 
 ✅ **Markdown Integration**
 - Automatic reference updates in standard Markdown and Obsidian
@@ -151,13 +174,12 @@ MIT License - see [LICENSE](LICENSE)
 - Easy provider switching via CLI or environment variables
 
 ✅ **Developer-Friendly**
-- 94 comprehensive tests with 88% coverage
+- Comprehensive tests with high coverage
 - Type-safe with Pydantic models
 - Well-documented code and APIs
 - Flake8 compliant
 
 ### What's Not Included (By Design)
-- GUI interface (CLI-first approach)
 - Video or PDF processing (images only)
 - Multi-language filename support (English slugs)
 

@@ -2,6 +2,13 @@
 
 This guide will help you install Image Namer on your system.
 
+## Choose Your Installation
+
+Image Namer offers two interfaces:
+
+- **CLI only** (lightweight): ~50MB with dependencies
+- **CLI + GUI** (full experience): ~150MB including Qt6 libraries
+
 ## Recommended: pipx Installation
 
 **pipx is the recommended installation method** for Image Namer. It installs Python CLI tools in isolated environments, preventing dependency conflicts with other Python projects on your system.
@@ -32,27 +39,43 @@ After installation, **restart your terminal** to ensure the PATH is updated.
 
 ### 2. Install Image Namer
 
+**CLI Only (lightweight):**
 ```bash
-pipx install git+https://github.com/svetzal/image-namer.git
+pipx install image-namer
 ```
 
-This installs `image-namer` as a globally available command in an isolated environment.
+**CLI + GUI (recommended):**
+```bash
+pipx install 'image-namer[gui]'
+```
+
+The `[gui]` extra installs PySide6 (Qt6 for Python), which adds the graphical interface.
 
 ### 3. Verify Installation
 
+**CLI:**
 ```bash
 image-namer --help
 ```
 
-You should see the CLI help output.
+**GUI (if installed with [gui]):**
+```bash
+image-namer-ui
+```
 
 ## Alternative: pip Installation
 
 !!! warning "Not Recommended"
     Installing with pip can cause dependency conflicts with other Python projects. Use pipx unless you have a specific reason not to.
 
+**CLI only:**
 ```bash
-pip install git+https://github.com/svetzal/image-namer.git
+pip install image-namer
+```
+
+**CLI + GUI:**
+```bash
+pip install 'image-namer[gui]'
 ```
 
 ## Development Installation
@@ -74,10 +97,10 @@ Using **uv** (recommended for development):
 # Install uv if you don't have it
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create virtual environment and install
+# Create virtual environment and install with GUI for testing
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e ".[dev]"
+uv pip install -e ".[dev,gui]"
 ```
 
 Using **pip**:
@@ -85,10 +108,11 @@ Using **pip**:
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e ".[dev,gui]"
 ```
 
 The `[dev]` extra includes testing tools (pytest, flake8, mypy) and documentation tools (mkdocs).
+The `[gui]` extra includes PySide6 for the graphical interface.
 
 ## System Requirements
 
@@ -141,7 +165,7 @@ pip install --upgrade git+https://github.com/svetzal/image-namer.git
 ```bash
 cd image-namer
 git pull
-uv pip install -e ".[dev]"  # or: pip install -e ".[dev]"
+uv pip install -e ".[dev,gui]"  # or: pip install -e ".[dev,gui]"
 ```
 
 ## Uninstalling
@@ -161,4 +185,5 @@ pip uninstall image-namer
 ## Next Steps
 
 - [Getting Started Guide](getting-started.md) - Set up your provider and run your first rename
+- [Using the GUI](how-to/using-gui.md) - Visual workflow guide (if installed with [gui])
 - [Configure Providers](how-to/provider-config.md) - Detailed provider configuration
