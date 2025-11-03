@@ -7,6 +7,8 @@
 
 Transform generic filenames like `IMG_2347.jpg` into descriptive names like `golden-retriever-puppy--running-in-park.jpg` using AI vision analysis.
 
+![Screenshot](docs/screenshot.png)
+
 ## Features
 
 - 🤖 **AI-powered naming** using Ollama (local) or OpenAI (cloud)

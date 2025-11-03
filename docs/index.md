@@ -8,6 +8,8 @@ Choose your workflow:
 - **GUI**: Visual interface with image preview and table editing
 - **CLI**: Command-line tool for scripting and automation
 
+![Screenshot](screenshot.jpg)
+
 ## Key Features
 
 - **Vision-based naming**: Uses AI models (Ollama/OpenAI) to analyze image content and generate descriptive filenames
