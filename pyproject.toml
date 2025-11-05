@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "image-namer"
-version = "2.0.2"
+version = "2.0.3"
 description = "Rename image files based on their visual contents using AI vision models."
 readme = "README.md"
 keywords = ["images", "renamer", "cli", "gui"]
@@ -28,7 +28,7 @@ dependencies = [
     "typer>=0.12.5",
     "rich>=13.7.0",
     "pydantic>=2.9.0",
-    "mojentic",
+    "mojentic>=0.8.4",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
 ]
 
