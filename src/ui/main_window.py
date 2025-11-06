@@ -13,8 +13,6 @@ from PySide6.QtGui import QPixmap, QResizeEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
@@ -374,6 +372,7 @@ class MainWindow(QMainWindow):
         # Action buttons
         button_layout = QHBoxLayout()
 
+        # Left group: bulk operations
         self.select_folder_btn = QPushButton("📁 Open Folder")
         self.select_folder_btn.clicked.connect(self._on_select_folder)
         button_layout.addWidget(self.select_folder_btn)
@@ -383,7 +382,7 @@ class MainWindow(QMainWindow):
         self.refresh_btn.clicked.connect(self._on_refresh_clicked)
         button_layout.addWidget(self.refresh_btn)
 
-        self.preview_btn = QPushButton("▶ Preview")
+        self.preview_btn = QPushButton("Analyze All")
         self.preview_btn.setEnabled(False)
         self.preview_btn.clicked.connect(self._on_preview_clicked)
         button_layout.addWidget(self.preview_btn)
@@ -394,17 +393,63 @@ class MainWindow(QMainWindow):
         self.stop_btn.clicked.connect(self._on_stop_clicked)
         button_layout.addWidget(self.stop_btn)
 
-        self.apply_btn = QPushButton("✓ Apply")
+        self.apply_btn = QPushButton("Analyze and Rename All")
         self.apply_btn.setEnabled(False)
         self.apply_btn.clicked.connect(self._on_apply_clicked)
         button_layout.addWidget(self.apply_btn)
 
+        # Middle stretch to push right-aligned single-item actions to the edge
         button_layout.addStretch()
+
+        # Right group: single-item operation
+        self.single_rename_btn = QPushButton("Rename")
+        self.single_rename_btn.setEnabled(False)
+        self.single_rename_btn.clicked.connect(self._on_single_rename_clicked)
+        button_layout.addWidget(self.single_rename_btn)
 
         bottom_layout.addLayout(button_layout)
 
         # Add bottom widget with no stretch (stays fixed height)
         parent_layout.addWidget(bottom_widget, stretch=0)
+
+    def _update_single_rename_button_label(self) -> None:
+        """Update the right-aligned single-rename button label and enabled state.
+
+        The button shows: "Rename [old name] to [new name]" when a single row is
+        selected and the final name differs from the current source name. Otherwise,
+        the button is disabled with a generic label.
+        """
+        # Default state
+        self.single_rename_btn.setText("Rename")
+        self.single_rename_btn.setEnabled(False)
+
+        # Ensure a table and items exist
+        if not hasattr(self, "results_table") or not self.rename_items:
+            return
+
+        selection_model = self.results_table.selectionModel()
+        if not selection_model:
+            return
+
+        selected_rows = selection_model.selectedRows()
+        if not selected_rows:
+            return
+
+        row = selected_rows[0].row()
+        if row < 0 or row >= len(self.rename_items):
+            return
+
+        item = self.rename_items[row]
+        old_name = item.source_name
+        new_name = item.final_name or item.source_name
+
+        if not old_name or not new_name or old_name == new_name:
+            # Nothing to do
+            return
+
+        # Update label and enable
+        self.single_rename_btn.setText(f"Rename {old_name} to {new_name}")
+        self.single_rename_btn.setEnabled(True)
 
     def _update_model_list(self) -> None:
         """Update model combo box based on selected provider.
@@ -510,6 +555,8 @@ class MainWindow(QMainWindow):
             self.preview_label.setText("No image selected")
             self.preview_filename_label.setText("Selected: (none)")
             self._clear_metadata_panel()
+            # Update single-rename button state
+            self._update_single_rename_button_label()
             return
 
         # Get selected row index
@@ -534,6 +581,8 @@ class MainWindow(QMainWindow):
             if pixmap.isNull():
                 self.preview_label.setText(f"Failed to load:\n{item.source_name}")
                 self.current_pixmap = None
+                # Update single-rename button state
+                self._update_single_rename_button_label()
                 return
 
             # Store original pixmap for rescaling on resize
@@ -545,6 +594,9 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.preview_label.setText(f"Error loading image:\n{e}")
             self.current_pixmap = None
+        finally:
+            # Update single-rename button state/label after selection changes
+            self._update_single_rename_button_label()
 
     def _rescale_current_image(self) -> None:
         """Rescale the current image to fit the preview label's current size."""
@@ -656,6 +708,9 @@ class MainWindow(QMainWindow):
             self.rename_items[row].final_name = new_final_name
             self.rename_items[row].manually_edited = True
             self.status_bar.showMessage(f"Updated final name for row {row + 1} (locked)", 2000)
+
+            # Update single-rename button label/state as the final name changed
+            self._update_single_rename_button_label()
 
     def _on_recursive_changed(self, state: int) -> None:
         """Handle recursive checkbox change.
@@ -837,6 +892,9 @@ class MainWindow(QMainWindow):
         self.progress_bar.setMaximum(len(self.rename_items))
         self.progress_bar.setValue(0)
         self.status_label.setText(f"Ready to process {len(self.rename_items)} images")
+
+        # Update single-rename button state after repopulating
+        self._update_single_rename_button_label()
 
     def _start_cache_loader(self) -> None:
         """Start background cache loader to populate table with cached data."""
@@ -1056,6 +1114,96 @@ class MainWindow(QMainWindow):
             self.worker.stop()
             self.status_label.setText("Stopping...")
             self.stop_btn.setEnabled(False)  # Prevent multiple clicks
+
+    def _on_single_rename_clicked(self) -> None:
+        """Rename only the currently selected image to its final name.
+
+        - Uses the value in the "Final Name" column for the selected row.
+        - Updates Markdown references if the checkbox is enabled.
+        - Updates UI elements for just that row.
+        """
+        if not self.rename_items or not self.current_folder:
+            return
+
+        selection_model = self.results_table.selectionModel()
+        if not selection_model:
+            return
+        selected_rows = selection_model.selectedRows()
+        if not selected_rows:
+            return
+        row = selected_rows[0].row()
+        if row < 0 or row >= len(self.rename_items):
+            return
+
+        item = self.rename_items[row]
+        old_path = item.path
+        old_name = item.source_name
+        new_name = item.final_name or item.source_name
+        new_path = old_path.parent / new_name
+
+        # Nothing to do
+        if old_name == new_name or old_path == new_path:
+            self.status_bar.showMessage("No change: final name matches current name", 3000)
+            self._update_single_rename_button_label()
+            return
+
+        try:
+            # Perform rename
+            old_path.rename(new_path)
+
+            # Update references if requested
+            total_refs_updated = 0
+            if self.update_refs_checkbox.isChecked():
+                refs = find_references(
+                    old_path,
+                    self.current_folder,
+                    recursive=self.recursive_scan
+                )
+                if refs:
+                    updates = update_references(refs, old_name, new_name)
+                    total_refs_updated = sum(u.replacement_count for u in updates)
+
+            # Update item state
+            item.status = RenameStatus.COMPLETED
+            item.status_message = "Successfully renamed"
+            item.source_name = new_name
+            item.path = new_path
+
+            # Update table row
+            # Column 0: Final name already set; keep as-is
+            status_text = f"{item.status_icon} {item.status_message}"
+            self.results_table.item(row, 1).setText(status_text)
+
+            # Update preview labels/metadata panel
+            self.preview_filename_label.setText(f"Selected: {item.source_name}")
+            self._update_metadata_panel(item)
+
+            # Reload preview pixmap to new path
+            try:
+                pixmap = QPixmap(str(item.path))
+                if not pixmap.isNull():
+                    self.current_pixmap = pixmap
+                    self._rescale_current_image()
+            except Exception:
+                pass
+
+            # Feedback: no popup dialog; use status bar only
+            msg = "Renamed 1 file"
+            if total_refs_updated > 0:
+                msg += f" — updated {total_refs_updated} reference(s)"
+            self.status_bar.showMessage(msg, 5000)
+
+        except Exception as e:
+            item.status = RenameStatus.ERROR
+            item.status_message = f"Rename failed: {e}"
+            item.error_message = str(e)
+            # Update row status cell to reflect error
+            self.results_table.item(row, 1).setText(f"{item.status_icon} {item.status_message}")
+            QMessageBox.critical(self, "Error", f"Failed to rename file:\n{e}")
+            self.status_bar.showMessage("Rename failed", 5000)
+        finally:
+            # Refresh the single-rename button label/state
+            self._update_single_rename_button_label()
 
     def _on_apply_clicked(self) -> None:
         """Handle Apply button click - rename files and optionally update references."""

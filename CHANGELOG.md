@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-11-06
+
+### Added
+- **GUI: Single-item rename button** - Right-aligned "Rename" button for renaming individual selected images
+  - Shows contextual label: "Rename [old-name] to [new-name]" when single row selected
+  - Enables quick rename workflow without processing entire batch
+  - Automatically updates markdown references if enabled
+  - Updates UI elements (preview, metadata, table row) after successful rename
+  - Status bar feedback only (no popup dialogs)
+  - Button disabled when no selection or when final name matches current name
+
+### Changed
+- Button labels updated for clarity:
+  - "Preview" → "Analyze All"
+  - "Apply" → "Analyze and Rename All"
+- Better visual grouping: bulk operations on left, single-item operation on right
+
+### Fixed
+- Removed unused imports (QDialog, QDialogButtonBox, ProposedName) to clean up code
+
 ## [2.0.3] - 2025-11-05
 
 ### Changed

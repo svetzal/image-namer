@@ -13,7 +13,6 @@ from operations.cache import (
     load_analysis_from_cache,
     save_analysis_to_cache,
 )
-from operations.models import ProposedName
 from ui.models.ui_models import RenameItem, RenameStatus
 
 
