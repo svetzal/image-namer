@@ -1115,6 +1115,76 @@ class MainWindow(QMainWindow):
             self.status_label.setText("Stopping...")
             self.stop_btn.setEnabled(False)  # Prevent multiple clicks
 
+    def _get_selected_row_and_item(self) -> tuple[int, RenameItem] | None:
+        """Get the currently selected row index and item.
+
+        Returns:
+            Tuple of (row_index, item) if valid selection exists, None otherwise.
+        """
+        if not self.rename_items or not self.current_folder:
+            return None
+
+        selection_model = self.results_table.selectionModel()
+        if not selection_model:
+            return None
+
+        selected_rows = selection_model.selectedRows()
+        if not selected_rows:
+            return None
+
+        row = selected_rows[0].row()
+        if row < 0 or row >= len(self.rename_items):
+            return None
+
+        return row, self.rename_items[row]
+
+    def _perform_single_rename_with_refs(
+        self, item: RenameItem, old_path: Path, new_path: Path, old_name: str, new_name: str
+    ) -> int:
+        """Perform single file rename and update references.
+
+        Args:
+            item: RenameItem to rename.
+            old_path: Current file path.
+            new_path: Target file path.
+            old_name: Current filename.
+            new_name: Target filename.
+
+        Returns:
+            Number of references updated.
+        """
+        old_path.rename(new_path)
+
+        total_refs_updated = 0
+        if self.update_refs_checkbox.isChecked():
+            refs = find_references(old_path, self.current_folder, recursive=self.recursive_scan)
+            if refs:
+                updates = update_references(refs, old_name, new_name)
+                total_refs_updated = sum(u.replacement_count for u in updates)
+
+        return total_refs_updated
+
+    def _update_ui_after_single_rename(self, row: int, item: RenameItem) -> None:
+        """Update UI elements after successful single rename.
+
+        Args:
+            row: Table row index.
+            item: RenameItem that was renamed.
+        """
+        status_text = f"{item.status_icon} {item.status_message}"
+        self.results_table.item(row, 1).setText(status_text)
+
+        self.preview_filename_label.setText(f"Selected: {item.source_name}")
+        self._update_metadata_panel(item)
+
+        try:
+            pixmap = QPixmap(str(item.path))
+            if not pixmap.isNull():
+                self.current_pixmap = pixmap
+                self._rescale_current_image()
+        except Exception:
+            pass
+
     def _on_single_rename_clicked(self) -> None:
         """Rename only the currently selected image to its final name.
 
@@ -1122,72 +1192,31 @@ class MainWindow(QMainWindow):
         - Updates Markdown references if the checkbox is enabled.
         - Updates UI elements for just that row.
         """
-        if not self.rename_items or not self.current_folder:
+        selection = self._get_selected_row_and_item()
+        if not selection:
             return
 
-        selection_model = self.results_table.selectionModel()
-        if not selection_model:
-            return
-        selected_rows = selection_model.selectedRows()
-        if not selected_rows:
-            return
-        row = selected_rows[0].row()
-        if row < 0 or row >= len(self.rename_items):
-            return
-
-        item = self.rename_items[row]
+        row, item = selection
         old_path = item.path
         old_name = item.source_name
         new_name = item.final_name or item.source_name
         new_path = old_path.parent / new_name
 
-        # Nothing to do
         if old_name == new_name or old_path == new_path:
             self.status_bar.showMessage("No change: final name matches current name", 3000)
             self._update_single_rename_button_label()
             return
 
         try:
-            # Perform rename
-            old_path.rename(new_path)
+            total_refs_updated = self._perform_single_rename_with_refs(item, old_path, new_path, old_name, new_name)
 
-            # Update references if requested
-            total_refs_updated = 0
-            if self.update_refs_checkbox.isChecked():
-                refs = find_references(
-                    old_path,
-                    self.current_folder,
-                    recursive=self.recursive_scan
-                )
-                if refs:
-                    updates = update_references(refs, old_name, new_name)
-                    total_refs_updated = sum(u.replacement_count for u in updates)
-
-            # Update item state
             item.status = RenameStatus.COMPLETED
             item.status_message = "Successfully renamed"
             item.source_name = new_name
             item.path = new_path
 
-            # Update table row
-            # Column 0: Final name already set; keep as-is
-            status_text = f"{item.status_icon} {item.status_message}"
-            self.results_table.item(row, 1).setText(status_text)
+            self._update_ui_after_single_rename(row, item)
 
-            # Update preview labels/metadata panel
-            self.preview_filename_label.setText(f"Selected: {item.source_name}")
-            self._update_metadata_panel(item)
-
-            # Reload preview pixmap to new path
-            try:
-                pixmap = QPixmap(str(item.path))
-                if not pixmap.isNull():
-                    self.current_pixmap = pixmap
-                    self._rescale_current_image()
-            except Exception:
-                pass
-
-            # Feedback: no popup dialog; use status bar only
             msg = "Renamed 1 file"
             if total_refs_updated > 0:
                 msg += f" — updated {total_refs_updated} reference(s)"
@@ -1197,50 +1226,57 @@ class MainWindow(QMainWindow):
             item.status = RenameStatus.ERROR
             item.status_message = f"Rename failed: {e}"
             item.error_message = str(e)
-            # Update row status cell to reflect error
             self.results_table.item(row, 1).setText(f"{item.status_icon} {item.status_message}")
             QMessageBox.critical(self, "Error", f"Failed to rename file:\n{e}")
             self.status_bar.showMessage("Rename failed", 5000)
         finally:
-            # Refresh the single-rename button label/state
             self._update_single_rename_button_label()
 
-    def _on_apply_clicked(self) -> None:
-        """Handle Apply button click - rename files and optionally update references."""
-        if not self.rename_items or not self.current_folder:
-            return
+    def _get_items_to_rename(self) -> list[RenameItem]:
+        """Get list of items that need renaming.
 
-        # Count items that need renaming
-        items_to_rename = [
+        Returns:
+            List of RenameItems that need renaming.
+        """
+        return [
             item for item in self.rename_items
             if item.status in (RenameStatus.READY, RenameStatus.COLLISION)
             and item.final_name != item.source_name
         ]
 
-        if not items_to_rename:
-            QMessageBox.information(
-                self,
-                "Nothing to Rename",
-                "No files need renaming. All files are either unchanged or not yet processed."
-            )
-            return
+    def _confirm_batch_rename(self, count: int, update_refs: bool) -> bool:
+        """Show confirmation dialog for batch rename operation.
 
-        # Confirm with user
-        update_refs = self.update_refs_checkbox.isChecked()
+        Args:
+            count: Number of files to rename.
+            update_refs: Whether references will be updated.
+
+        Returns:
+            True if user confirmed, False otherwise.
+        """
         ref_text = " and update markdown references" if update_refs else ""
         reply = QMessageBox.question(
             self,
             "Confirm Rename",
-            f"Rename {len(items_to_rename)} file(s){ref_text}?\n\n"
+            f"Rename {count} file(s){ref_text}?\n\n"
             "This action cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
+        return reply == QMessageBox.StandardButton.Yes
 
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+    def _perform_batch_rename(
+        self, items_to_rename: list[RenameItem], update_refs: bool
+    ) -> tuple[int, int, int]:
+        """Perform batch rename operation.
 
-        # Perform renames
+        Args:
+            items_to_rename: List of items to rename.
+            update_refs: Whether to update markdown references.
+
+        Returns:
+            Tuple of (renamed_count, error_count, total_refs_updated).
+        """
         renamed_count = 0
         error_count = 0
         total_refs_updated = 0
@@ -1250,26 +1286,18 @@ class MainWindow(QMainWindow):
                 old_path = item.path
                 new_path = old_path.parent / item.final_name
 
-                # Skip if already at target name
                 if old_path == new_path:
                     continue
 
-                # Rename the file
                 old_path.rename(new_path)
                 renamed_count += 1
 
-                # Update references if requested
                 if update_refs:
-                    refs = find_references(
-                        old_path,
-                        self.current_folder,
-                        recursive=self.recursive_scan
-                    )
+                    refs = find_references(old_path, self.current_folder, recursive=self.recursive_scan)
                     if refs:
                         updates = update_references(refs, item.source_name, item.final_name)
                         total_refs_updated += sum(u.replacement_count for u in updates)
 
-                # Update item status
                 item.status = RenameStatus.COMPLETED
                 item.status_message = "Successfully renamed"
                 item.source_name = item.final_name
@@ -1281,7 +1309,29 @@ class MainWindow(QMainWindow):
                 item.status_message = f"Rename failed: {e}"
                 item.error_message = str(e)
 
-        # Show results
+        return renamed_count, error_count, total_refs_updated
+
+    def _on_apply_clicked(self) -> None:
+        """Handle Apply button click - rename files and optionally update references."""
+        if not self.rename_items or not self.current_folder:
+            return
+
+        items_to_rename = self._get_items_to_rename()
+
+        if not items_to_rename:
+            QMessageBox.information(
+                self,
+                "Nothing to Rename",
+                "No files need renaming. All files are either unchanged or not yet processed."
+            )
+            return
+
+        update_refs = self.update_refs_checkbox.isChecked()
+        if not self._confirm_batch_rename(len(items_to_rename), update_refs):
+            return
+
+        renamed_count, error_count, total_refs_updated = self._perform_batch_rename(items_to_rename, update_refs)
+
         result_msg = f"Renamed {renamed_count} file(s)"
         if update_refs and total_refs_updated > 0:
             result_msg += f"\nUpdated {total_refs_updated} reference(s)"
@@ -1291,7 +1341,6 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Rename Complete", result_msg)
         self.status_bar.showMessage(f"Renamed {renamed_count} files", 5000)
 
-        # Refresh the table
         self._on_refresh_clicked()
 
     def _on_worker_finished(self, stats: dict) -> None:

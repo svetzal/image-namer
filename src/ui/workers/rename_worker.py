@@ -56,10 +56,105 @@ class RenameWorker(QThread):
         self._stop_requested = False
         self._planned_names: set[str] = set()  # Track planned filenames to avoid collisions
 
+    def _get_or_generate_analysis(self, item: RenameItem, i: int, unified_cache_dir: Path, stats: dict) -> object:
+        """Get analysis from cache or generate using LLM.
+
+        Args:
+            item: RenameItem to analyze.
+            i: Item index for status updates.
+            unified_cache_dir: Cache directory path.
+            stats: Statistics dict to update.
+
+        Returns:
+            Analysis result from operations.analyze_image.
+        """
+        self.item_status_changed.emit(i, "assessing", f"Analyzing {item.source_name}...")
+
+        analysis = load_analysis_from_cache(
+            unified_cache_dir, item.path, item.source_name, self.provider, self.model
+        )
+
+        if analysis is None:
+            self.item_status_changed.emit(i, "generating", f"Analyzing {item.source_name} (calling LLM)...")
+            analysis = analyze_image(item.path, item.source_name, llm=self.llm)
+            save_analysis_to_cache(
+                unified_cache_dir, item.path, item.source_name, self.provider, self.model, analysis
+            )
+        else:
+            self.item_status_changed.emit(i, "cache_hit", f"✓ Analysis cached for {item.source_name}")
+            stats["cached"] += 1
+            item.cached = True
+
+        return analysis
+
+    def _normalize_proposed_extension(self, proposed_ext: str, fallback_ext: str) -> str:
+        """Normalize proposed extension to include leading dot.
+
+        Args:
+            proposed_ext: Extension from proposed name.
+            fallback_ext: Fallback extension from original file.
+
+        Returns:
+            Normalized extension with leading dot.
+        """
+        if proposed_ext.startswith("."):
+            return proposed_ext
+        if not proposed_ext:
+            return fallback_ext
+        return f".{proposed_ext}"
+
+    def _handle_suitable_name(self, item: RenameItem, i: int, stats: dict) -> None:
+        """Handle case where current name is already suitable.
+
+        Args:
+            item: RenameItem with suitable current name.
+            i: Item index for signals.
+            stats: Statistics dict to update.
+        """
+        if not item.manually_edited:
+            item.final_name = item.source_name
+            item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
+        else:
+            item.update_status(RenameStatus.UNCHANGED, "Current name suitable (filename locked by user)")
+
+        stats["unchanged"] += 1
+        self.item_processed.emit(i, item)
+        self.progress_updated.emit(i + 1, len(self.items))
+
+    def _determine_final_name(
+        self, item: RenameItem, proposed_stem: str, proposed_ext: str, proposed_filename: str, i: int, stats: dict
+    ) -> None:
+        """Determine final name considering manual edits, idempotency, and collisions.
+
+        Args:
+            item: RenameItem to process.
+            proposed_stem: Proposed filename stem.
+            proposed_ext: Proposed extension with leading dot.
+            proposed_filename: Full proposed filename.
+            i: Item index for collision resolution.
+            stats: Statistics dict to update.
+        """
+        if item.manually_edited:
+            item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
+            stats["renamed"] += 1
+        elif item.path.stem == proposed_stem:
+            item.update_status(RenameStatus.UNCHANGED, "Proposed name matches current")
+            item.final_name = item.source_name
+            stats["unchanged"] += 1
+        else:
+            final_filename = self._resolve_collision(item.path.parent, proposed_stem, proposed_ext, i)
+
+            if final_filename != proposed_filename:
+                item.update_status(RenameStatus.COLLISION, f"Collision resolved: {final_filename}")
+            else:
+                item.update_status(RenameStatus.READY, "Ready to rename")
+
+            item.final_name = final_filename
+            stats["renamed"] += 1
+
     def run(self) -> None:
         """Process items, emitting signals for real-time UI updates."""
         stats = {"renamed": 0, "unchanged": 0, "cached": 0, "errors": 0}
-
         unified_cache_dir = self.cache_root / "cache" / "unified"
 
         for i, item in enumerate(self.items):
@@ -67,89 +162,20 @@ class RenameWorker(QThread):
                 break
 
             try:
-                # Single unified analysis (replaces assess + generate)
-                self.item_status_changed.emit(
-                    i, "assessing", f"Analyzing {item.source_name}..."
-                )
+                analysis = self._get_or_generate_analysis(item, i, unified_cache_dir, stats)
 
-                analysis = load_analysis_from_cache(
-                    unified_cache_dir, item.path, item.source_name, self.provider, self.model
-                )
-
-                if analysis is None:
-                    # Cache miss - make single LLM call
-                    self.item_status_changed.emit(
-                        i, "generating", f"Analyzing {item.source_name} (calling LLM)..."
-                    )
-
-                    analysis = analyze_image(item.path, item.source_name, llm=self.llm)
-
-                    save_analysis_to_cache(
-                        unified_cache_dir,
-                        item.path,
-                        item.source_name,
-                        self.provider,
-                        self.model,
-                        analysis,
-                    )
-                else:
-                    # Cache hit for unified analysis
-                    self.item_status_changed.emit(
-                        i, "cache_hit", f"✓ Analysis cached for {item.source_name}"
-                    )
-                    stats["cached"] += 1
-                    item.cached = True
-
-                # Extract proposed name and reasoning from analysis
                 proposed = analysis.proposed_name
-                item.reasoning = analysis.reasoning  # Store LLM reasoning
+                item.reasoning = analysis.reasoning
 
-                # Normalize proposed name
-                proposed_ext = proposed.extension if proposed.extension.startswith(".") else f".{proposed.extension}"
-                if not proposed.extension:
-                    proposed_ext = item.path.suffix
-
+                proposed_ext = self._normalize_proposed_extension(proposed.extension, item.path.suffix)
                 proposed_filename = f"{proposed.stem}{proposed_ext}"
-
-                # Always update proposed_name
                 item.proposed_name = proposed_filename
 
-                # Handle suitable names (current name already good)
                 if analysis.current_name_suitable:
-                    # Only update if not manually edited
-                    if not item.manually_edited:
-                        item.final_name = item.source_name
-                        item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
-                    else:
-                        item.update_status(RenameStatus.UNCHANGED, "Current name suitable (filename locked by user)")
-                    stats["unchanged"] += 1
-                    self.item_processed.emit(i, item)
-                    self.progress_updated.emit(i + 1, len(self.items))
+                    self._handle_suitable_name(item, i, stats)
                     continue
 
-                # Only update final_name if not manually edited by user
-                if item.manually_edited:
-                    # User has locked this filename - preserve it
-                    item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
-                    stats["renamed"] += 1
-                elif item.path.stem == proposed.stem:
-                    # Check idempotency
-                    item.update_status(RenameStatus.UNCHANGED, "Proposed name matches current")
-                    item.final_name = item.source_name
-                    stats["unchanged"] += 1
-                else:
-                    # Check for collisions with existing files and already-planned names
-                    final_filename = self._resolve_collision(
-                        item.path.parent, proposed.stem, proposed_ext, i
-                    )
-
-                    if final_filename != proposed_filename:
-                        item.update_status(RenameStatus.COLLISION, f"Collision resolved: {final_filename}")
-                    else:
-                        item.update_status(RenameStatus.READY, "Ready to rename")
-
-                    item.final_name = final_filename
-                    stats["renamed"] += 1
+                self._determine_final_name(item, proposed.stem, proposed_ext, proposed_filename, i, stats)
 
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))

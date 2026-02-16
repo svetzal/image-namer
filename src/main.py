@@ -18,7 +18,7 @@ from rich.table import Table
 
 from operations.find_references import find_references
 from operations.generate_name import generate_name
-from operations.models import ProposedName
+from operations.models import NameAssessment, ProposedName
 from operations.update_references import update_references
 from utils.fs import ensure_cache_layout, next_available_name
 
@@ -481,6 +481,76 @@ def _apply_renames(results: list[dict]) -> None:
     console.print("[green]✓ All renames applied.[/green]")
 
 
+def _get_or_assess_current_name(
+    path: Path, analysis_cache_dir: Path, provider: str, model: str, llm: LLMBroker
+) -> NameAssessment:
+    """Assess if current filename is already suitable (with caching).
+
+    Args:
+        path: Image file path.
+        analysis_cache_dir: Directory for analysis cache.
+        provider: LLM provider name.
+        model: Model name.
+        llm: LLM broker instance.
+
+    Returns:
+        NameAssessment instance.
+
+    Raises:
+        typer.Exit: If assessment fails.
+    """
+    from operations.assess_name import assess_name
+    from operations.cache import load_assessment_from_cache, save_assessment_to_cache
+
+    current_name = path.name
+    current_proposed = ProposedName(stem=path.stem, extension=path.suffix)
+
+    assessment = load_assessment_from_cache(analysis_cache_dir, path, current_name, provider, model)
+
+    if assessment is None:
+        try:
+            assessment = assess_name(path, current_proposed, llm=llm)
+            save_assessment_to_cache(analysis_cache_dir, path, current_name, provider, model, assessment)
+        except Exception as e:
+            console.print(f"[red]Error assessing filename: {e}[/red]")
+            raise typer.Exit(1)
+
+    return assessment
+
+
+def _get_or_generate_new_name(
+    path: Path, names_cache_dir: Path, provider: str, model: str, llm: LLMBroker
+) -> ProposedName:
+    """Generate a new proposed name (with caching).
+
+    Args:
+        path: Image file path.
+        names_cache_dir: Directory for names cache.
+        provider: LLM provider name.
+        model: Model name.
+        llm: LLM broker instance.
+
+    Returns:
+        ProposedName instance.
+
+    Raises:
+        typer.Exit: If name generation fails.
+    """
+    from operations.cache import load_from_cache, save_to_cache
+
+    proposed = load_from_cache(names_cache_dir, path, provider, model)
+
+    if proposed is None:
+        try:
+            proposed = generate_name(path, llm=llm)
+            save_to_cache(names_cache_dir, path, provider, model, proposed)
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1)
+
+    return proposed
+
+
 @app.command()
 def file(
     path: Path = typer.Argument(
@@ -516,7 +586,6 @@ def file(
     _validate_file_type(path)
     _validate_provider(provider)
 
-    # Set up cache and LLM
     cache_root = ensure_cache_layout(Path.cwd())
     analysis_cache_dir = cache_root / "cache" / "analysis"
     names_cache_dir = cache_root / "cache" / "names"
@@ -525,64 +594,24 @@ def file(
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
         llm = LLMBroker(gateway=gateway, model=model)
     except typer.Exit:
-        raise  # Re-raise typer.Exit to allow proper CLI exit
+        raise
     except Exception as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    # First, assess if current filename is already suitable
-    from operations.assess_name import assess_name
-    from operations.cache import (
-        load_assessment_from_cache,
-        load_from_cache,
-        save_assessment_to_cache,
-        save_to_cache,
-    )
+    assessment = _get_or_assess_current_name(path, analysis_cache_dir, provider, model, llm)
 
-    current_name = path.name
-    current_proposed = ProposedName(stem=path.stem, extension=path.suffix)
-
-    assessment = load_assessment_from_cache(
-        analysis_cache_dir, path, current_name, provider, model
-    )
-
-    if assessment is None:
-        try:
-            assessment = assess_name(path, current_proposed, llm=llm)
-            save_assessment_to_cache(
-                analysis_cache_dir, path, current_name, provider, model, assessment
-            )
-        except Exception as e:
-            console.print(f"[red]Error assessing filename: {e}[/red]")
-            raise typer.Exit(1)
-
-    # If current name is suitable, no need to generate a new one
     if assessment.suitable:
         final_name = path.name
         mode_label = "unchanged"
         proposed_stem = path.stem
         proposed_ext = path.suffix
     else:
-        # Current name unsuitable - check cache for proposed name
-        proposed = load_from_cache(names_cache_dir, path, provider, model)
-
-        if proposed is None:
-            # Cache miss - generate name using LLM
-            try:
-                proposed = generate_name(path, llm=llm)
-                save_to_cache(names_cache_dir, path, provider, model, proposed)
-            except Exception as e:
-                console.print(f"[red]Error: {e}[/red]")
-                raise typer.Exit(1)
-
-        # Normalize proposed name
+        proposed = _get_or_generate_new_name(path, names_cache_dir, provider, model, llm)
         proposed_stem = proposed.stem
         proposed_ext = _normalize_extension(proposed.extension, path.suffix)
-
-        # Determine final name (idempotency + collision resolution)
         final_name, mode_label = _determine_final_name(path, proposed_stem, proposed_ext)
 
-    # Show output panel
     console.print(
         Panel.fit(
             f"[dim]Source[/]: {path.name}\n"
@@ -595,10 +624,8 @@ def file(
         )
     )
 
-    # Update markdown references if requested
     _handle_reference_updates(path, final_name, update_refs, refs_root, dry_run)
 
-    # Apply rename if not in dry-run mode
     if not dry_run and final_name != path.name:
         path.rename(path.with_name(final_name))
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=82", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,24 +25,24 @@ classifiers = [
 ]
 # Main runtime dependencies. Keep minimal; GUI is optional for headless use.
 dependencies = [
-    "typer>=0.12.5",
-    "rich>=13.7.0",
-    "pydantic>=2.9.0",
-    "mojentic>=0.8.4",
+    "typer>=0.23.1",
+    "rich>=14.3.2",
+    "pydantic>=2.12.5",
+    "mojentic>=1.2.0",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
 ]
 
 [project.optional-dependencies]
 # Install with: pip install ".[dev]"
 dev = [
-    "pytest>=8.2",
-    "pytest-cov>=5.0",
-    "pytest-mock>=3.14",
-    "flake8>=7.1",
-    "flake8-pyproject>=1.2",
-    "mypy>=1.13",
-    "mkdocs>=1.6",
-    "mkdocs-material>=9.5",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "flake8>=7.3.0",
+    "flake8-pyproject>=1.2.4",
+    "mypy>=1.19.1",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.1",
 ]
 # Install with: pip install ".[gui]"
 # PySide6 provides the Qt-based GUI runtime.
