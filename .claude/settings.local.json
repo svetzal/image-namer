@@ -15,7 +15,11 @@
       "Bash(curl:*)",
       "Read(//Users/svetzal/**)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nRelease v2.1.0\n\nMajor changes:\n- Added single-item rename button in GUI for quick individual file renaming\n- Improved button labeling for clarity (Preview → Analyze All, Apply → Analyze and Rename All)\n- Fixed unused imports for cleaner codebase\n\nSee CHANGELOG.md for full details.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nRelease v2.1.0\n\nMajor changes:\n- Added single-item rename button in GUI for quick individual file renaming\n- Improved button labeling for clarity (Preview → Analyze All, Apply → Analyze and Rename All)\n- Fixed unused imports for cleaner codebase\n\nSee CHANGELOG.md for full details.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(gh release view:*)"
     ],
     "deny": [],
     "ask": []

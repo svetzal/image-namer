@@ -1,0 +1,19 @@
+{
+  "gates": [
+    {
+      "name": "test",
+      "command": "pytest",
+      "required": true
+    },
+    {
+      "name": "lint",
+      "command": "flake8 src",
+      "required": true
+    },
+    {
+      "name": "typecheck",
+      "command": "mypy src",
+      "required": false
+    }
+  ]
+}
