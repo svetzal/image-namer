@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=82", "wheel"]
+requires = ["setuptools>=82.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,7 +25,7 @@ classifiers = [
 ]
 # Main runtime dependencies. Keep minimal; GUI is optional for headless use.
 dependencies = [
-    "typer>=0.23.1",
+    "typer>=0.24.0",
     "rich>=14.3.2",
     "pydantic>=2.12.5",
     "mojentic>=1.2.0",
@@ -42,13 +42,13 @@ dev = [
     "flake8-pyproject>=1.2.4",
     "mypy>=1.19.1",
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.7.1",
+    "mkdocs-material>=9.7.2",
 ]
 # Install with: pip install ".[gui]"
 # PySide6 provides the Qt-based GUI runtime.
 # Note: wheels are platform-specific; pin loosely and let pip resolve the right one.
 "gui" = [
-    "PySide6>=6.7",
+    "PySide6>=6.8",
 ]
 
 [project.urls]

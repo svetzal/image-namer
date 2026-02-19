@@ -2,17 +2,17 @@
   "gates": [
     {
       "name": "test",
-      "command": "pytest",
+      "command": "uv run pytest",
       "required": true
     },
     {
       "name": "lint",
-      "command": "flake8 src",
+      "command": "uv run flake8 src",
       "required": true
     },
     {
       "name": "typecheck",
-      "command": "mypy src",
+      "command": "uv run mypy src",
       "required": false
     }
   ]
