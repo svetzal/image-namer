@@ -26,7 +26,7 @@ classifiers = [
 # Main runtime dependencies. Keep minimal; GUI is optional for headless use.
 dependencies = [
     "typer>=0.24.0",
-    "rich>=14.3.2",
+    "rich>=14.3.3",
     "pydantic>=2.12.5",
     "mojentic>=1.2.0",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
