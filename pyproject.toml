@@ -33,7 +33,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Install with: pip install ".[dev]"
+# Install with: uv sync --extra gui
+# PySide6 provides the Qt-based GUI runtime.
+# Note: wheels are platform-specific; pin loosely and let pip resolve the right one.
+"gui" = [
+    "PySide6>=6.7",
+]
+
+[dependency-groups]
+# Dev dependencies — local only, never published to PyPI
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
@@ -44,12 +52,9 @@ dev = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.2",
 ]
-# Install with: pip install ".[gui]"
-# PySide6 provides the Qt-based GUI runtime.
-# Note: wheels are platform-specific; pin loosely and let pip resolve the right one.
-"gui" = [
-    "PySide6>=6.8",
-]
+
+[tool.uv]
+default-groups = ["dev"]
 
 [project.urls]
 Homepage = "https://github.com/svetzal/image-namer"
