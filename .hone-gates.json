@@ -13,7 +13,7 @@
     {
       "name": "typecheck",
       "command": "uv run mypy src",
-      "required": false
+      "required": true
     }
   ]
 }
