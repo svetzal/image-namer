@@ -37,6 +37,9 @@ jobs:
           uv run flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 \
             --statistics
 
+      - name: Type-check with mypy
+        run: uv run mypy src
+
       - name: Test with pytest
         run: |
           uv run pytest --junitxml=junit/test-results.xml --cov=src \

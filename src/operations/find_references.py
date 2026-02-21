@@ -49,7 +49,7 @@ def find_references(
     return references
 
 
-def _get_reference_patterns() -> dict[str, re.Pattern]:
+def _get_reference_patterns() -> dict[str, re.Pattern[str]]:
     """Get compiled regex patterns for markdown references.
 
     Returns:
@@ -69,7 +69,7 @@ def _find_references_in_line(
     md_file: Path,
     image_path: Path,
     image_name: str,
-    patterns: dict[str, re.Pattern]
+    patterns: dict[str, re.Pattern[str]]
 ) -> list[MarkdownReference]:
     """Find all references in a single line.
 

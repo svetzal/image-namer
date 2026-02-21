@@ -13,6 +13,7 @@ from operations.cache import (
     load_analysis_from_cache,
     save_analysis_to_cache,
 )
+from operations.models import ImageAnalysis
 from ui.models.ui_models import RenameItem, RenameStatus
 
 
@@ -56,7 +57,9 @@ class RenameWorker(QThread):
         self._stop_requested = False
         self._planned_names: set[str] = set()  # Track planned filenames to avoid collisions
 
-    def _get_or_generate_analysis(self, item: RenameItem, i: int, unified_cache_dir: Path, stats: dict) -> object:
+    def _get_or_generate_analysis(
+        self, item: RenameItem, i: int, unified_cache_dir: Path, stats: dict[str, int]
+    ) -> ImageAnalysis:
         """Get analysis from cache or generate using LLM.
 
         Args:
@@ -103,7 +106,7 @@ class RenameWorker(QThread):
             return fallback_ext
         return f".{proposed_ext}"
 
-    def _handle_suitable_name(self, item: RenameItem, i: int, stats: dict) -> None:
+    def _handle_suitable_name(self, item: RenameItem, i: int, stats: dict[str, int]) -> None:
         """Handle case where current name is already suitable.
 
         Args:
@@ -122,7 +125,13 @@ class RenameWorker(QThread):
         self.progress_updated.emit(i + 1, len(self.items))
 
     def _determine_final_name(
-        self, item: RenameItem, proposed_stem: str, proposed_ext: str, proposed_filename: str, i: int, stats: dict
+        self,
+        item: RenameItem,
+        proposed_stem: str,
+        proposed_ext: str,
+        proposed_filename: str,
+        i: int,
+        stats: dict[str, int],
     ) -> None:
         """Determine final name considering manual edits, idempotency, and collisions.
 

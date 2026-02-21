@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from mojentic.llm import MessageBuilder, LLMBroker
 
@@ -27,4 +28,4 @@ def generate_name(
         .add_image(path)
         .build()
     ]
-    return llm.generate_object(messages, object_model=ProposedName)
+    return cast(ProposedName, llm.generate_object(messages, object_model=ProposedName))

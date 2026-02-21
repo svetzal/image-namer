@@ -25,10 +25,10 @@ classifiers = [
 ]
 # Main runtime dependencies. Keep minimal; GUI is optional for headless use.
 dependencies = [
-    "typer>=0.24.0",
+    "typer>=0.24.1",
     "rich>=14.3.3",
     "pydantic>=2.12.5",
-    "mojentic>=1.2.0",
+    "mojentic>=1.2.1",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
 ]
 
@@ -110,3 +110,20 @@ strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_return_any = true
+# src-layout: resolve imports from src/ rather than the installed (stub-less) package
+mypy_path = "src"
+explicit_package_bases = true
+# Test spec files follow project convention (no return/arg type annotations required)
+exclude = [".*_spec\\.py$", "conftest\\.py$"]
+
+[[tool.mypy.overrides]]
+# PySide6 ships no stubs and is an optional extra not installed in the dev env
+# mojentic ships no py.typed marker yet
+module = ["PySide6.*", "mojentic.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# PySide6 returns Any for all its types (no stubs, optional extra not in dev env).
+# Subclassing QThread, QLabel, QMainWindow etc. would all trigger misc errors.
+module = ["ui.*"]
+disallow_subclassing_any = false

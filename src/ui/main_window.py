@@ -5,11 +5,12 @@ Contains the primary application layout with table, toolbar, and controls.
 
 import os
 from pathlib import Path
+from typing import Any
 
 from mojentic.llm import LLMBroker
 from mojentic.llm.gateways import OllamaGateway, OpenAIGateway
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QPixmap, QResizeEvent
+from PySide6.QtGui import QCloseEvent, QPixmap, QResizeEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -42,10 +43,10 @@ from utils.fs import ensure_cache_layout
 class ResizableImageLabel(QLabel):
     """QLabel subclass that emits signal when resized."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize resizable image label."""
         super().__init__(parent)
-        self.main_window = None
+        self.main_window: "MainWindow | None" = None
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize event to rescale image.
@@ -143,7 +144,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready")
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Handle window close - stop workers if running.
 
         Args:
@@ -1156,7 +1157,7 @@ class MainWindow(QMainWindow):
         old_path.rename(new_path)
 
         total_refs_updated = 0
-        if self.update_refs_checkbox.isChecked():
+        if self.update_refs_checkbox.isChecked() and self.current_folder is not None:
             refs = find_references(old_path, self.current_folder, recursive=self.recursive_scan)
             if refs:
                 updates = update_references(refs, old_name, new_name)
@@ -1263,7 +1264,7 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
-        return reply == QMessageBox.StandardButton.Yes
+        return bool(reply == QMessageBox.StandardButton.Yes)
 
     def _perform_batch_rename(
         self, items_to_rename: list[RenameItem], update_refs: bool
@@ -1292,7 +1293,7 @@ class MainWindow(QMainWindow):
                 old_path.rename(new_path)
                 renamed_count += 1
 
-                if update_refs:
+                if update_refs and self.current_folder is not None:
                     refs = find_references(old_path, self.current_folder, recursive=self.recursive_scan)
                     if refs:
                         updates = update_references(refs, item.source_name, item.final_name)
@@ -1343,7 +1344,7 @@ class MainWindow(QMainWindow):
 
         self._on_refresh_clicked()
 
-    def _on_worker_finished(self, stats: dict) -> None:
+    def _on_worker_finished(self, stats: dict[str, Any]) -> None:
         """Handle worker completion.
 
         Args:

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from mojentic.llm import LLMBroker, MessageBuilder
 
@@ -32,4 +33,4 @@ def assess_name(
         .build()
     ]
 
-    return llm.generate_object(messages, object_model=NameAssessment)
+    return cast(NameAssessment, llm.generate_object(messages, object_model=NameAssessment))

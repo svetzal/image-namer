@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from mojentic.llm import LLMBroker, MessageBuilder
 
@@ -55,4 +56,4 @@ def analyze_image(
         .build()
     ]
 
-    return llm.generate_object(messages, object_model=ImageAnalysis)
+    return cast(ImageAnalysis, llm.generate_object(messages, object_model=ImageAnalysis))

@@ -7,7 +7,7 @@ Command logic is kept here for simplicity; business logic lives in operations/.
 import os
 import sys
 from pathlib import Path
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 import typer
 from mojentic.llm import LLMBroker
@@ -18,7 +18,7 @@ from rich.table import Table
 
 from operations.find_references import find_references
 from operations.generate_name import generate_name
-from operations.models import NameAssessment, ProposedName
+from operations.models import MarkdownReference, NameAssessment, ProposedName
 from operations.update_references import update_references
 from utils.fs import ensure_cache_layout, next_available_name
 
@@ -176,7 +176,7 @@ def _process_single_image(
     cache_root: Path,
     provider: str,
     model: str,
-) -> dict:
+) -> dict[str, Any]:
     """Process a single image file to determine its new name.
 
     Args:
@@ -312,7 +312,7 @@ def _find_next_available_in_batch(
         suffix_num += 1
 
 
-def _display_results_table(results: list[dict], dry_run: bool) -> None:
+def _display_results_table(results: list[dict[str, Any]], dry_run: bool) -> None:
     """Display results in a formatted table.
 
     Args:
@@ -344,7 +344,7 @@ def _display_results_table(results: list[dict], dry_run: bool) -> None:
     console.print(table)
 
 
-def _print_statistics(results: list[dict]) -> None:
+def _print_statistics(results: list[dict[str, Any]]) -> None:
     """Print summary statistics for processed files.
 
     Args:
@@ -363,7 +363,7 @@ def _print_statistics(results: list[dict]) -> None:
 
 
 def _handle_batch_reference_updates(
-    results: list[dict],
+    results: list[dict[str, Any]],
     search_root: Path,
     dry_run: bool
 ) -> None:
@@ -417,7 +417,7 @@ def _handle_batch_reference_updates(
         )
 
 
-def _ref_matches_filename(ref, filename: str) -> bool:
+def _ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
     """Check if a reference matches a filename.
 
     Handles URL-encoded paths and Unicode whitespace normalization.
@@ -450,7 +450,7 @@ def _ref_matches_filename(ref, filename: str) -> bool:
             return True
 
         # Normalize Unicode spaces for comparison
-        def normalize_spaces(text):
+        def normalize_spaces(text: str) -> str:
             normalized = unicodedata.normalize('NFKC', text)
             return ' '.join(normalized.split())
 
@@ -466,7 +466,7 @@ def _ref_matches_filename(ref, filename: str) -> bool:
     return False
 
 
-def _apply_renames(results: list[dict]) -> None:
+def _apply_renames(results: list[dict[str, Any]]) -> None:
     """Apply the renames to the filesystem.
 
     Args:

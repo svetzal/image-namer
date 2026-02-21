@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 def get_settings_path() -> Path:
@@ -27,7 +27,7 @@ def load_settings() -> dict[str, Any]:
 
     try:
         with open(settings_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            return cast(dict[str, Any], json.load(f))
     except (json.JSONDecodeError, OSError):
         # If settings file is corrupted, return empty dict
         return {}
