@@ -1,5 +1,7 @@
 # AGENTS.md — Project Guidance for AI Coding Assistants
 
+Why this project exists and what problem does it solve: @CHARTER.md
+
 This file provides unified guidance for all AI coding assistants working with this repository.
 
 ## About the Author
