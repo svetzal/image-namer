@@ -203,3 +203,43 @@ def _normalize_spaces(text: str) -> str:
     normalized = unicodedata.normalize('NFKC', text)
     # Replace all whitespace characters with regular space
     return ' '.join(normalized.split())
+
+
+def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
+    """Check if a markdown reference matches a given filename.
+
+    Handles URL-encoded paths and Unicode whitespace normalization.
+    Used during batch reference updates to match references by old filename.
+
+    Args:
+        ref: MarkdownReference object to check.
+        filename: The filename to match against.
+
+    Returns:
+        True if the reference matches the filename.
+    """
+    from urllib.parse import unquote
+
+    ref_name = str(ref.image_path.name)
+    ref_stem = str(ref.image_path.stem)
+
+    if ref_name == filename:
+        return True
+
+    if ref_stem == Path(filename).stem:
+        return True
+
+    try:
+        decoded_name = unquote(ref_name)
+        if decoded_name == filename:
+            return True
+
+        if _normalize_spaces(decoded_name) == _normalize_spaces(filename):
+            return True
+
+        if _normalize_spaces(unquote(ref_stem)) == _normalize_spaces(Path(filename).stem):
+            return True
+    except Exception:
+        pass
+
+    return False

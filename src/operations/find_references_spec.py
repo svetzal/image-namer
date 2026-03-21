@@ -1,5 +1,8 @@
 """Tests for find_references operation."""
-from .find_references import find_references
+from pathlib import Path
+
+from .find_references import find_references, ref_matches_filename
+from .models import MarkdownReference
 
 
 def should_find_standard_image_references(tmp_path):
@@ -270,3 +273,51 @@ def should_find_references_with_spaces_in_paths(tmp_path):
 
     assert len(refs) == 1
     assert refs[0].ref_type == "image"
+
+
+def should_ref_match_direct_filename(tmp_path):
+    ref = MarkdownReference(
+        file_path=tmp_path / "doc.md",
+        line_number=1,
+        original_text="![](photo.png)",
+        image_path=Path("photo.png"),
+        ref_type="image",
+    )
+
+    assert ref_matches_filename(ref, "photo.png") is True
+
+
+def should_ref_match_by_stem_only(tmp_path):
+    ref = MarkdownReference(
+        file_path=tmp_path / "doc.md",
+        line_number=1,
+        original_text="![[photo]]",
+        image_path=Path("photo"),
+        ref_type="wiki_embed",
+    )
+
+    assert ref_matches_filename(ref, "photo.png") is True
+
+
+def should_ref_match_url_encoded_filename(tmp_path):
+    ref = MarkdownReference(
+        file_path=tmp_path / "doc.md",
+        line_number=1,
+        original_text="![](my%20photo.png)",
+        image_path=Path("my%20photo.png"),
+        ref_type="image",
+    )
+
+    assert ref_matches_filename(ref, "my photo.png") is True
+
+
+def should_ref_not_match_different_filename(tmp_path):
+    ref = MarkdownReference(
+        file_path=tmp_path / "doc.md",
+        line_number=1,
+        original_text="![](other.png)",
+        image_path=Path("other.png"),
+        ref_type="image",
+    )
+
+    assert ref_matches_filename(ref, "photo.png") is False

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Final
 
-from constants import RUBRIC_VERSION
+from constants import RUBRIC_VERSION, SUPPORTED_EXTENSIONS
 
 # Top-level cache directory name (dot folder in repo root)
 CACHE_ROOT_NAME: Final[str] = ".image_namer"
@@ -111,3 +111,20 @@ def next_available_name(dir: Path, stem: str, ext: str) -> str:
         if normalize(name) not in existing_norm:
             return name
         n += 1
+
+
+def collect_image_files(path: Path, recursive: bool) -> list[Path]:
+    """Collect all image files in a directory.
+
+    Args:
+        path: Directory to search.
+        recursive: Whether to search recursively.
+
+    Returns:
+        List of image file paths, sorted by name for consistent ordering.
+    """
+    if recursive:
+        files = [p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
+    else:
+        files = [p for p in path.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
+    return sorted(files)

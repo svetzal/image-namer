@@ -1,7 +1,7 @@
 import hashlib
 from pathlib import Path
 
-from utils.fs import sha256_file, ensure_cache_layout
+from utils.fs import collect_image_files, ensure_cache_layout, sha256_file
 from constants import RUBRIC_VERSION
 
 
@@ -41,3 +41,56 @@ def should_ensure_cache_layout_and_write_version(tmp_path: Path) -> None:
 
     assert cache_root2 == cache_root
     assert before == after
+
+
+def should_collect_png_and_jpg_files(tmp_path: Path) -> None:
+    (tmp_path / "a.png").write_bytes(b"x")
+    (tmp_path / "b.jpg").write_bytes(b"y")
+    (tmp_path / "c.txt").write_text("not an image")
+
+    files = collect_image_files(tmp_path, recursive=False)
+
+    assert len(files) == 2
+    assert all(f.suffix in {".png", ".jpg"} for f in files)
+
+
+def should_exclude_non_image_files(tmp_path: Path) -> None:
+    (tmp_path / "doc.txt").write_text("text")
+    (tmp_path / "data.csv").write_text("csv")
+
+    files = collect_image_files(tmp_path, recursive=False)
+
+    assert files == []
+
+
+def should_collect_recursively_when_flag_set(tmp_path: Path) -> None:
+    (tmp_path / "root.png").write_bytes(b"x")
+    subdir = tmp_path / "sub"
+    subdir.mkdir()
+    (subdir / "nested.png").write_bytes(b"y")
+
+    files = collect_image_files(tmp_path, recursive=True)
+
+    assert len(files) == 2
+
+
+def should_not_collect_recursively_when_flag_false(tmp_path: Path) -> None:
+    (tmp_path / "root.png").write_bytes(b"x")
+    subdir = tmp_path / "sub"
+    subdir.mkdir()
+    (subdir / "nested.png").write_bytes(b"y")
+
+    files = collect_image_files(tmp_path, recursive=False)
+
+    assert len(files) == 1
+    assert files[0].name == "root.png"
+
+
+def should_return_sorted_files(tmp_path: Path) -> None:
+    (tmp_path / "c.png").write_bytes(b"x")
+    (tmp_path / "a.png").write_bytes(b"y")
+    (tmp_path / "b.png").write_bytes(b"z")
+
+    files = collect_image_files(tmp_path, recursive=False)
+
+    assert [f.name for f in files] == ["a.png", "b.png", "c.png"]

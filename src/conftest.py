@@ -6,6 +6,16 @@ import pytest
 from operations.models import ProposedName, NameAssessment
 
 
+@pytest.fixture
+def cache_dirs(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Create standard cache directory layout and return cache root."""
+    analysis_dir = tmp_path / ".image_namer" / "cache" / "analysis"
+    names_dir = tmp_path / ".image_namer" / "cache" / "names"
+    analysis_dir.mkdir(parents=True)
+    names_dir.mkdir(parents=True)
+    return tmp_path / ".image_namer"
+
+
 class FakeLLM:
     """A minimal stand-in for LLMBroker used in tests.
 

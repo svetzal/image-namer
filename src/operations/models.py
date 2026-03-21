@@ -1,5 +1,7 @@
+from enum import StrEnum
 from pathlib import Path
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class NameAssessment(BaseModel):
@@ -79,3 +81,46 @@ class ReferenceUpdate(BaseModel):
     """
     file_path: Path = Field(..., description="Path to the updated markdown file")
     replacement_count: int = Field(..., description="Number of replacements made")
+
+
+class RenameStatus(StrEnum):
+    """Status of a single image processing operation."""
+
+    RENAMED = "renamed"
+    UNCHANGED = "unchanged"
+    COLLISION = "collision"
+    ERROR = "error"
+
+
+class ProcessingResult(BaseModel):
+    """Result of processing a single image file.
+
+    Attributes:
+        source: Original filename.
+        proposed: The LLM-proposed filename.
+        final: The resolved final filename after collision resolution.
+        status: What happened during processing.
+        path: Original file path (needed for rename application and reference updates).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str = Field(..., description="Original filename")
+    proposed: str = Field(..., description="LLM-proposed filename")
+    final: str = Field(..., description="Resolved final filename")
+    status: RenameStatus = Field(..., description="Processing outcome")
+    path: Path | None = Field(default=None, description="Original file path")
+
+
+class BatchReferenceResult(BaseModel):
+    """Result of batch markdown reference updates.
+
+    Attributes:
+        total_references: Total number of reference replacements made.
+        files_updated: Number of distinct markdown files modified.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    total_references: int = Field(..., description="Total reference replacements")
+    files_updated: int = Field(..., description="Number of markdown files updated")
