@@ -21,15 +21,13 @@ from operations.batch_references import apply_batch_reference_updates, count_bat
 from operations.find_references import find_references
 from operations.generate_name import generate_name
 from operations.models import (
-    NameAssessment,
     ProcessingResult,
-    ProposedName,
     RenameStatus,
 )
 from operations.process_folder import compute_statistics, process_folder
-from operations.process_image import normalize_extension
+from operations.process_image import process_single_image
 from operations.update_references import update_references
-from utils.fs import collect_image_files, ensure_cache_layout, next_available_name
+from utils.fs import collect_image_files, ensure_cache_layout
 
 # Runtime Python version enforcement (see REVIEW.md #12)
 if sys.version_info < (3, 13):  # pragma: no cover - defensive
@@ -70,29 +68,6 @@ def _validate_provider(provider: str) -> None:
     if provider not in SUPPORTED_PROVIDERS:
         console.print(f"[red]Invalid provider: {provider}[/red]")
         raise typer.Exit(2)
-
-
-def _determine_final_name(path: Path, proposed_stem: str, proposed_ext: str) -> tuple[str, str]:
-    """Determine final filename after idempotency and collision checks.
-
-    Args:
-        path: Original file path.
-        proposed_stem: Proposed stem from LLM.
-        proposed_ext: Proposed extension (with leading dot).
-
-    Returns:
-        Tuple of (final_name, mode_label).
-    """
-    current_stem = path.stem
-    if current_stem == proposed_stem:
-        return path.name, "unchanged"
-
-    candidate = f"{proposed_stem}{proposed_ext}"
-    if (path.parent / candidate).exists():
-        final_name = next_available_name(path.parent, proposed_stem, proposed_ext)
-        return final_name, "collision-resolved"
-
-    return candidate, "proposed"
 
 
 def _handle_reference_updates(
@@ -195,76 +170,6 @@ def _apply_renames(results: list[ProcessingResult]) -> None:
     console.print("[green]✓ All renames applied.[/green]")
 
 
-def _get_or_assess_current_name(
-    path: Path, analysis_cache_dir: Path, provider: str, model: str, llm: LLMBroker
-) -> NameAssessment:
-    """Assess if current filename is already suitable (with caching).
-
-    Args:
-        path: Image file path.
-        analysis_cache_dir: Directory for analysis cache.
-        provider: LLM provider name.
-        model: Model name.
-        llm: LLM broker instance.
-
-    Returns:
-        NameAssessment instance.
-
-    Raises:
-        typer.Exit: If assessment fails.
-    """
-    from operations.assess_name import assess_name
-    from operations.cache import load_assessment_from_cache, save_assessment_to_cache
-
-    current_name = path.name
-    current_proposed = ProposedName(stem=path.stem, extension=path.suffix)
-
-    assessment = load_assessment_from_cache(analysis_cache_dir, path, current_name, provider, model)
-
-    if assessment is None:
-        try:
-            assessment = assess_name(path, current_proposed, llm=llm)
-            save_assessment_to_cache(analysis_cache_dir, path, current_name, provider, model, assessment)
-        except Exception as e:
-            console.print(f"[red]Error assessing filename: {e}[/red]")
-            raise typer.Exit(1)
-
-    return assessment
-
-
-def _get_or_generate_new_name(
-    path: Path, names_cache_dir: Path, provider: str, model: str, llm: LLMBroker
-) -> ProposedName:
-    """Generate a new proposed name (with caching).
-
-    Args:
-        path: Image file path.
-        names_cache_dir: Directory for names cache.
-        provider: LLM provider name.
-        model: Model name.
-        llm: LLM broker instance.
-
-    Returns:
-        ProposedName instance.
-
-    Raises:
-        typer.Exit: If name generation fails.
-    """
-    from operations.cache import load_from_cache, save_to_cache
-
-    proposed = load_from_cache(names_cache_dir, path, provider, model)
-
-    if proposed is None:
-        try:
-            proposed = generate_name(path, llm=llm)
-            save_to_cache(names_cache_dir, path, provider, model, proposed)
-        except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
-            raise typer.Exit(1)
-
-    return proposed
-
-
 @app.command()
 def file(
     path: Path = typer.Argument(
@@ -302,8 +207,6 @@ def file(
     _validate_provider(provider)
 
     cache_root = ensure_cache_layout(Path.cwd())
-    analysis_cache_dir = cache_root / "cache" / "analysis"
-    names_cache_dir = cache_root / "cache" / "names"
 
     try:
         gateway = _get_gateway(provider)  # type: ignore[arg-type]
@@ -314,24 +217,25 @@ def file(
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    assessment = _get_or_assess_current_name(path, analysis_cache_dir, provider, model, llm)
+    result = process_single_image(path, llm, set(), cache_root, provider, model)
 
-    if assessment.suitable:
-        final_name = path.name
-        mode_label = "unchanged"
-        proposed_stem = path.stem
-        proposed_ext = path.suffix
-    else:
-        proposed = _get_or_generate_new_name(path, names_cache_dir, provider, model, llm)
-        proposed_stem = proposed.stem
-        proposed_ext = normalize_extension(proposed.extension, path.suffix)
-        final_name, mode_label = _determine_final_name(path, proposed_stem, proposed_ext)
+    if result.status == RenameStatus.ERROR:
+        console.print(f"[red]Error processing {path.name}[/red]")
+        raise typer.Exit(1)
+
+    status_labels = {
+        RenameStatus.UNCHANGED: "unchanged",
+        RenameStatus.RENAMED: "proposed",
+        RenameStatus.COLLISION: "collision-resolved",
+        RenameStatus.ERROR: "error",
+    }
+    mode_label = status_labels[result.status]
 
     console.print(
         Panel.fit(
-            f"[dim]Source[/]: {path.name}\n"
-            f"[bold]Proposed[/]: {proposed_stem}{proposed_ext}\n"
-            f"[bold]Final[/]: {final_name}\n"
+            f"[dim]Source[/]: {result.source}\n"
+            f"[bold]Proposed[/]: {result.proposed}\n"
+            f"[bold]Final[/]: {result.final}\n"
             f"[dim]Provider[/]: {provider}  [dim]Model[/]: {model}  [dim]Mode[/]: "
             f"{'dry-run' if dry_run else 'apply'} ({mode_label})",
             title="image-namer: file",
@@ -339,10 +243,10 @@ def file(
         )
     )
 
-    _handle_reference_updates(path, final_name, update_refs, refs_root, dry_run)
+    _handle_reference_updates(path, result.final, update_refs, refs_root, dry_run)
 
-    if not dry_run and final_name != path.name:
-        path.rename(path.with_name(final_name))
+    if not dry_run and result.final != path.name:
+        path.rename(path.with_name(result.final))
 
 
 @app.command()

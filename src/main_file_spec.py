@@ -6,19 +6,9 @@ import pytest
 from typer.testing import CliRunner
 
 import main as cli
-from operations.models import NameAssessment, ProposedName
+from operations.models import ProcessingResult, RenameStatus
 
 runner = CliRunner()
-
-
-class _LLMStub:
-    def __init__(self, gateway=None, model: str | None = None, payload: dict | None = None):
-        self.payload = payload or {"stem": "cat--sitting", "extension": ".png"}
-
-    def generate_object(self, messages, object_model):
-        if object_model is NameAssessment:
-            return NameAssessment(suitable=False)
-        return ProposedName(**self.payload)
 
 
 def should_reject_unsupported_type(tmp_path: Path) -> None:
@@ -56,7 +46,17 @@ def should_follow_flag_env_default_precedence(
     src = tmp_path / "a.png"
     src.write_bytes(b"x")
 
-    mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: _LLMStub(gateway, model))
+    mocker.patch(
+        "main.process_single_image",
+        return_value=ProcessingResult(
+            source="a.png",
+            proposed="a.png",
+            final="a.png",
+            status=RenameStatus.UNCHANGED,
+            path=src,
+        ),
+    )
+    mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: object())
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
 
     env = {
@@ -75,3 +75,25 @@ def should_follow_flag_env_default_precedence(
     assert result.exit_code == 0
     assert f"Provider: {expect_provider}" in result.output
     assert f"Model: {expect_model}" in result.output
+
+
+def should_exit_with_error_when_processing_fails(tmp_path: Path, mocker) -> None:
+    src = tmp_path / "a.png"
+    src.write_bytes(b"x")
+
+    mocker.patch(
+        "main.process_single_image",
+        return_value=ProcessingResult(
+            source="a.png",
+            proposed="ERROR",
+            final="a.png",
+            status=RenameStatus.ERROR,
+        ),
+    )
+    mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: object())
+    mocker.patch.object(cli, "_get_gateway", lambda provider: object())
+
+    result = runner.invoke(cli.app, ["file", str(src)])
+
+    assert result.exit_code == 1
+    assert "Error" in result.output
