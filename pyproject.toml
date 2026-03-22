@@ -44,7 +44,7 @@ dependencies = [
 # Dev dependencies — local only, never published to PyPI
 dev = [
     "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
+    "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
     "flake8>=7.3.0",
     "flake8-pyproject>=1.2.4",
