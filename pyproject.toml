@@ -78,6 +78,7 @@ image-namer-ui = "ui.main:main"
 minversion = "8.0"
 testpaths = ["src"]
 python_files = "*_spec.py"
+python_classes = "Describe*"
 python_functions = "should_*"
 addopts = "-q --cov=src --cov-report=term-missing"
 
