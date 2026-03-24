@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from mojentic.llm import LLMBroker
-from mojentic.llm.gateways import OllamaGateway, OpenAIGateway
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QPixmap, QResizeEvent
 from PySide6.QtWidgets import (
@@ -32,12 +31,13 @@ from PySide6.QtWidgets import (
 )
 
 from operations.find_references import find_references
+from operations.gateway_factory import MissingApiKeyError, create_gateway
 from operations.update_references import update_references
 from ui.models.ui_models import RenameItem, RenameStatus
 from ui.settings import get_setting, set_setting
 from ui.workers.cache_loader import CacheLoaderWorker
 from ui.workers.rename_worker import RenameWorker
-from utils.fs import ensure_cache_layout
+from utils.fs import collect_image_files, ensure_cache_layout
 
 
 class ResizableImageLabel(QLabel):
@@ -67,9 +67,6 @@ class MainWindow(QMainWindow):
     - Center: Splitter with preview panel (left) and results table (right)
     - Bottom: Progress bar, status label, action buttons
     """
-
-    # Supported image extensions (from main.py)
-    SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff"}
 
     def __init__(self) -> None:
         """Initialize main window with layout and widgets."""
@@ -471,16 +468,12 @@ class MainWindow(QMainWindow):
             }
 
             try:
-                # Create gateway and fetch available models
-                if provider == "ollama":
-                    gateway = OllamaGateway()
-                else:  # openai
-                    api_key = os.environ.get("OPENAI_API_KEY")
-                    if not api_key:
-                        # Can't query without API key, use defaults
-                        self.model_combo.addItems(default_models[provider])
-                        return
-                    gateway = OpenAIGateway(api_key=api_key)
+                try:
+                    gateway = create_gateway(provider)
+                except MissingApiKeyError:
+                    # Can't query without API key — use defaults
+                    self.model_combo.addItems(default_models[provider])
+                    return
 
                 # Get available models from gateway
                 models = gateway.get_available_models()
@@ -820,19 +813,7 @@ class MainWindow(QMainWindow):
         if not self.current_folder:
             return
 
-        # Collect image files (reuse logic from main.py _collect_image_files)
-        if self.recursive_scan:
-            # Recursive scan - search all subdirectories
-            image_files = sorted([
-                p for p in self.current_folder.rglob("*")
-                if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTENSIONS
-            ])
-        else:
-            # Flat scan - current directory only
-            image_files = sorted([
-                p for p in self.current_folder.iterdir()
-                if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTENSIONS
-            ])
+        image_files = collect_image_files(self.current_folder, self.recursive_scan)
 
         if not image_files:
             self.status_bar.showMessage(
@@ -977,13 +958,6 @@ class MainWindow(QMainWindow):
         provider = self.provider_combo.currentText()
         model = self.model_combo.currentText()
 
-        # Validate provider
-        if provider == "openai" and "OPENAI_API_KEY" not in os.environ:
-            self.status_bar.showMessage(
-                "Error: OPENAI_API_KEY not set. Please configure in environment.", 5000
-            )
-            return
-
         # Setup cache
         cache_root = ensure_cache_layout(
             self.current_folder if self.current_folder else Path.cwd()
@@ -991,12 +965,11 @@ class MainWindow(QMainWindow):
 
         # Create LLM gateway and broker
         try:
-            if provider == "ollama":
-                gateway = OllamaGateway()
-            else:
-                gateway = OpenAIGateway(api_key=os.environ["OPENAI_API_KEY"])
-
+            gateway = create_gateway(provider)
             llm = LLMBroker(gateway=gateway, model=model)
+        except MissingApiKeyError as e:
+            self.status_bar.showMessage(f"Error: {e}", 5000)
+            return
         except Exception as e:
             self.status_bar.showMessage(f"Error setting up LLM: {e}", 5000)
             return

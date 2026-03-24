@@ -13,7 +13,9 @@ from operations.cache import (
     load_analysis_from_cache,
     save_analysis_to_cache,
 )
-from operations.models import ImageAnalysis
+from operations.models import ImageAnalysis, ProposedName
+from operations.models import RenameStatus as OpsRenameStatus
+from operations.process_image import normalize_extension, resolve_final_name
 from ui.models.ui_models import RenameItem, RenameStatus
 
 
@@ -62,6 +64,9 @@ class RenameWorker(QThread):
     ) -> ImageAnalysis:
         """Get analysis from cache or generate using LLM.
 
+        Emits status signals before and after the operation so the UI can
+        show real-time progress.
+
         Args:
             item: RenameItem to analyze.
             i: Item index for status updates.
@@ -90,22 +95,6 @@ class RenameWorker(QThread):
 
         return analysis
 
-    def _normalize_proposed_extension(self, proposed_ext: str, fallback_ext: str) -> str:
-        """Normalize proposed extension to include leading dot.
-
-        Args:
-            proposed_ext: Extension from proposed name.
-            fallback_ext: Fallback extension from original file.
-
-        Returns:
-            Normalized extension with leading dot.
-        """
-        if proposed_ext.startswith("."):
-            return proposed_ext
-        if not proposed_ext:
-            return fallback_ext
-        return f".{proposed_ext}"
-
     def _handle_suitable_name(self, item: RenameItem, i: int, stats: dict[str, int]) -> None:
         """Handle case where current name is already suitable.
 
@@ -127,37 +116,40 @@ class RenameWorker(QThread):
     def _determine_final_name(
         self,
         item: RenameItem,
-        proposed_stem: str,
-        proposed_ext: str,
+        proposed: ProposedName,
         proposed_filename: str,
-        i: int,
         stats: dict[str, int],
     ) -> None:
         """Determine final name considering manual edits, idempotency, and collisions.
 
+        Delegates to the shared ``resolve_final_name`` function for idempotency
+        and collision logic, mapping operations status values to UI status values.
+
         Args:
             item: RenameItem to process.
-            proposed_stem: Proposed filename stem.
-            proposed_ext: Proposed extension with leading dot.
-            proposed_filename: Full proposed filename.
-            i: Item index for collision resolution.
+            proposed: Proposed filename components from the LLM.
+            proposed_filename: Full proposed filename string (for display).
             stats: Statistics dict to update.
         """
         if item.manually_edited:
             item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
             stats["renamed"] += 1
-        elif item.path.stem == proposed_stem:
+            return
+
+        _, final_filename, ops_status = resolve_final_name(
+            item.path, proposed, self._planned_names
+        )
+
+        if ops_status == OpsRenameStatus.UNCHANGED:
             item.update_status(RenameStatus.UNCHANGED, "Proposed name matches current")
             item.final_name = item.source_name
             stats["unchanged"] += 1
+        elif ops_status == OpsRenameStatus.COLLISION:
+            item.update_status(RenameStatus.COLLISION, f"Collision resolved: {final_filename}")
+            item.final_name = final_filename
+            stats["renamed"] += 1
         else:
-            final_filename = self._resolve_collision(item.path.parent, proposed_stem, proposed_ext, i)
-
-            if final_filename != proposed_filename:
-                item.update_status(RenameStatus.COLLISION, f"Collision resolved: {final_filename}")
-            else:
-                item.update_status(RenameStatus.READY, "Ready to rename")
-
+            item.update_status(RenameStatus.READY, "Ready to rename")
             item.final_name = final_filename
             stats["renamed"] += 1
 
@@ -176,7 +168,7 @@ class RenameWorker(QThread):
                 proposed = analysis.proposed_name
                 item.reasoning = analysis.reasoning
 
-                proposed_ext = self._normalize_proposed_extension(proposed.extension, item.path.suffix)
+                proposed_ext = normalize_extension(proposed.extension, item.path.suffix)
                 proposed_filename = f"{proposed.stem}{proposed_ext}"
                 item.proposed_name = proposed_filename
 
@@ -184,7 +176,7 @@ class RenameWorker(QThread):
                     self._handle_suitable_name(item, i, stats)
                     continue
 
-                self._determine_final_name(item, proposed.stem, proposed_ext, proposed_filename, i, stats)
+                self._determine_final_name(item, proposed, proposed_filename, stats)
 
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))
@@ -202,44 +194,3 @@ class RenameWorker(QThread):
     def stop(self) -> None:
         """Request graceful shutdown."""
         self._stop_requested = True
-
-    def _resolve_collision(self, directory: Path, stem: str, ext: str, current_index: int) -> str:
-        """Resolve filename collisions.
-
-        Checks both filesystem and planned names from batch processing.
-
-        Args:
-            directory: Directory where file will be renamed.
-            stem: Proposed filename stem.
-            ext: File extension with leading dot.
-            current_index: Index of current item being processed.
-
-        Returns:
-            Final filename (may be same as proposed, or with -2, -3, etc. suffix).
-        """
-        candidate = f"{stem}{ext}"
-
-        # Check if this collides with existing file on disk
-        if (directory / candidate).exists():
-            # Make sure it's not the source file itself
-            if current_index < len(self.items):
-                source_name = self.items[current_index].source_name
-                if candidate == source_name:
-                    # Proposed name is same as source - no collision
-                    self._planned_names.add(candidate)
-                    return candidate
-
-        # Check if already planned in this batch
-        if candidate not in self._planned_names:
-            # No collision - use as-is
-            self._planned_names.add(candidate)
-            return candidate
-
-        # Collision detected - find next available with suffix
-        suffix_num = 2
-        while True:
-            test_name = f"{stem}-{suffix_num}{ext}"
-            if not (directory / test_name).exists() and test_name not in self._planned_names:
-                self._planned_names.add(test_name)
-                return test_name
-            suffix_num += 1

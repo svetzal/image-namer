@@ -57,6 +57,7 @@ def ensure_cache_layout(repo_root: Path) -> Path:
     (cache_root / "cache" / "analysis").mkdir(parents=True, exist_ok=True)
     (cache_root / "cache" / "names").mkdir(parents=True, exist_ok=True)
     (cache_root / "cache" / "refs").mkdir(parents=True, exist_ok=True)
+    (cache_root / "cache" / "unified").mkdir(parents=True, exist_ok=True)
     (cache_root / "runs").mkdir(parents=True, exist_ok=True)
 
     version_file = cache_root / "version"

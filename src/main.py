@@ -4,10 +4,9 @@ This module defines the Typer application and all CLI commands.
 Command logic is kept thin; all business logic lives in operations/.
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Final, Literal
+from typing import Final
 
 import typer
 from mojentic.llm import LLMBroker
@@ -19,6 +18,7 @@ from rich.table import Table
 from constants import SUPPORTED_EXTENSIONS
 from operations.batch_references import apply_batch_reference_updates, count_batch_references
 from operations.find_references import find_references
+from operations.gateway_factory import MissingApiKeyError, create_gateway
 from operations.generate_name import generate_name
 from operations.models import (
     ProcessingResult,
@@ -209,7 +209,7 @@ def file(
     cache_root = ensure_cache_layout(Path.cwd())
 
     try:
-        gateway = _get_gateway(provider)  # type: ignore[arg-type]
+        gateway = _get_gateway(provider)
         llm = LLMBroker(gateway=gateway, model=model)
     except typer.Exit:
         raise
@@ -297,7 +297,7 @@ def folder(
     cache_root = ensure_cache_layout(Path.cwd())
 
     try:
-        gateway = _get_gateway(provider)  # type: ignore[arg-type]
+        gateway = _get_gateway(provider)
         llm = LLMBroker(gateway=gateway, model=model)
     except typer.Exit:
         raise
@@ -370,7 +370,7 @@ def generate(
     _validate_provider(provider)
 
     try:
-        gateway = _get_gateway(provider)  # type: ignore[arg-type]
+        gateway = _get_gateway(provider)
         llm = LLMBroker(gateway=gateway, model=model)
 
         proposed = generate_name(path, llm=llm)
@@ -394,25 +394,23 @@ def generate(
         console.print("[yellow]Apply mode is not implemented yet. No changes made.[/]")
 
 
-def _get_gateway(provider: Literal["openai", "ollama"]) -> OllamaGateway | OpenAIGateway:
+def _get_gateway(provider: str) -> OllamaGateway | OpenAIGateway:
     """Create the appropriate LLM gateway for the given provider.
 
     Args:
-        provider: Either "ollama" or "openai"
+        provider: Either "ollama" or "openai".
 
     Returns:
-        Gateway instance for the specified provider
+        Gateway instance for the specified provider.
 
     Raises:
         typer.Exit: If provider configuration is invalid.
     """
-    if provider == "ollama":
-        return OllamaGateway()
-    else:
-        if "OPENAI_API_KEY" not in os.environ:
-            console.print("[red]OPENAI_API_KEY environment variable not set[/red]")
-            raise typer.Exit(2)
-        return OpenAIGateway(api_key=os.environ["OPENAI_API_KEY"])
+    try:
+        return create_gateway(provider)
+    except MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(2)
 
 
 def main() -> None:

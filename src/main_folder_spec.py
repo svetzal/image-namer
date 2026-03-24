@@ -5,7 +5,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 import main as cli
-from operations.models import NameAssessment, ProposedName
+from operations.models import ImageAnalysis, ProposedName
 
 runner = CliRunner()
 
@@ -16,11 +16,15 @@ class _LLMStub:
         self._call_count = 0
 
     def generate_object(self, messages, object_model):
-        if object_model is NameAssessment:
-            return NameAssessment(suitable=False)
-        self._call_count += 1
-        payload = self.name_map.get(self._call_count, {"stem": "default-image", "extension": ".png"})
-        return ProposedName(**payload)
+        if object_model is ImageAnalysis:
+            self._call_count += 1
+            payload = self.name_map.get(self._call_count, {"stem": "default-image", "extension": ".png"})
+            return ImageAnalysis(
+                current_name_suitable=False,
+                proposed_name=ProposedName(**payload),
+                reasoning="stub",
+            )
+        raise AssertionError(f"Unexpected object_model: {object_model}")
 
 
 def should_handle_empty_folder(tmp_path: Path) -> None:
@@ -51,10 +55,8 @@ def should_rename_images_in_folder(tmp_path: Path, mocker) -> None:
     )
     mocker.patch.object(cli, "LLMBroker", lambda gateway=None, model=None: stub)
     mocker.patch.object(cli, "_get_gateway", lambda provider: object())
-    mocker.patch("operations.process_image.load_from_cache", return_value=None)
-    mocker.patch("operations.process_image.save_to_cache", return_value=None)
-    mocker.patch("operations.process_image.load_assessment_from_cache", return_value=None)
-    mocker.patch("operations.process_image.save_assessment_to_cache", return_value=None)
+    mocker.patch("operations.process_image.load_analysis_from_cache", return_value=None)
+    mocker.patch("operations.process_image.save_analysis_to_cache")
 
     result = runner.invoke(cli.app, ["folder", str(tmp_path), "--apply"])
 

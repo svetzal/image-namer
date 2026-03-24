@@ -1,6 +1,6 @@
 """Tests for batch folder processing orchestration."""
 
-from operations.models import NameAssessment, ProcessingResult, ProposedName, RenameStatus
+from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
 from operations.process_folder import compute_statistics, process_folder
 
 
@@ -17,22 +17,23 @@ def should_process_all_images_in_list(
     for img in imgs:
         img.write_bytes(b"x")
 
-    mocker.patch(
-        "operations.process_image.load_assessment_from_cache",
-        return_value=NameAssessment(suitable=False),
-    )
-
     call_count = 0
 
-    def fake_generate(path, llm=None):
+    def fake_analyze(path, name, llm=None):
         nonlocal call_count
         call_count += 1
-        return ProposedName(stem=f"name-{call_count}", extension=".png")
+        return ImageAnalysis(
+            current_name_suitable=False,
+            proposed_name=ProposedName(stem=f"name-{call_count}", extension=".png"),
+            reasoning="",
+        )
 
-    mocker.patch("operations.process_image.generate_name", side_effect=fake_generate)
-    mocker.patch("operations.process_image.load_from_cache", return_value=None)
-    mocker.patch("operations.process_image.save_to_cache")
-    mocker.patch("operations.process_image.save_assessment_to_cache")
+    mocker.patch(
+        "operations.process_image.load_analysis_from_cache",
+        return_value=None,
+    )
+    mocker.patch("operations.process_image.analyze_image", side_effect=fake_analyze)
+    mocker.patch("operations.process_image.save_analysis_to_cache")
 
     results = process_folder(imgs, fake_llm, cache_dirs, "ollama", "gemma3:27b")
 
@@ -48,19 +49,18 @@ def should_track_planned_names_across_images(
     img2.write_bytes(b"y")
 
     mocker.patch(
-        "operations.process_image.load_assessment_from_cache",
-        return_value=NameAssessment(suitable=False),
-    )
-    mocker.patch(
-        "operations.process_image.load_from_cache",
+        "operations.process_image.load_analysis_from_cache",
         return_value=None,
     )
     mocker.patch(
-        "operations.process_image.generate_name",
-        return_value=ProposedName(stem="same-name", extension=".png"),
+        "operations.process_image.analyze_image",
+        return_value=ImageAnalysis(
+            current_name_suitable=False,
+            proposed_name=ProposedName(stem="same-name", extension=".png"),
+            reasoning="",
+        ),
     )
-    mocker.patch("operations.process_image.save_to_cache")
-    mocker.patch("operations.process_image.save_assessment_to_cache")
+    mocker.patch("operations.process_image.save_analysis_to_cache")
 
     results = process_folder(
         [img1, img2], fake_llm, cache_dirs, "ollama", "gemma3:27b"

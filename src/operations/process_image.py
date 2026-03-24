@@ -8,15 +8,12 @@ from pathlib import Path
 
 from mojentic.llm import LLMBroker
 
-from operations.assess_name import assess_name
+from operations.analyze_image import analyze_image
 from operations.cache import (
-    load_assessment_from_cache,
-    load_from_cache,
-    save_assessment_to_cache,
-    save_to_cache,
+    load_analysis_from_cache,
+    save_analysis_to_cache,
 )
-from operations.generate_name import generate_name
-from operations.models import ProcessingResult, ProposedName, RenameStatus
+from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
 
 
 def normalize_extension(proposed_ext: str, fallback_ext: str) -> str:
@@ -51,7 +48,7 @@ def find_next_available_in_batch(
         planned_names: Set of already planned filenames.
 
     Returns:
-        Next available filename.
+        Next available filename (stem-2.ext, stem-3.ext, ...).
     """
     suffix_num = 2
     while True:
@@ -59,6 +56,82 @@ def find_next_available_in_batch(
         if not (directory / test_name).exists() and test_name not in planned_names:
             return test_name
         suffix_num += 1
+
+
+def get_or_generate_analysis(
+    img_path: Path,
+    current_name: str,
+    llm: LLMBroker,
+    cache_dir: Path,
+    provider: str,
+    model: str,
+) -> ImageAnalysis:
+    """Get analysis from cache or generate via LLM.
+
+    Args:
+        img_path: Path to the image file.
+        current_name: Current filename (used as cache key component).
+        llm: LLM broker for analysis generation.
+        cache_dir: Unified cache directory (cache/unified).
+        provider: LLM provider name for cache key.
+        model: Model name for cache key.
+
+    Returns:
+        ImageAnalysis result.
+
+    Raises:
+        Exception: Propagates any LLM or I/O failure to the caller.
+    """
+    analysis = load_analysis_from_cache(cache_dir, img_path, current_name, provider, model)
+    if analysis is None:
+        analysis = analyze_image(img_path, current_name, llm=llm)
+        save_analysis_to_cache(cache_dir, img_path, current_name, provider, model, analysis)
+    return analysis
+
+
+def resolve_final_name(
+    img_path: Path,
+    proposed: ProposedName,
+    planned_names: set[str],
+) -> tuple[str, str, RenameStatus]:
+    """Resolve proposed name to a final filename, handling idempotency and collisions.
+
+    Mutates ``planned_names`` by adding the resolved final filename when a rename
+    is needed (RENAMED or COLLISION status).
+
+    Args:
+        img_path: Path to the image file (used for idempotency check and collision detection).
+        proposed: Proposed filename components from the LLM.
+        planned_names: Set of already reserved filenames in the current batch.
+            This set is mutated when a name is reserved.
+
+    Returns:
+        Tuple of (proposed_filename, final_filename, status) where:
+
+        - proposed_filename: The raw LLM proposal as a full filename string.
+        - final_filename: The collision-resolved filename that will be used.
+        - status: UNCHANGED if no rename needed, RENAMED for clean rename,
+          COLLISION if a suffix was added.
+    """
+    proposed_stem = proposed.stem
+    proposed_ext = normalize_extension(proposed.extension, img_path.suffix)
+    proposed_filename = f"{proposed_stem}{proposed_ext}"
+
+    if img_path.stem == proposed_stem:
+        return proposed_filename, img_path.name, RenameStatus.UNCHANGED
+
+    candidate = proposed_filename
+    if (img_path.parent / candidate).exists() or candidate in planned_names:
+        final_name = find_next_available_in_batch(
+            img_path.parent, proposed_stem, proposed_ext, planned_names
+        )
+        status = RenameStatus.COLLISION
+    else:
+        final_name = candidate
+        status = RenameStatus.RENAMED
+
+    planned_names.add(final_name)
+    return proposed_filename, final_name, status
 
 
 def process_single_image(
@@ -71,8 +144,8 @@ def process_single_image(
 ) -> ProcessingResult:
     """Process a single image file to determine its new name.
 
-    Runs assessment-first: if current filename is already suitable, skip generation.
-    All errors are captured in the result rather than raised.
+    Uses a unified single-LLM-call strategy (assess + name in one call) with
+    cache-first optimisation. All errors are captured in the result rather than raised.
 
     Args:
         img_path: Path to the image file.
@@ -86,31 +159,22 @@ def process_single_image(
     Returns:
         ProcessingResult describing what happened.
     """
-    analysis_cache_dir = cache_root / "cache" / "analysis"
-    names_cache_dir = cache_root / "cache" / "names"
-
+    unified_cache_dir = cache_root / "cache" / "unified"
     current_name = img_path.name
-    current_proposed = ProposedName(stem=img_path.stem, extension=img_path.suffix)
 
-    assessment = load_assessment_from_cache(
-        analysis_cache_dir, img_path, current_name, provider, model
-    )
+    try:
+        analysis = get_or_generate_analysis(
+            img_path, current_name, llm, unified_cache_dir, provider, model
+        )
+    except Exception:
+        return ProcessingResult(
+            source=img_path.name,
+            proposed="ERROR",
+            final=img_path.name,
+            status=RenameStatus.ERROR,
+        )
 
-    if assessment is None:
-        try:
-            assessment = assess_name(img_path, current_proposed, llm=llm)
-            save_assessment_to_cache(
-                analysis_cache_dir, img_path, current_name, provider, model, assessment
-            )
-        except Exception:
-            return ProcessingResult(
-                source=img_path.name,
-                proposed="ERROR",
-                final=img_path.name,
-                status=RenameStatus.ERROR,
-            )
-
-    if assessment.suitable:
+    if analysis.current_name_suitable:
         return ProcessingResult(
             source=img_path.name,
             proposed=img_path.name,
@@ -119,47 +183,22 @@ def process_single_image(
             path=img_path,
         )
 
-    proposed = load_from_cache(names_cache_dir, img_path, provider, model)
+    proposed_filename, final_name, status = resolve_final_name(
+        img_path, analysis.proposed_name, planned_names
+    )
 
-    if proposed is None:
-        try:
-            proposed = generate_name(img_path, llm=llm)
-            save_to_cache(names_cache_dir, img_path, provider, model, proposed)
-        except Exception:
-            return ProcessingResult(
-                source=img_path.name,
-                proposed="ERROR",
-                final=img_path.name,
-                status=RenameStatus.ERROR,
-            )
-
-    proposed_stem = proposed.stem
-    proposed_ext = normalize_extension(proposed.extension, img_path.suffix)
-
-    if img_path.stem == proposed_stem:
+    if status == RenameStatus.UNCHANGED:
         return ProcessingResult(
             source=img_path.name,
-            proposed=f"{proposed_stem}{proposed_ext}",
+            proposed=proposed_filename,
             final=img_path.name,
             status=RenameStatus.UNCHANGED,
             path=img_path,
         )
 
-    candidate = f"{proposed_stem}{proposed_ext}"
-    if (img_path.parent / candidate).exists() or candidate in planned_names:
-        final_name = find_next_available_in_batch(
-            img_path.parent, proposed_stem, proposed_ext, planned_names
-        )
-        status = RenameStatus.COLLISION
-    else:
-        final_name = candidate
-        status = RenameStatus.RENAMED
-
-    planned_names.add(final_name)
-
     return ProcessingResult(
         source=img_path.name,
-        proposed=candidate,
+        proposed=proposed_filename,
         final=final_name,
         status=status,
         path=img_path,

@@ -3,16 +3,15 @@ import typing as t
 
 import pytest
 
-from operations.models import ProposedName, NameAssessment
+from operations.models import ImageAnalysis, NameAssessment, ProposedName
 
 
 @pytest.fixture
 def cache_dirs(tmp_path: pathlib.Path) -> pathlib.Path:
     """Create standard cache directory layout and return cache root."""
-    analysis_dir = tmp_path / ".image_namer" / "cache" / "analysis"
-    names_dir = tmp_path / ".image_namer" / "cache" / "names"
-    analysis_dir.mkdir(parents=True)
-    names_dir.mkdir(parents=True)
+    (tmp_path / ".image_namer" / "cache" / "analysis").mkdir(parents=True)
+    (tmp_path / ".image_namer" / "cache" / "names").mkdir(parents=True)
+    (tmp_path / ".image_namer" / "cache" / "unified").mkdir(parents=True)
     return tmp_path / ".image_namer"
 
 
@@ -35,6 +34,13 @@ class FakeLLM:
         if object_model is NameAssessment:
             data = self.payload or {"suitable": True}
             return NameAssessment(**data)
+        if object_model is ImageAnalysis:
+            data = self.payload or {
+                "current_name_suitable": True,
+                "proposed_name": {"stem": "primary-subject--specific-detail", "extension": ".png"},
+                "reasoning": "Test reasoning",
+            }
+            return ImageAnalysis(**data)
         raise AssertionError("Unexpected object_model requested")
 
 
