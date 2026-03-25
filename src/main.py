@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from constants import SUPPORTED_EXTENSIONS
+from operations.adapters import FilesystemAnalysisCache, MojenticImageAnalyzer
 from operations.batch_references import apply_batch_reference_updates, count_batch_references
 from operations.find_references import find_references
 from operations.gateway_factory import MissingApiKeyError, create_gateway
@@ -217,7 +218,9 @@ def file(
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    result = process_single_image(path, llm, set(), cache_root, provider, model)
+    unified_cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
+    analyzer = MojenticImageAnalyzer(llm)
+    result = process_single_image(path, analyzer, unified_cache, set(), provider, model)
 
     if result.status == RenameStatus.ERROR:
         console.print(f"[red]Error processing {path.name}[/red]")
@@ -305,7 +308,9 @@ def folder(
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    results = process_folder(image_files, llm, cache_root, provider, model)
+    unified_cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
+    analyzer = MojenticImageAnalyzer(llm)
+    results = process_folder(image_files, analyzer, unified_cache, provider, model)
 
     _display_results_table(results, dry_run)
     _print_statistics(results)

@@ -1,21 +1,20 @@
 """Batch folder processing orchestration.
 
 Contains pure functions for processing multiple image files and computing statistics.
-No I/O side effects — no printing, no filesystem mutations.
+No printing, no filesystem mutations beyond what's injected through ports.
 """
 
 from pathlib import Path
 
-from mojentic.llm import LLMBroker
-
 from operations.models import ProcessingResult, RenameStatus
+from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_image import process_single_image
 
 
 def process_folder(
     image_files: list[Path],
-    llm: LLMBroker,
-    cache_root: Path,
+    analyzer: ImageAnalyzerPort,
+    cache: AnalysisCachePort,
     provider: str,
     model: str,
 ) -> list[ProcessingResult]:
@@ -23,8 +22,8 @@ def process_folder(
 
     Args:
         image_files: List of image file paths to process.
-        llm: LLM broker for name generation.
-        cache_root: Path to the cache root directory (.image_namer).
+        analyzer: Image analyzer for generating analysis.
+        cache: Analysis cache for loading/saving results.
         provider: LLM provider name for cache key.
         model: Model name for cache key.
 
@@ -33,7 +32,7 @@ def process_folder(
     """
     planned_names: set[str] = set()
     return [
-        process_single_image(img, llm, planned_names, cache_root, provider, model)
+        process_single_image(img, analyzer, cache, planned_names, provider, model)
         for img in image_files
     ]
 

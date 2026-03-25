@@ -1,25 +1,29 @@
 """Tests for batch folder processing orchestration."""
 
+from unittest.mock import Mock
+
 from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
+from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_folder import compute_statistics, process_folder
 
 
-def should_return_empty_list_for_empty_input(fake_llm, cache_dirs):
-    results = process_folder([], fake_llm, cache_dirs, "ollama", "gemma3:27b")
+def should_return_empty_list_for_empty_input():
+    cache = Mock(spec=AnalysisCachePort)
+    analyzer = Mock(spec=ImageAnalyzerPort)
+
+    results = process_folder([], analyzer, cache, "ollama", "gemma3:27b")
 
     assert results == []
 
 
-def should_process_all_images_in_list(
-    tmp_path, fake_llm, cache_dirs, mocker
-):
+def should_process_all_images_in_list(tmp_path):
     imgs = [tmp_path / f"img{i}.png" for i in range(3)]
     for img in imgs:
         img.write_bytes(b"x")
 
     call_count = 0
 
-    def fake_analyze(path, name, llm=None):
+    def fake_analyze(path, name):
         nonlocal call_count
         call_count += 1
         return ImageAnalysis(
@@ -28,42 +32,33 @@ def should_process_all_images_in_list(
             reasoning="",
         )
 
-    mocker.patch(
-        "operations.process_image.load_analysis_from_cache",
-        return_value=None,
-    )
-    mocker.patch("operations.process_image.analyze_image", side_effect=fake_analyze)
-    mocker.patch("operations.process_image.save_analysis_to_cache")
+    cache = Mock(spec=AnalysisCachePort)
+    cache.load.return_value = None
+    analyzer = Mock(spec=ImageAnalyzerPort)
+    analyzer.analyze.side_effect = fake_analyze
 
-    results = process_folder(imgs, fake_llm, cache_dirs, "ollama", "gemma3:27b")
+    results = process_folder(imgs, analyzer, cache, "ollama", "gemma3:27b")
 
     assert len(results) == 3
 
 
-def should_track_planned_names_across_images(
-    tmp_path, fake_llm, cache_dirs, mocker
-):
+def should_track_planned_names_across_images(tmp_path):
     img1 = tmp_path / "a.png"
     img2 = tmp_path / "b.png"
     img1.write_bytes(b"x")
     img2.write_bytes(b"y")
 
-    mocker.patch(
-        "operations.process_image.load_analysis_from_cache",
-        return_value=None,
+    cache = Mock(spec=AnalysisCachePort)
+    cache.load.return_value = None
+    analyzer = Mock(spec=ImageAnalyzerPort)
+    analyzer.analyze.return_value = ImageAnalysis(
+        current_name_suitable=False,
+        proposed_name=ProposedName(stem="same-name", extension=".png"),
+        reasoning="",
     )
-    mocker.patch(
-        "operations.process_image.analyze_image",
-        return_value=ImageAnalysis(
-            current_name_suitable=False,
-            proposed_name=ProposedName(stem="same-name", extension=".png"),
-            reasoning="",
-        ),
-    )
-    mocker.patch("operations.process_image.save_analysis_to_cache")
 
     results = process_folder(
-        [img1, img2], fake_llm, cache_dirs, "ollama", "gemma3:27b"
+        [img1, img2], analyzer, cache, "ollama", "gemma3:27b"
     )
 
     assert results[0].status == RenameStatus.RENAMED

@@ -47,6 +47,8 @@ The codebase follows a clean separation between CLI and business logic:
 | File | Purpose |
 |------|---------|
 | `src/operations/models.py` | All Pydantic models |
+| `src/operations/ports.py` | Protocol definitions for I/O boundaries (`AnalysisCachePort`, `ImageAnalyzerPort`) |
+| `src/operations/adapters.py` | Concrete implementations of ports (`FilesystemAnalysisCache`, `MojenticImageAnalyzer`) |
 | `src/operations/cache.py` | Cache key generation, load/save for assessments and names. Uses `constants.RUBRIC_VERSION` for cache invalidation |
 | `src/operations/generate_name.py` | Vision naming with rubric prompt (5-8 words, `<subject>--<detail>` structure, 80 char max) |
 | `src/operations/assess_name.py` | Suitability assessment (checks if current filename matches rubric) |
@@ -175,6 +177,7 @@ uv run image-namer folder path/to/dir --provider openai --model gpt-4o
 - No docstrings on test functions
 - No conditional statements in tests
 - Each test fails for exactly one reason
+- For I/O boundaries defined in `ports.py`, inject `Mock(spec=AnalysisCachePort)` and `Mock(spec=ImageAnalyzerPort)` directly — never use `mocker.patch()` on module-internal imports like `operations.process_image.load_analysis_from_cache`
 
 Shared fixtures live in `conftest.py`:
 
@@ -211,10 +214,14 @@ def should_call_llm_with_rubric_prompt(mocker, tmp_image_path, fake_llm):
 ## Adding New Operations
 
 1. Define Pydantic models in `src/operations/models.py`
-2. Create a pure function in `src/operations/{name}.py` accepting domain objects + `LLMBroker`
-3. Return a Pydantic model — never a raw dict
-4. Co-locate `{name}_spec.py` with test fixtures from `conftest.py`
-5. Wire into the CLI command in `main.py` (keep it thin)
+2. If the operation requires I/O (filesystem, LLM, external API):
+   - Define a Protocol in `src/operations/ports.py` for each I/O boundary
+   - Create a concrete adapter class in `src/operations/adapters.py` wrapping the real implementation
+   - Inject the port into the operation function rather than calling I/O functions directly
+3. Create a pure function in `src/operations/{name}.py` accepting domain objects and port interfaces
+4. Return a Pydantic model — never a raw dict
+5. Co-locate `{name}_spec.py` with test fixtures from `conftest.py`; use `Mock(spec=PortClass)` for I/O boundaries
+6. Wire into the CLI command in `main.py` by constructing the concrete adapters and passing them in (keep command logic thin)
 
 ## Release Process
 
