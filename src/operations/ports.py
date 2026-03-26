@@ -72,3 +72,16 @@ class ImageAnalyzerPort(Protocol):
             ImageAnalysis containing assessment, proposed name, and reasoning.
         """
         ...
+
+
+class FileRenamerPort(Protocol):
+    """Port for renaming files on the filesystem."""
+
+    def rename(self, source: Path, destination: Path) -> None:
+        """Rename a file from source to destination.
+
+        Args:
+            source: Current file path.
+            destination: New file path.
+        """
+        ...

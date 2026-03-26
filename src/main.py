@@ -16,7 +16,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from constants import SUPPORTED_EXTENSIONS
-from operations.adapters import FilesystemAnalysisCache, MojenticImageAnalyzer
+from operations.adapters import FilesystemRenamer
+from operations.apply_renames import apply_renames
 from operations.batch_references import apply_batch_reference_updates, count_batch_references
 from operations.find_references import find_references
 from operations.gateway_factory import MissingApiKeyError, create_gateway
@@ -25,6 +26,7 @@ from operations.models import (
     ProcessingResult,
     RenameStatus,
 )
+from operations.pipeline_factory import build_analysis_pipeline
 from operations.process_folder import compute_statistics, process_folder
 from operations.process_image import process_single_image
 from operations.update_references import update_references
@@ -162,12 +164,7 @@ def _apply_renames(results: list[ProcessingResult]) -> None:
     Args:
         results: List of processing results.
     """
-    for result in results:
-        if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
-            img_path = result.path
-            final_path = img_path.with_name(result.final)
-            if final_path != img_path:
-                img_path.rename(final_path)
+    apply_renames(results, FilesystemRenamer())
     console.print("[green]✓ All renames applied.[/green]")
 
 
@@ -210,17 +207,15 @@ def file(
     cache_root = ensure_cache_layout(Path.cwd())
 
     try:
-        gateway = _get_gateway(provider)
-        llm = LLMBroker(gateway=gateway, model=model)
-    except typer.Exit:
-        raise
+        pipeline = build_analysis_pipeline(provider, model, cache_root)
+    except MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(2)
     except Exception as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    unified_cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
-    analyzer = MojenticImageAnalyzer(llm)
-    result = process_single_image(path, analyzer, unified_cache, set(), provider, model)
+    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
 
     if result.status == RenameStatus.ERROR:
         console.print(f"[red]Error processing {path.name}[/red]")
@@ -300,17 +295,15 @@ def folder(
     cache_root = ensure_cache_layout(Path.cwd())
 
     try:
-        gateway = _get_gateway(provider)
-        llm = LLMBroker(gateway=gateway, model=model)
-    except typer.Exit:
-        raise
+        pipeline = build_analysis_pipeline(provider, model, cache_root)
+    except MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(2)
     except Exception as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 
-    unified_cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
-    analyzer = MojenticImageAnalyzer(llm)
-    results = process_folder(image_files, analyzer, unified_cache, provider, model)
+    results = process_folder(image_files, pipeline.analyzer, pipeline.cache, provider, model)
 
     _display_results_table(results, dry_run)
     _print_statistics(results)

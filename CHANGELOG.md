@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Next]
+
+### Changed
+- Extracted rename application logic from CLI into `operations/apply_renames.py` with `FileRenamerPort` for clean port injection
+- Extracted LLM pipeline construction into `operations/pipeline_factory.py`, eliminating duplication across commands
+- Removed CLI integration tests that violated the "only mock gateway/boundary classes" principle
+- Retained thin CLI validation smoke tests that verify argument handling without internal patching
+
 ## [2.1.0] - 2025-11-06
 
 ### Added

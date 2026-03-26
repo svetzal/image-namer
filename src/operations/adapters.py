@@ -72,3 +72,16 @@ class MojenticImageAnalyzer:
     ) -> ImageAnalysis:
         """Analyze an image using the bound LLM broker."""
         return analyze_image(path, current_name, llm=self._llm)
+
+
+class FilesystemRenamer:
+    """Filesystem implementation of FileRenamerPort."""
+
+    def rename(self, source: Path, destination: Path) -> None:
+        """Rename a file on disk.
+
+        Args:
+            source: Current file path.
+            destination: New file path.
+        """
+        source.rename(destination)

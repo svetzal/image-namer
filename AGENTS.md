@@ -47,8 +47,10 @@ The codebase follows a clean separation between CLI and business logic:
 | File | Purpose |
 |------|---------|
 | `src/operations/models.py` | All Pydantic models |
-| `src/operations/ports.py` | Protocol definitions for I/O boundaries (`AnalysisCachePort`, `ImageAnalyzerPort`) |
-| `src/operations/adapters.py` | Concrete implementations of ports (`FilesystemAnalysisCache`, `MojenticImageAnalyzer`) |
+| `src/operations/ports.py` | Protocol definitions for I/O boundaries (`AnalysisCachePort`, `ImageAnalyzerPort`, `FileRenamerPort`) |
+| `src/operations/adapters.py` | Concrete implementations of ports (`FilesystemAnalysisCache`, `MojenticImageAnalyzer`, `FilesystemRenamer`) |
+| `src/operations/apply_renames.py` | Apply rename operations from processing results via `FileRenamerPort` |
+| `src/operations/pipeline_factory.py` | Factory for constructing gateway -> broker -> cache -> analyzer pipeline |
 | `src/operations/cache.py` | Cache key generation, load/save for assessments and names. Uses `constants.RUBRIC_VERSION` for cache invalidation |
 | `src/operations/generate_name.py` | Vision naming with rubric prompt (5-8 words, `<subject>--<detail>` structure, 80 char max) |
 | `src/operations/assess_name.py` | Suitability assessment (checks if current filename matches rubric) |
