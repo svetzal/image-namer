@@ -4,11 +4,14 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from .models import MarkdownReference
+from .ports import MarkdownFilePort
+from .text_utils import normalize_spaces
 
 
 def find_references(
     image_path: Path,
     refs_root: Path,
+    markdown_files: MarkdownFilePort,
     *,
     recursive: bool = True
 ) -> list[MarkdownReference]:
@@ -24,6 +27,7 @@ def find_references(
     Args:
         image_path: Path to the image file to find references to.
         refs_root: Root directory to search for markdown files.
+        markdown_files: Port for discovering and reading markdown files.
         recursive: Whether to search subdirectories recursively.
 
     Returns:
@@ -33,14 +37,9 @@ def find_references(
     image_name = image_path.name
     patterns = _get_reference_patterns()
 
-    # Find all markdown files
-    pattern = "**/*.md" if recursive else "*.md"
-    for md_file in refs_root.glob(pattern):
-        if not md_file.is_file():
-            continue
-
-        with open(md_file, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+    for md_file in markdown_files.find_markdown_files(refs_root, recursive=recursive):
+        content = markdown_files.read_markdown_content(md_file)
+        lines = content.splitlines(keepends=True)
 
         for line_num, line in enumerate(lines, start=1):
             refs = _find_references_in_line(line, line_num, md_file, image_path, image_name, patterns)
@@ -157,7 +156,7 @@ def _matches_url_decoded(ref_path: Path, image_path: Path, image_name: str) -> b
         if decoded_name == image_name:
             return True
         # Also try normalizing whitespace (various Unicode spaces to regular space)
-        if _normalize_spaces(decoded_name) == _normalize_spaces(image_name):
+        if normalize_spaces(decoded_name) == normalize_spaces(image_name):
             return True
     except Exception:
         pass
@@ -189,22 +188,6 @@ def _matches_by_full_path(ref_path: Path, image_path: Path) -> bool:
         return False
 
 
-def _normalize_spaces(text: str) -> str:
-    """Normalize all whitespace characters to regular spaces.
-
-    Args:
-        text: Text to normalize.
-
-    Returns:
-        Text with all Unicode whitespace normalized to ASCII space.
-    """
-    import unicodedata
-    # Normalize Unicode (e.g., decompose combined characters)
-    normalized = unicodedata.normalize('NFKC', text)
-    # Replace all whitespace characters with regular space
-    return ' '.join(normalized.split())
-
-
 def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
     """Check if a markdown reference matches a given filename.
 
@@ -218,8 +201,6 @@ def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
     Returns:
         True if the reference matches the filename.
     """
-    from urllib.parse import unquote
-
     ref_name = str(ref.image_path.name)
     ref_stem = str(ref.image_path.stem)
 
@@ -234,10 +215,10 @@ def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
         if decoded_name == filename:
             return True
 
-        if _normalize_spaces(decoded_name) == _normalize_spaces(filename):
+        if normalize_spaces(decoded_name) == normalize_spaces(filename):
             return True
 
-        if _normalize_spaces(unquote(ref_stem)) == _normalize_spaces(Path(filename).stem):
+        if normalize_spaces(unquote(ref_stem)) == normalize_spaces(Path(filename).stem):
             return True
     except Exception:
         pass

@@ -1,18 +1,17 @@
-"""Batch markdown reference update logic.
-
-Pure functions for collecting and applying reference updates across multiple files.
-"""
+"""Batch markdown reference update orchestration."""
 
 from pathlib import Path
 
 from operations.find_references import find_references, ref_matches_filename
 from operations.models import BatchReferenceResult, ProcessingResult, RenameStatus
+from operations.ports import MarkdownFilePort
 from operations.update_references import update_references
 
 
 def apply_batch_reference_updates(
     results: list[ProcessingResult],
     search_root: Path,
+    markdown_files: MarkdownFilePort,
 ) -> BatchReferenceResult:
     """Find and apply markdown reference updates for renamed files.
 
@@ -23,6 +22,7 @@ def apply_batch_reference_updates(
     Args:
         results: List of processing results from folder processing.
         search_root: Root directory to search for markdown files.
+        markdown_files: Port for discovering, reading, and writing markdown files.
 
     Returns:
         BatchReferenceResult with totals of what was updated.
@@ -33,7 +33,7 @@ def apply_batch_reference_updates(
     for result in results:
         if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
             if result.final != result.path.name:
-                refs = find_references(result.path, search_root, recursive=True)
+                refs = find_references(result.path, search_root, markdown_files, recursive=True)
                 all_refs.extend(refs)
                 rename_map[result.path.name] = result.final
 
@@ -44,7 +44,7 @@ def apply_batch_reference_updates(
     for old_name, new_name in rename_map.items():
         file_refs = [r for r in all_refs if ref_matches_filename(r, old_name)]
         if file_refs:
-            file_updates = update_references(file_refs, old_name, new_name)
+            file_updates = update_references(file_refs, old_name, new_name, markdown_files)
             for upd in file_updates:
                 updates_by_file[upd.file_path] = (
                     updates_by_file.get(upd.file_path, 0) + upd.replacement_count
@@ -59,6 +59,7 @@ def apply_batch_reference_updates(
 def count_batch_references(
     results: list[ProcessingResult],
     search_root: Path,
+    markdown_files: MarkdownFilePort,
 ) -> BatchReferenceResult:
     """Count markdown references for renamed files without applying updates.
 
@@ -67,6 +68,7 @@ def count_batch_references(
     Args:
         results: List of processing results from folder processing.
         search_root: Root directory to search for markdown files.
+        markdown_files: Port for discovering and reading markdown files.
 
     Returns:
         BatchReferenceResult with counts of references that would be updated.
@@ -76,7 +78,7 @@ def count_batch_references(
     for result in results:
         if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
             if result.final != result.path.name:
-                refs = find_references(result.path, search_root, recursive=True)
+                refs = find_references(result.path, search_root, markdown_files, recursive=True)
                 all_refs.extend(refs)
 
     if not all_refs:

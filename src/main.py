@@ -16,7 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from constants import SUPPORTED_EXTENSIONS
-from operations.adapters import FilesystemRenamer
+from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
 from operations.batch_references import apply_batch_reference_updates, count_batch_references
 from operations.find_references import find_references
@@ -93,11 +93,12 @@ def _handle_reference_updates(
         return
 
     search_root = refs_root if refs_root else path.parent
-    refs = find_references(path, search_root, recursive=True)
+    markdown_files = FilesystemMarkdownFiles()
+    refs = find_references(path, search_root, markdown_files, recursive=True)
 
     if refs:
         if not dry_run:
-            updates = update_references(refs, path.name, final_name)
+            updates = update_references(refs, path.name, final_name, markdown_files)
             total_replacements = sum(u.replacement_count for u in updates)
             console.print(
                 f"[green]Updated {total_replacements} reference(s) "
@@ -244,7 +245,7 @@ def file(
     _handle_reference_updates(path, result.final, update_refs, refs_root, dry_run)
 
     if not dry_run and result.final != path.name:
-        path.rename(path.with_name(result.final))
+        FilesystemRenamer().rename(path, path.with_name(result.final))
 
 
 @app.command()
@@ -310,10 +311,11 @@ def folder(
 
     if update_refs:
         search_root = refs_root if refs_root else path
+        markdown_files = FilesystemMarkdownFiles()
         if dry_run:
-            ref_result = count_batch_references(results, search_root)
+            ref_result = count_batch_references(results, search_root, markdown_files)
         else:
-            ref_result = apply_batch_reference_updates(results, search_root)
+            ref_result = apply_batch_reference_updates(results, search_root, markdown_files)
 
         if ref_result.total_references == 0:
             console.print("[dim]No markdown references found[/dim]")

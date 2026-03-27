@@ -47,15 +47,17 @@ The codebase follows a clean separation between CLI and business logic:
 | File | Purpose |
 |------|---------|
 | `src/operations/models.py` | All Pydantic models |
-| `src/operations/ports.py` | Protocol definitions for I/O boundaries (`AnalysisCachePort`, `ImageAnalyzerPort`, `FileRenamerPort`) |
-| `src/operations/adapters.py` | Concrete implementations of ports (`FilesystemAnalysisCache`, `MojenticImageAnalyzer`, `FilesystemRenamer`) |
+| `src/operations/ports.py` | Protocol definitions for I/O boundaries (`AnalysisCachePort`, `ImageAnalyzerPort`, `FileRenamerPort`, `MarkdownFilePort`) |
+| `src/operations/adapters.py` | Concrete implementations of ports (`FilesystemAnalysisCache`, `MojenticImageAnalyzer`, `FilesystemRenamer`, `FilesystemMarkdownFiles`) |
 | `src/operations/apply_renames.py` | Apply rename operations from processing results via `FileRenamerPort` |
 | `src/operations/pipeline_factory.py` | Factory for constructing gateway -> broker -> cache -> analyzer pipeline |
 | `src/operations/cache.py` | Cache key generation, load/save for assessments and names. Uses `constants.RUBRIC_VERSION` for cache invalidation |
 | `src/operations/generate_name.py` | Vision naming with rubric prompt (5-8 words, `<subject>--<detail>` structure, 80 char max) |
 | `src/operations/assess_name.py` | Suitability assessment (checks if current filename matches rubric) |
-| `src/operations/find_references.py` | Markdown reference scanner with URL decoding and Unicode space normalization |
-| `src/operations/update_references.py` | In-place file updater preserving alt text/aliases |
+| `src/operations/find_references.py` | Markdown reference scanner with URL decoding and Unicode space normalization; accepts `MarkdownFilePort` for I/O |
+| `src/operations/update_references.py` | In-place file updater preserving alt text/aliases; accepts `MarkdownFilePort` for I/O |
+| `src/operations/batch_references.py` | Batch markdown reference update orchestration; accepts `MarkdownFilePort` for I/O |
+| `src/operations/text_utils.py` | Shared text normalization utilities (Unicode/whitespace); used by reference operations |
 | `src/utils/fs.py` | `sha256_file()`, `ensure_cache_layout()`, `next_available_name()` (collision resolver with macOS case-insensitivity) |
 
 ### Cache-First Design

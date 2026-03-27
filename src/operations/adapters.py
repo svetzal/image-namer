@@ -85,3 +85,46 @@ class FilesystemRenamer:
             destination: New file path.
         """
         source.rename(destination)
+
+
+class FilesystemMarkdownFiles:
+    """Filesystem implementation of MarkdownFilePort.
+
+    A thin I/O wrapper with no business logic. Discovers, reads, and writes
+    markdown files on disk.
+    """
+
+    def find_markdown_files(self, root: Path, *, recursive: bool) -> list[Path]:
+        """Find markdown files using glob.
+
+        Args:
+            root: Root directory to search.
+            recursive: Whether to search subdirectories.
+
+        Returns:
+            List of paths to markdown files found.
+        """
+        pattern = "**/*.md" if recursive else "*.md"
+        return [p for p in root.glob(pattern) if p.is_file()]
+
+    def read_markdown_content(self, file_path: Path) -> str:
+        """Read a markdown file from disk.
+
+        Args:
+            file_path: Path to the markdown file.
+
+        Returns:
+            The file's content as a string.
+        """
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+
+    def write_markdown_content(self, file_path: Path, content: str) -> None:
+        """Write content to a markdown file on disk.
+
+        Args:
+            file_path: Path to the markdown file.
+            content: The content to write.
+        """
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)

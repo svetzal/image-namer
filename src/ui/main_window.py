@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from operations.adapters import FilesystemMarkdownFiles
 from operations.find_references import find_references
 from operations.gateway_factory import MissingApiKeyError, create_gateway
 from operations.update_references import update_references
@@ -1131,9 +1132,10 @@ class MainWindow(QMainWindow):
 
         total_refs_updated = 0
         if self.update_refs_checkbox.isChecked() and self.current_folder is not None:
-            refs = find_references(old_path, self.current_folder, recursive=self.recursive_scan)
+            markdown_files = FilesystemMarkdownFiles()
+            refs = find_references(old_path, self.current_folder, markdown_files, recursive=self.recursive_scan)
             if refs:
-                updates = update_references(refs, old_name, new_name)
+                updates = update_references(refs, old_name, new_name, markdown_files)
                 total_refs_updated = sum(u.replacement_count for u in updates)
 
         return total_refs_updated
@@ -1267,9 +1269,10 @@ class MainWindow(QMainWindow):
                 renamed_count += 1
 
                 if update_refs and self.current_folder is not None:
-                    refs = find_references(old_path, self.current_folder, recursive=self.recursive_scan)
+                    markdown_files = FilesystemMarkdownFiles()
+                    refs = find_references(old_path, self.current_folder, markdown_files, recursive=self.recursive_scan)
                     if refs:
-                        updates = update_references(refs, item.source_name, item.final_name)
+                        updates = update_references(refs, item.source_name, item.final_name, markdown_files)
                         total_refs_updated += sum(u.replacement_count for u in updates)
 
                 item.status = RenameStatus.COMPLETED

@@ -85,3 +85,39 @@ class FileRenamerPort(Protocol):
             destination: New file path.
         """
         ...
+
+
+class MarkdownFilePort(Protocol):
+    """Port for reading, writing, and discovering markdown files."""
+
+    def find_markdown_files(self, root: Path, *, recursive: bool) -> list[Path]:
+        """Find all markdown files under a root directory.
+
+        Args:
+            root: Root directory to search.
+            recursive: Whether to search subdirectories.
+
+        Returns:
+            List of paths to markdown files found.
+        """
+        ...
+
+    def read_markdown_content(self, file_path: Path) -> str:
+        """Read the full content of a markdown file.
+
+        Args:
+            file_path: Path to the markdown file.
+
+        Returns:
+            The file's content as a string.
+        """
+        ...
+
+    def write_markdown_content(self, file_path: Path, content: str) -> None:
+        """Write content to a markdown file.
+
+        Args:
+            file_path: Path to the markdown file.
+            content: The content to write.
+        """
+        ...

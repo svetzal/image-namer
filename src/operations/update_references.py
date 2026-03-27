@@ -4,12 +4,15 @@ from pathlib import Path
 from urllib.parse import quote, unquote
 
 from .models import MarkdownReference, ReferenceUpdate
+from .ports import MarkdownFilePort
+from .text_utils import normalize_spaces
 
 
 def update_references(
     references: list[MarkdownReference],
     old_name: str,
-    new_name: str
+    new_name: str,
+    markdown_files: MarkdownFilePort,
 ) -> list[ReferenceUpdate]:
     """Update markdown references to reflect a renamed image.
 
@@ -20,6 +23,7 @@ def update_references(
         references: List of MarkdownReference objects to update.
         old_name: Original filename (including extension).
         new_name: New filename (including extension).
+        markdown_files: Port for reading and writing markdown files.
 
     Returns:
         List of ReferenceUpdate objects describing changes made.
@@ -38,7 +42,7 @@ def update_references(
 
     # Update each file
     for file_path, file_refs in refs_by_file.items():
-        replacement_count = _update_file(file_path, file_refs, old_name, new_name)
+        replacement_count = _update_file(file_path, file_refs, old_name, new_name, markdown_files)
         if replacement_count > 0:
             updates.append(ReferenceUpdate(
                 file_path=file_path,
@@ -52,7 +56,8 @@ def _update_file(
     file_path: Path,
     references: list[MarkdownReference],
     old_name: str,
-    new_name: str
+    new_name: str,
+    markdown_files: MarkdownFilePort,
 ) -> int:
     """Update all references in a single file.
 
@@ -61,13 +66,12 @@ def _update_file(
         references: List of references in this file.
         old_name: Original filename.
         new_name: New filename.
+        markdown_files: Port for reading and writing markdown files.
 
     Returns:
         Number of replacements made.
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
+    content = markdown_files.read_markdown_content(file_path)
     original_content = content
     replacement_count = 0
 
@@ -83,8 +87,7 @@ def _update_file(
             replacement_count += count
 
     if content != original_content:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+        markdown_files.write_markdown_content(file_path, content)
 
     return replacement_count
 
@@ -146,8 +149,8 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
                 return quote(new_decoded, safe='/')
 
             # Try with space normalization (handle Unicode spaces)
-            normalized_decoded = _normalize_spaces_for_replacement(decoded)
-            normalized_old = _normalize_spaces_for_replacement(old_name)
+            normalized_decoded = normalize_spaces(decoded)
+            normalized_old = normalize_spaces(old_name)
             if normalized_old in normalized_decoded:
                 new_decoded = decoded.replace(
                     _find_substring_with_different_spaces(decoded, old_name),
@@ -161,20 +164,6 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
     return path_str.replace(old_name, new_name)
 
 
-def _normalize_spaces_for_replacement(text: str) -> str:
-    """Normalize spaces for comparison purposes.
-
-    Args:
-        text: Text to normalize.
-
-    Returns:
-        Text with normalized spaces.
-    """
-    import unicodedata
-    normalized = unicodedata.normalize('NFKC', text)
-    return ' '.join(normalized.split())
-
-
 def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
     """Find a substring that matches after space normalization.
 
@@ -186,12 +175,12 @@ def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
         The actual substring from haystack, or needle if not found.
     """
     # Normalize the needle for comparison
-    normalized_needle = _normalize_spaces_for_replacement(needle)
+    normalized_needle = normalize_spaces(needle)
 
     # Slide through haystack to find a match
     for i in range(len(haystack) - len(needle) + 1):
         substring = haystack[i:i+len(needle)]
-        if _normalize_spaces_for_replacement(substring) == normalized_needle:
+        if normalize_spaces(substring) == normalized_needle:
             return substring
 
     return needle
