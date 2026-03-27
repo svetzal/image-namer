@@ -3,14 +3,12 @@ import typing as t
 
 import pytest
 
-from operations.models import ImageAnalysis, NameAssessment, ProposedName
+from operations.models import ImageAnalysis, ProposedName
 
 
 @pytest.fixture
 def cache_dirs(tmp_path: pathlib.Path) -> pathlib.Path:
     """Create standard cache directory layout and return cache root."""
-    (tmp_path / ".image_namer" / "cache" / "analysis").mkdir(parents=True)
-    (tmp_path / ".image_namer" / "cache" / "names").mkdir(parents=True)
     (tmp_path / ".image_namer" / "cache" / "unified").mkdir(parents=True)
     return tmp_path / ".image_namer"
 
@@ -31,9 +29,6 @@ class FakeLLM:
         if object_model is ProposedName:
             data = self.payload or {"stem": "primary-subject--specific-detail", "extension": ".png"}
             return ProposedName(**data)
-        if object_model is NameAssessment:
-            data = self.payload or {"suitable": True}
-            return NameAssessment(**data)
         if object_model is ImageAnalysis:
             data = self.payload or {
                 "current_name_suitable": True,

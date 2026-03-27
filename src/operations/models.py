@@ -4,11 +4,6 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class NameAssessment(BaseModel):
-    """A judgement about the suitability of a filename for an image"""
-    suitable: bool = Field(..., description="Whether the provided filename is suitable for the image")
-
-
 class ProposedName(BaseModel):
     """Proposed filename components.
 

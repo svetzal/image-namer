@@ -38,7 +38,7 @@ The codebase follows a clean separation between CLI and business logic:
 
 - `src/main.py`: Typer application with all CLI commands. Handles argument parsing, provider setup, and output formatting. Keep command logic thin.
 - `src/operations/`: Core business logic. Pure functions that accept domain objects and `LLMBroker`, return Pydantic models.
-- `src/operations/models.py`: All Pydantic models (`ProposedName`, `NameAssessment`, `MarkdownReference`, etc.)
+- `src/operations/models.py`: All Pydantic models (`ProposedName`, `ImageAnalysis`, `MarkdownReference`, etc.)
 
 **Testing Focus**: Write tests for the `operations/` layer where `LLMBroker` can be easily mocked. CLI commands in `main.py` are kept simple and thin — do not write tests for them.
 
@@ -51,9 +51,8 @@ The codebase follows a clean separation between CLI and business logic:
 | `src/operations/adapters.py` | Concrete implementations of ports (`FilesystemAnalysisCache`, `MojenticImageAnalyzer`, `FilesystemRenamer`, `FilesystemMarkdownFiles`) |
 | `src/operations/apply_renames.py` | Apply rename operations from processing results via `FileRenamerPort` |
 | `src/operations/pipeline_factory.py` | Factory for constructing gateway -> broker -> cache -> analyzer pipeline |
-| `src/operations/cache.py` | Cache key generation, load/save for assessments and names. Uses `constants.RUBRIC_VERSION` for cache invalidation |
-| `src/operations/generate_name.py` | Vision naming with rubric prompt (5-8 words, `<subject>--<detail>` structure, 80 char max) |
-| `src/operations/assess_name.py` | Suitability assessment (checks if current filename matches rubric) |
+| `src/operations/cache.py` | Cache key generation, load/save for unified analysis results. Uses `constants.RUBRIC_VERSION` for cache invalidation |
+| `src/operations/analyze_image.py` | Single-call LLM analysis: assesses suitability and proposes filename in one request |
 | `src/operations/find_references.py` | Markdown reference scanner with URL decoding and Unicode space normalization; accepts `MarkdownFilePort` for I/O |
 | `src/operations/update_references.py` | In-place file updater preserving alt text/aliases; accepts `MarkdownFilePort` for I/O |
 | `src/operations/batch_references.py` | Batch markdown reference update orchestration; accepts `MarkdownFilePort` for I/O |
@@ -62,12 +61,11 @@ The codebase follows a clean separation between CLI and business logic:
 
 ### Cache-First Design
 
-`.image_namer/cache/` stores LLM results keyed by `{image_sha256}__{provider}__{model}__v{rubric_version}`. Two cache types:
+`.image_namer/cache/` stores LLM results keyed by `{image_sha256}__{filename}__{provider}__{model}__v{rubric_version}`. One cache type:
 
-- `analysis/`: Assessment of whether the current filename is suitable (`NameAssessment`)
-- `names/`: Proposed new filenames (`ProposedName`)
+- `unified/`: Combined assessment + proposed filename (`ImageAnalysis`)
 
-Assessment always runs **before** name generation to avoid unnecessary LLM calls on already-suitable filenames. See `_process_single_image()` in `main.py` for the assessment → generation → collision flow.
+A single LLM call returns both whether the current name is suitable and the proposed replacement. Files that are already suitably named are skipped without any LLM call when cached. See `get_or_generate_analysis()` in `process_image.py` for the cache-first flow.
 
 ### Idempotency
 
@@ -81,14 +79,14 @@ All LLM interactions use Mojentic's `LLMBroker` with structured Pydantic output:
 from mojentic.llm import LLMBroker, MessageBuilder
 
 messages = [MessageBuilder(prompt).add_image(path).build()]
-result = llm.generate_object(messages, object_model=ProposedName)
+result = llm.generate_object(messages, object_model=ImageAnalysis)
 ```
 
-Gateway setup in commands:
+Pipeline construction is centralised in `build_analysis_pipeline()`:
 
 ```python
-gateway = OllamaGateway() if provider == "ollama" else OpenAIGateway(api_key=os.environ["OPENAI_API_KEY"])
-llm = LLMBroker(gateway=gateway, model=model)
+pipeline = build_analysis_pipeline(provider, model, cache_root)
+result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
 ```
 
 ### Provider Configuration
@@ -99,8 +97,8 @@ llm = LLMBroker(gateway=gateway, model=model)
 
 ### Data Flow (folder command)
 
-1. Collect image files (`_collect_image_files`)
-2. For each image: `_process_single_image()` → assessment → (if unsuitable) → name generation → collision check → track planned name
+1. Collect image files (`collect_image_files`)
+2. For each image: `process_single_image()` → cache lookup → (on miss) unified LLM call → collision check → track planned name
 3. Display table (`_display_results_table`) + stats
 4. If `--update-refs`: find markdown references → update files → report
 5. If `--apply`: rename files on disk

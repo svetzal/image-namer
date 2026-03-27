@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Final
 
 import typer
-from mojentic.llm import LLMBroker
-from mojentic.llm.gateways import OllamaGateway, OpenAIGateway
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -20,8 +18,7 @@ from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
 from operations.batch_references import apply_batch_reference_updates, count_batch_references
 from operations.find_references import find_references
-from operations.gateway_factory import MissingApiKeyError, create_gateway
-from operations.generate_name import generate_name
+from operations.gateway_factory import MissingApiKeyError
 from operations.models import (
     ProcessingResult,
     RenameStatus,
@@ -369,20 +366,27 @@ def generate(
     _validate_file_type(path)
     _validate_provider(provider)
 
-    try:
-        gateway = _get_gateway(provider)
-        llm = LLMBroker(gateway=gateway, model=model)
+    cache_root = ensure_cache_layout(Path.cwd())
 
-        proposed = generate_name(path, llm=llm)
-        proposed_name = proposed.filename
-    except Exception as e:  # see REVIEW.md #7
-        console.print(f"[red]Error: {e}[/red]")
+    try:
+        pipeline = build_analysis_pipeline(provider, model, cache_root)
+    except MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(2)
+    except Exception as e:
+        console.print(f"[red]Error setting up LLM: {e}[/red]")
+        raise typer.Exit(1)
+
+    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
+
+    if result.status == RenameStatus.ERROR:
+        console.print(f"[red]Error processing {path.name}[/red]")
         raise typer.Exit(1)
 
     console.print(
         Panel.fit(
-            f"[bold]Proposed[/]: {proposed_name}\n"
-            f"[dim]Source[/]: {path.name}\n"
+            f"[bold]Proposed[/]: {result.proposed}\n"
+            f"[dim]Source[/]: {result.source}\n"
             f"[dim]Provider[/]: {provider}  [dim]Model[/]: {model}  [dim]Mode[/]: "
             f"{'dry-run' if dry_run else 'apply'}",
             title="image-namer: generate",
@@ -390,27 +394,11 @@ def generate(
         )
     )
 
-    if not dry_run:
-        console.print("[yellow]Apply mode is not implemented yet. No changes made.[/]")
-
-
-def _get_gateway(provider: str) -> OllamaGateway | OpenAIGateway:
-    """Create the appropriate LLM gateway for the given provider.
-
-    Args:
-        provider: Either "ollama" or "openai".
-
-    Returns:
-        Gateway instance for the specified provider.
-
-    Raises:
-        typer.Exit: If provider configuration is invalid.
-    """
-    try:
-        return create_gateway(provider)
-    except MissingApiKeyError as e:
-        console.print(f"[red]{e}[/red]")
-        raise typer.Exit(2)
+    if not dry_run and result.final != path.name:
+        FilesystemRenamer().rename(path, path.with_name(result.final))
+        console.print(f"[green]Renamed to: {result.final}[/green]")
+    elif not dry_run:
+        console.print("[dim]No rename needed.[/dim]")
 
 
 def main() -> None:

@@ -7,7 +7,7 @@ from typing import Generic, TypeVar, cast
 from pydantic import BaseModel, Field
 
 from constants import RUBRIC_VERSION
-from operations.models import ImageAnalysis, NameAssessment, ProposedName
+from operations.models import ImageAnalysis
 from utils.fs import sha256_file
 
 
@@ -21,36 +21,6 @@ class BaseCacheEntry(BaseModel):
 
     image_hash: str = Field(..., description="SHA-256 hash of the image")
     rubric_version: int = Field(..., description="Rubric version")
-
-
-class CacheEntry(BaseCacheEntry):
-    """A cached LLM result for an image naming operation.
-
-    Attributes:
-        provider: LLM provider name (e.g., 'ollama', 'openai').
-        model: Model name (e.g., 'gemma3:27b', 'gpt-4o').
-        proposed_name: The proposed filename from the LLM.
-    """
-
-    provider: str = Field(..., description="LLM provider name")
-    model: str = Field(..., description="Model name")
-    proposed_name: ProposedName = Field(..., description="Proposed filename")
-
-
-class AssessmentCacheEntry(BaseCacheEntry):
-    """A cached LLM result for an image name assessment operation.
-
-    Attributes:
-        filename: The filename that was assessed.
-        provider: LLM provider name (e.g., 'ollama', 'openai').
-        model: Model name (e.g., 'gemma3:27b', 'gpt-4o').
-        assessment: The assessment result from the LLM.
-    """
-
-    filename: str = Field(..., description="Filename that was assessed")
-    provider: str = Field(..., description="LLM provider name")
-    model: str = Field(..., description="Model name")
-    assessment: NameAssessment = Field(..., description="Assessment result")
 
 
 class AnalysisCacheEntry(BaseCacheEntry):
@@ -81,35 +51,6 @@ def build_cache_key(image_hash: str, *parts: str) -> str:
     """
     sanitized = [p.replace("/", "_").replace(":", "_") for p in parts]
     return "__".join([image_hash, *sanitized, f"v{RUBRIC_VERSION}"])
-
-
-def cache_key(image_hash: str, provider: str, model: str) -> str:
-    """Generate a cache key for a given image and LLM configuration.
-
-    Args:
-        image_hash: SHA-256 hash of the image file.
-        provider: LLM provider name.
-        model: Model name.
-
-    Returns:
-        Cache key string in format: {hash}__{provider}__{model}__v{rubric_version}
-    """
-    return build_cache_key(image_hash, provider, model)
-
-
-def assessment_cache_key(image_hash: str, filename: str, provider: str, model: str) -> str:
-    """Generate a cache key for a filename assessment.
-
-    Args:
-        image_hash: SHA-256 hash of the image file.
-        filename: The filename being assessed.
-        provider: LLM provider name.
-        model: Model name.
-
-    Returns:
-        Cache key string in format: {hash}__{filename}__{provider}__{model}__v{rubric_version}
-    """
-    return build_cache_key(image_hash, filename, provider, model)
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -187,109 +128,11 @@ class CacheStore(Generic[T]):
         )
 
 
-_names_store: CacheStore[ProposedName] = CacheStore(
-    entry_type=CacheEntry,
-    payload_field="proposed_name",
-    key_fields=("provider", "model"),
-)
-
-_assessment_store: CacheStore[NameAssessment] = CacheStore(
-    entry_type=AssessmentCacheEntry,
-    payload_field="assessment",
-    key_fields=("filename", "provider", "model"),
-)
-
 _analysis_store: CacheStore[ImageAnalysis] = CacheStore(
     entry_type=AnalysisCacheEntry,
     payload_field="analysis",
     key_fields=("filename", "provider", "model"),
 )
-
-
-def load_from_cache(
-    cache_dir: Path,
-    image_path: Path,
-    provider: str,
-    model: str,
-) -> ProposedName | None:
-    """Load a cached naming result if it exists and is valid.
-
-    Args:
-        cache_dir: Path to the cache/names directory.
-        image_path: Path to the image file.
-        provider: LLM provider name.
-        model: Model name.
-
-    Returns:
-        Cached ProposedName if found and valid, None otherwise.
-    """
-    return _names_store.load(cache_dir, image_path, provider=provider, model=model)
-
-
-def save_to_cache(
-    cache_dir: Path,
-    image_path: Path,
-    provider: str,
-    model: str,
-    proposed_name: ProposedName,
-) -> None:
-    """Save a naming result to the cache.
-
-    Args:
-        cache_dir: Path to the cache/names directory.
-        image_path: Path to the image file.
-        provider: LLM provider name.
-        model: Model name.
-        proposed_name: The proposed filename to cache.
-    """
-    _names_store.save(cache_dir, image_path, proposed_name, provider=provider, model=model)
-
-
-def load_assessment_from_cache(
-    cache_dir: Path,
-    image_path: Path,
-    filename: str,
-    provider: str,
-    model: str,
-) -> NameAssessment | None:
-    """Load a cached assessment result if it exists and is valid.
-
-    Args:
-        cache_dir: Path to the cache/analysis directory.
-        image_path: Path to the image file.
-        filename: The filename being assessed.
-        provider: LLM provider name.
-        model: Model name.
-
-    Returns:
-        Cached NameAssessment if found and valid, None otherwise.
-    """
-    return _assessment_store.load(
-        cache_dir, image_path, filename=filename, provider=provider, model=model
-    )
-
-
-def save_assessment_to_cache(
-    cache_dir: Path,
-    image_path: Path,
-    filename: str,
-    provider: str,
-    model: str,
-    assessment: NameAssessment,
-) -> None:
-    """Save an assessment result to the cache.
-
-    Args:
-        cache_dir: Path to the cache/analysis directory.
-        image_path: Path to the image file.
-        filename: The filename that was assessed.
-        provider: LLM provider name.
-        model: Model name.
-        assessment: The assessment result to cache.
-    """
-    _assessment_store.save(
-        cache_dir, image_path, assessment, filename=filename, provider=provider, model=model
-    )
 
 
 def load_analysis_from_cache(
