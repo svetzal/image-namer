@@ -23,7 +23,7 @@ from operations.models import (
     ProcessingResult,
     RenameStatus,
 )
-from operations.pipeline_factory import build_analysis_pipeline
+from operations.pipeline_factory import AnalysisPipeline, build_analysis_pipeline
 from operations.process_folder import compute_statistics, process_folder
 from operations.process_image import process_single_image
 from operations.update_references import update_references
@@ -68,6 +68,30 @@ def _validate_provider(provider: str) -> None:
     if provider not in SUPPORTED_PROVIDERS:
         console.print(f"[red]Invalid provider: {provider}[/red]")
         raise typer.Exit(2)
+
+
+def _build_pipeline_or_exit(provider: str, model: str, cache_root: Path) -> AnalysisPipeline:
+    """Build analysis pipeline or exit with an error message.
+
+    Args:
+        provider: LLM provider name.
+        model: Model identifier string.
+        cache_root: Path to the .image_namer cache root directory.
+
+    Returns:
+        Configured AnalysisPipeline.
+
+    Raises:
+        typer.Exit: On any pipeline construction failure.
+    """
+    try:
+        return build_analysis_pipeline(provider, model, cache_root)
+    except MissingApiKeyError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(2)
+    except Exception as e:
+        console.print(f"[red]Error setting up LLM: {e}[/red]")
+        raise typer.Exit(1)
 
 
 def _handle_reference_updates(
@@ -203,15 +227,7 @@ def file(
     _validate_provider(provider)
 
     cache_root = ensure_cache_layout(Path.cwd())
-
-    try:
-        pipeline = build_analysis_pipeline(provider, model, cache_root)
-    except MissingApiKeyError as e:
-        console.print(f"[red]{e}[/red]")
-        raise typer.Exit(2)
-    except Exception as e:
-        console.print(f"[red]Error setting up LLM: {e}[/red]")
-        raise typer.Exit(1)
+    pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
     result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
 
@@ -291,15 +307,7 @@ def folder(
     console.print(f"[dim]Found {len(image_files)} image(s) to process...[/dim]")
 
     cache_root = ensure_cache_layout(Path.cwd())
-
-    try:
-        pipeline = build_analysis_pipeline(provider, model, cache_root)
-    except MissingApiKeyError as e:
-        console.print(f"[red]{e}[/red]")
-        raise typer.Exit(2)
-    except Exception as e:
-        console.print(f"[red]Error setting up LLM: {e}[/red]")
-        raise typer.Exit(1)
+    pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
     results = process_folder(image_files, pipeline.analyzer, pipeline.cache, provider, model)
 
@@ -367,15 +375,7 @@ def generate(
     _validate_provider(provider)
 
     cache_root = ensure_cache_layout(Path.cwd())
-
-    try:
-        pipeline = build_analysis_pipeline(provider, model, cache_root)
-    except MissingApiKeyError as e:
-        console.print(f"[red]{e}[/red]")
-        raise typer.Exit(2)
-    except Exception as e:
-        console.print(f"[red]Error setting up LLM: {e}[/red]")
-        raise typer.Exit(1)
+    pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
     result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
 

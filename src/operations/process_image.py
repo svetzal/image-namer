@@ -8,7 +8,7 @@ Protocol-based ports — errors are captured in ProcessingResult.
 from pathlib import Path
 
 from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
-from operations.ports import AnalysisCachePort, ImageAnalyzerPort
+from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
 
 
 def normalize_extension(proposed_ext: str, fallback_ext: str) -> str:
@@ -60,7 +60,8 @@ def get_or_generate_analysis(
     cache: AnalysisCachePort,
     provider: str,
     model: str,
-) -> ImageAnalysis:
+    progress: ProgressCallback | None = None,
+) -> tuple[ImageAnalysis, bool]:
     """Get analysis from cache or generate via analyzer.
 
     Args:
@@ -70,18 +71,28 @@ def get_or_generate_analysis(
         cache: Analysis cache for loading/saving results.
         provider: LLM provider name for cache key.
         model: Model name for cache key.
+        progress: Optional progress callback for cache-hit/miss notifications.
 
     Returns:
-        ImageAnalysis result.
+        Tuple of (ImageAnalysis result, cached flag). cached is True when the
+        result was loaded from cache, False when freshly generated.
 
     Raises:
         Exception: Propagates any analyzer failure to the caller.
     """
     analysis = cache.load(img_path, current_name, provider, model)
-    if analysis is None:
-        analysis = analyzer.analyze(img_path, current_name)
-        cache.save(img_path, current_name, provider, model, analysis)
-    return analysis
+    if analysis is not None:
+        if progress is not None:
+            progress.on_cache_hit(img_path, analysis)
+        return analysis, True
+
+    if progress is not None:
+        progress.on_cache_miss(img_path)
+    analysis = analyzer.analyze(img_path, current_name)
+    cache.save(img_path, current_name, provider, model, analysis)
+    if progress is not None:
+        progress.on_analysis_complete(img_path, analysis)
+    return analysis, False
 
 
 def resolve_final_name(
@@ -136,6 +147,7 @@ def process_single_image(
     planned_names: set[str],
     provider: str,
     model: str,
+    progress: ProgressCallback | None = None,
 ) -> ProcessingResult:
     """Process a single image file to determine its new name.
 
@@ -150,6 +162,7 @@ def process_single_image(
             This set is mutated when a name is reserved.
         provider: LLM provider name for cache key.
         model: Model name for cache key.
+        progress: Optional progress callback for cache-hit/miss notifications.
 
     Returns:
         ProcessingResult describing what happened.
@@ -157,8 +170,8 @@ def process_single_image(
     current_name = img_path.name
 
     try:
-        analysis = get_or_generate_analysis(
-            img_path, current_name, analyzer, cache, provider, model
+        analysis, cached = get_or_generate_analysis(
+            img_path, current_name, analyzer, cache, provider, model, progress
         )
     except Exception:
         return ProcessingResult(
@@ -175,6 +188,8 @@ def process_single_image(
             final=img_path.name,
             status=RenameStatus.UNCHANGED,
             path=img_path,
+            reasoning=analysis.reasoning,
+            cached=cached,
         )
 
     proposed_filename, final_name, status = resolve_final_name(
@@ -188,6 +203,8 @@ def process_single_image(
             final=img_path.name,
             status=RenameStatus.UNCHANGED,
             path=img_path,
+            reasoning=analysis.reasoning,
+            cached=cached,
         )
 
     return ProcessingResult(
@@ -196,4 +213,6 @@ def process_single_image(
         final=final_name,
         status=status,
         path=img_path,
+        reasoning=analysis.reasoning,
+        cached=cached,
     )

@@ -5,25 +5,54 @@ Processes images in a background thread to keep UI responsive.
 
 from pathlib import Path
 
-from mojentic.llm import LLMBroker
 from PySide6.QtCore import QThread, Signal
 
-from operations.analyze_image import analyze_image
-from operations.cache import (
-    load_analysis_from_cache,
-    save_analysis_to_cache,
-)
-from operations.models import ImageAnalysis, ProposedName
+from operations.models import ImageAnalysis
 from operations.models import RenameStatus as OpsRenameStatus
-from operations.process_image import normalize_extension, resolve_final_name
+from operations.ports import AnalysisCachePort, ImageAnalyzerPort
+from operations.process_image import process_single_image
 from ui.models.ui_models import RenameItem, RenameStatus
+
+_OPS_TO_UI_STATUS = {
+    OpsRenameStatus.RENAMED: RenameStatus.READY,
+    OpsRenameStatus.UNCHANGED: RenameStatus.UNCHANGED,
+    OpsRenameStatus.COLLISION: RenameStatus.COLLISION,
+    OpsRenameStatus.ERROR: RenameStatus.ERROR,
+}
+
+
+class _SignalProgressCallback:
+    """Emits Qt signals during analysis cache-hit/miss events.
+
+    Implements the ProgressCallback protocol structurally (duck typing).
+    """
+
+    def __init__(self, worker: "RenameWorker", item_index: int, item: RenameItem) -> None:
+        self._worker = worker
+        self._i = item_index
+        self._item = item
+
+    def on_cache_hit(self, path: Path, analysis: ImageAnalysis) -> None:
+        """Emit cache-hit signal."""
+        self._worker.item_status_changed.emit(
+            self._i, "cache_hit", f"Analysis cached for {self._item.source_name}"
+        )
+
+    def on_cache_miss(self, path: Path) -> None:
+        """Emit generating signal when LLM call is needed."""
+        self._worker.item_status_changed.emit(
+            self._i, "generating", f"Analyzing {self._item.source_name} (calling LLM)..."
+        )
+
+    def on_analysis_complete(self, path: Path, analysis: ImageAnalysis) -> None:
+        """No additional signal needed after analysis; handled by item_processed."""
 
 
 class RenameWorker(QThread):
     """Background worker for LLM processing with detailed progress signals.
 
     Processes a batch of images, emitting signals for real-time UI updates.
-    Reuses all business logic from operations/ package.
+    Delegates all business logic to process_single_image from the operations layer.
     """
 
     # Signals for fine-grained UI updates
@@ -36,8 +65,8 @@ class RenameWorker(QThread):
     def __init__(
         self,
         items: list[RenameItem],
-        llm: LLMBroker,
-        cache_root: Path,
+        analyzer: ImageAnalyzerPort,
+        cache: AnalysisCachePort,
         provider: str,
         model: str,
     ):
@@ -45,138 +74,76 @@ class RenameWorker(QThread):
 
         Args:
             items: List of RenameItem objects to process.
-            llm: LLM broker for name generation.
-            cache_root: Path to cache directory (.image_namer).
+            analyzer: Image analyzer port for LLM-based analysis.
+            cache: Analysis cache port for loading/saving results.
             provider: LLM provider name (for cache keys).
             model: Model name (for cache keys).
         """
         super().__init__()
         self.items = items
-        self.llm = llm
-        self.cache_root = cache_root
+        self._analyzer = analyzer
+        self._cache = cache
         self.provider = provider
         self.model = model
         self._stop_requested = False
-        self._planned_names: set[str] = set()  # Track planned filenames to avoid collisions
-
-    def _get_or_generate_analysis(
-        self, item: RenameItem, i: int, unified_cache_dir: Path, stats: dict[str, int]
-    ) -> ImageAnalysis:
-        """Get analysis from cache or generate using LLM.
-
-        Emits status signals before and after the operation so the UI can
-        show real-time progress.
-
-        Args:
-            item: RenameItem to analyze.
-            i: Item index for status updates.
-            unified_cache_dir: Cache directory path.
-            stats: Statistics dict to update.
-
-        Returns:
-            Analysis result from operations.analyze_image.
-        """
-        self.item_status_changed.emit(i, "assessing", f"Analyzing {item.source_name}...")
-
-        analysis = load_analysis_from_cache(
-            unified_cache_dir, item.path, item.source_name, self.provider, self.model
-        )
-
-        if analysis is None:
-            self.item_status_changed.emit(i, "generating", f"Analyzing {item.source_name} (calling LLM)...")
-            analysis = analyze_image(item.path, item.source_name, llm=self.llm)
-            save_analysis_to_cache(
-                unified_cache_dir, item.path, item.source_name, self.provider, self.model, analysis
-            )
-        else:
-            self.item_status_changed.emit(i, "cache_hit", f"✓ Analysis cached for {item.source_name}")
-            stats["cached"] += 1
-            item.cached = True
-
-        return analysis
-
-    def _handle_suitable_name(self, item: RenameItem, i: int, stats: dict[str, int]) -> None:
-        """Handle case where current name is already suitable.
-
-        Args:
-            item: RenameItem with suitable current name.
-            i: Item index for signals.
-            stats: Statistics dict to update.
-        """
-        if not item.manually_edited:
-            item.final_name = item.source_name
-            item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
-        else:
-            item.update_status(RenameStatus.UNCHANGED, "Current name suitable (filename locked by user)")
-
-        stats["unchanged"] += 1
-        self.item_processed.emit(i, item)
-        self.progress_updated.emit(i + 1, len(self.items))
-
-    def _determine_final_name(
-        self,
-        item: RenameItem,
-        proposed: ProposedName,
-        proposed_filename: str,
-        stats: dict[str, int],
-    ) -> None:
-        """Determine final name considering manual edits, idempotency, and collisions.
-
-        Delegates to the shared ``resolve_final_name`` function for idempotency
-        and collision logic, mapping operations status values to UI status values.
-
-        Args:
-            item: RenameItem to process.
-            proposed: Proposed filename components from the LLM.
-            proposed_filename: Full proposed filename string (for display).
-            stats: Statistics dict to update.
-        """
-        if item.manually_edited:
-            item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
-            stats["renamed"] += 1
-            return
-
-        _, final_filename, ops_status = resolve_final_name(
-            item.path, proposed, self._planned_names
-        )
-
-        if ops_status == OpsRenameStatus.UNCHANGED:
-            item.update_status(RenameStatus.UNCHANGED, "Proposed name matches current")
-            item.final_name = item.source_name
-            stats["unchanged"] += 1
-        elif ops_status == OpsRenameStatus.COLLISION:
-            item.update_status(RenameStatus.COLLISION, f"Collision resolved: {final_filename}")
-            item.final_name = final_filename
-            stats["renamed"] += 1
-        else:
-            item.update_status(RenameStatus.READY, "Ready to rename")
-            item.final_name = final_filename
-            stats["renamed"] += 1
 
     def run(self) -> None:
         """Process items, emitting signals for real-time UI updates."""
         stats = {"renamed": 0, "unchanged": 0, "cached": 0, "errors": 0}
-        unified_cache_dir = self.cache_root / "cache" / "unified"
+        planned_names: set[str] = set()
 
         for i, item in enumerate(self.items):
             if self._stop_requested:
                 break
 
+            if item.manually_edited:
+                item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
+                stats["renamed"] += 1
+                self.item_processed.emit(i, item)
+                self.progress_updated.emit(i + 1, len(self.items))
+                continue
+
+            self.item_status_changed.emit(i, "assessing", f"Analyzing {item.source_name}...")
+
             try:
-                analysis = self._get_or_generate_analysis(item, i, unified_cache_dir, stats)
+                progress_cb = _SignalProgressCallback(self, i, item)
+                result = process_single_image(
+                    item.path,
+                    self._analyzer,
+                    self._cache,
+                    planned_names,
+                    self.provider,
+                    self.model,
+                    progress_cb,
+                )
 
-                proposed = analysis.proposed_name
-                item.reasoning = analysis.reasoning
+                item.reasoning = result.reasoning
+                item.cached = result.cached
 
-                proposed_ext = normalize_extension(proposed.extension, item.path.suffix)
-                proposed_filename = f"{proposed.stem}{proposed_ext}"
-                item.proposed_name = proposed_filename
+                if result.cached:
+                    stats["cached"] += 1
 
-                if analysis.current_name_suitable:
-                    self._handle_suitable_name(item, i, stats)
-                    continue
-
-                self._determine_final_name(item, proposed, proposed_filename, stats)
+                if result.status == OpsRenameStatus.ERROR:
+                    stats["errors"] += 1
+                    item.update_status(RenameStatus.ERROR, "Error during analysis")
+                    self.error_occurred.emit(i, "Error during analysis")
+                elif result.status == OpsRenameStatus.UNCHANGED:
+                    item.proposed_name = result.proposed
+                    item.final_name = result.final
+                    item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
+                    stats["unchanged"] += 1
+                elif result.status == OpsRenameStatus.COLLISION:
+                    item.proposed_name = result.proposed
+                    item.final_name = result.final
+                    item.update_status(
+                        RenameStatus.COLLISION, f"Collision resolved: {result.final}"
+                    )
+                    stats["renamed"] += 1
+                else:
+                    item.proposed_name = result.proposed
+                    item.final_name = result.final
+                    item.update_status(RenameStatus.READY, "Ready to rename")
+                    stats["renamed"] += 1
 
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))

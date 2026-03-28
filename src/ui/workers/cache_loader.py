@@ -3,11 +3,10 @@
 Proactively loads cache to give user early feedback on what's already been processed.
 """
 
-from pathlib import Path
-
 from PySide6.QtCore import QThread, Signal
 
-from operations.cache import load_analysis_from_cache
+from operations.ports import AnalysisCachePort
+from operations.process_image import normalize_extension, resolve_final_name
 from ui.models.ui_models import RenameItem, RenameStatus
 
 
@@ -24,7 +23,7 @@ class CacheLoaderWorker(QThread):
     def __init__(
         self,
         items: list[RenameItem],
-        cache_root: Path,
+        cache: AnalysisCachePort,
         provider: str,
         model: str,
     ):
@@ -32,54 +31,49 @@ class CacheLoaderWorker(QThread):
 
         Args:
             items: List of RenameItem objects to check cache for.
-            cache_root: Path to cache directory (.image_namer).
+            cache: Analysis cache port for loading cached results.
             provider: LLM provider name (for cache keys).
             model: Model name (for cache keys).
         """
         super().__init__()
         self.items = items
-        self.cache_root = cache_root
+        self._cache = cache
         self.provider = provider
         self.model = model
         self._stop_requested = False
 
     def run(self) -> None:
         """Load cached data for each item."""
-        unified_cache_dir = self.cache_root / "cache" / "unified"
         cached_count = 0
+        planned_names: set[str] = set()
 
         for i, item in enumerate(self.items):
             if self._stop_requested:
                 break
 
-            # Check if unified analysis is cached
-            analysis = load_analysis_from_cache(
-                unified_cache_dir, item.path, item.source_name, self.provider, self.model
-            )
+            analysis = self._cache.load(item.path, item.source_name, self.provider, self.model)
 
             if analysis:
-                # Extract proposed name and reasoning from cached analysis
                 proposed = analysis.proposed_name
-                item.reasoning = analysis.reasoning  # Store LLM reasoning
-                proposed_ext = proposed.extension if proposed.extension.startswith(".") else f".{proposed.extension}"
-                if not proposed.extension:
-                    proposed_ext = item.path.suffix
-
+                item.reasoning = analysis.reasoning
+                proposed_ext = normalize_extension(proposed.extension, item.path.suffix)
                 proposed_filename = f"{proposed.stem}{proposed_ext}"
                 item.proposed_name = proposed_filename
 
-                # Handle based on current name suitability
                 if analysis.current_name_suitable:
-                    # Current name is suitable - only update if not manually edited
                     if not item.manually_edited:
                         item.final_name = item.source_name
                         item.update_status(RenameStatus.UNCHANGED, "Already suitable (cached)")
                     else:
-                        item.update_status(RenameStatus.UNCHANGED, "Already suitable (filename locked by user)")
+                        item.update_status(
+                            RenameStatus.UNCHANGED, "Already suitable (filename locked by user)"
+                        )
                 else:
-                    # Current name not suitable - use proposed name
                     if not item.manually_edited:
-                        item.final_name = proposed_filename
+                        _, final_name, _ = resolve_final_name(
+                            item.path, proposed, planned_names
+                        )
+                        item.final_name = final_name
                         item.update_status(RenameStatus.READY, "Ready (from cache)")
                     else:
                         item.update_status(RenameStatus.READY, "Ready (filename locked by user)")

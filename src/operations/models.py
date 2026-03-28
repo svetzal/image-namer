@@ -96,6 +96,8 @@ class ProcessingResult(BaseModel):
         final: The resolved final filename after collision resolution.
         status: What happened during processing.
         path: Original file path (needed for rename application and reference updates).
+        reasoning: LLM reasoning for the assessment.
+        cached: Whether result came from cache.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -105,6 +107,8 @@ class ProcessingResult(BaseModel):
     final: str = Field(..., description="Resolved final filename")
     status: RenameStatus = Field(..., description="Processing outcome")
     path: Path | None = Field(default=None, description="Original file path")
+    reasoning: str = Field(default="", description="LLM reasoning for the assessment")
+    cached: bool = Field(default=False, description="Whether result came from cache")
 
 
 class BatchReferenceResult(BaseModel):

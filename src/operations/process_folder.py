@@ -7,7 +7,7 @@ No printing, no filesystem mutations beyond what's injected through ports.
 from pathlib import Path
 
 from operations.models import ProcessingResult, RenameStatus
-from operations.ports import AnalysisCachePort, ImageAnalyzerPort
+from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
 from operations.process_image import process_single_image
 
 
@@ -17,6 +17,7 @@ def process_folder(
     cache: AnalysisCachePort,
     provider: str,
     model: str,
+    progress: ProgressCallback | None = None,
 ) -> list[ProcessingResult]:
     """Process all image files in a list, tracking cross-file name collisions.
 
@@ -26,13 +27,14 @@ def process_folder(
         cache: Analysis cache for loading/saving results.
         provider: LLM provider name for cache key.
         model: Model name for cache key.
+        progress: Optional progress callback for cache-hit/miss notifications.
 
     Returns:
         List of ProcessingResult objects, one per input file.
     """
     planned_names: set[str] = set()
     return [
-        process_single_image(img, analyzer, cache, planned_names, provider, model)
+        process_single_image(img, analyzer, cache, planned_names, provider, model, progress)
         for img in image_files
     ]
 

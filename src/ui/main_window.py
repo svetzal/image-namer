@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from mojentic.llm import LLMBroker
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QPixmap, QResizeEvent
 from PySide6.QtWidgets import (
@@ -30,9 +29,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from operations.adapters import FilesystemMarkdownFiles
+from operations.adapters import FilesystemAnalysisCache, FilesystemMarkdownFiles
 from operations.find_references import find_references
 from operations.gateway_factory import MissingApiKeyError, create_gateway
+from operations.pipeline_factory import build_analysis_pipeline
 from operations.update_references import update_references
 from ui.models.ui_models import RenameItem, RenameStatus
 from ui.settings import get_setting, set_setting
@@ -890,11 +890,12 @@ class MainWindow(QMainWindow):
 
         # Setup cache
         cache_root = ensure_cache_layout(self.current_folder)
+        cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
 
         # Create and start cache loader
         self.cache_loader = CacheLoaderWorker(
             items=self.rename_items,
-            cache_root=cache_root,
+            cache=cache,
             provider=provider,
             model=model,
         )
@@ -964,10 +965,9 @@ class MainWindow(QMainWindow):
             self.current_folder if self.current_folder else Path.cwd()
         )
 
-        # Create LLM gateway and broker
+        # Build analysis pipeline (gateway + LLM + cache)
         try:
-            gateway = create_gateway(provider)
-            llm = LLMBroker(gateway=gateway, model=model)
+            pipeline = build_analysis_pipeline(provider, model, cache_root)
         except MissingApiKeyError as e:
             self.status_bar.showMessage(f"Error: {e}", 5000)
             return
@@ -978,8 +978,8 @@ class MainWindow(QMainWindow):
         # Create and configure worker
         self.worker = RenameWorker(
             items=self.rename_items,
-            llm=llm,
-            cache_root=cache_root,
+            analyzer=pipeline.analyzer,
+            cache=pipeline.cache,
             provider=provider,
             model=model,
         )

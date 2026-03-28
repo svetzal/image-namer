@@ -121,3 +121,33 @@ class MarkdownFilePort(Protocol):
             content: The content to write.
         """
         ...
+
+
+class ProgressCallback(Protocol):
+    """Port for receiving progress notifications during image analysis."""
+
+    def on_cache_hit(self, path: Path, analysis: ImageAnalysis) -> None:
+        """Called when an analysis result is found in the cache.
+
+        Args:
+            path: Path to the image file.
+            analysis: The cached analysis result.
+        """
+        ...
+
+    def on_cache_miss(self, path: Path) -> None:
+        """Called when no cached analysis is available and LLM will be invoked.
+
+        Args:
+            path: Path to the image file.
+        """
+        ...
+
+    def on_analysis_complete(self, path: Path, analysis: ImageAnalysis) -> None:
+        """Called after a fresh LLM analysis has been performed and cached.
+
+        Args:
+            path: Path to the image file.
+            analysis: The freshly generated analysis result.
+        """
+        ...
