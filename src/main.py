@@ -190,6 +190,35 @@ def _apply_renames(results: list[ProcessingResult]) -> None:
     console.print("[green]✓ All renames applied.[/green]")
 
 
+def _process_single_file(path: Path, provider: str, model: str) -> ProcessingResult:
+    """Validate, build pipeline, and process a single image file.
+
+    Args:
+        path: Path to the image file.
+        provider: LLM provider name.
+        model: Model identifier string.
+
+    Returns:
+        ProcessingResult for the image.
+
+    Raises:
+        typer.Exit: On unsupported file type, invalid provider, pipeline error, or processing error.
+    """
+    _validate_file_type(path)
+    _validate_provider(provider)
+
+    cache_root = ensure_cache_layout(Path.cwd())
+    pipeline = _build_pipeline_or_exit(provider, model, cache_root)
+
+    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
+
+    if result.status == RenameStatus.ERROR:
+        console.print(f"[red]Error processing {path.name}[/red]")
+        raise typer.Exit(1)
+
+    return result
+
+
 @app.command()
 def file(
     path: Path = typer.Argument(
@@ -223,17 +252,7 @@ def file(
     Validates types, calls vision naming, enforces idempotency, resolves collisions,
     and optionally renames the file when --apply is used.
     """
-    _validate_file_type(path)
-    _validate_provider(provider)
-
-    cache_root = ensure_cache_layout(Path.cwd())
-    pipeline = _build_pipeline_or_exit(provider, model, cache_root)
-
-    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
-
-    if result.status == RenameStatus.ERROR:
-        console.print(f"[red]Error processing {path.name}[/red]")
-        raise typer.Exit(1)
+    result = _process_single_file(path, provider, model)
 
     status_labels = {
         RenameStatus.UNCHANGED: "unchanged",
@@ -371,17 +390,7 @@ def generate(
         model: Visual model identifier (defaults to `gemma3:27b`).
         dry_run: When true, only prints the proposal; `--apply` reserved for future.
     """
-    _validate_file_type(path)
-    _validate_provider(provider)
-
-    cache_root = ensure_cache_layout(Path.cwd())
-    pipeline = _build_pipeline_or_exit(provider, model, cache_root)
-
-    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
-
-    if result.status == RenameStatus.ERROR:
-        console.print(f"[red]Error processing {path.name}[/red]")
-        raise typer.Exit(1)
+    result = _process_single_file(path, provider, model)
 
     console.print(
         Panel.fit(

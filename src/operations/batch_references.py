@@ -3,9 +3,37 @@
 from pathlib import Path
 
 from operations.find_references import find_references, ref_matches_filename
-from operations.models import BatchReferenceResult, ProcessingResult, RenameStatus
+from operations.models import BatchReferenceResult, MarkdownReference, ProcessingResult, RenameStatus
 from operations.ports import MarkdownFilePort
 from operations.update_references import update_references
+
+
+def _collect_references(
+    results: list[ProcessingResult],
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+) -> tuple[list[MarkdownReference], dict[str, str]]:
+    """Collect markdown references and rename map for renamed/collision results.
+
+    Args:
+        results: List of processing results from folder processing.
+        search_root: Root directory to search for markdown files.
+        markdown_files: Port for discovering and reading markdown files.
+
+    Returns:
+        Tuple of (all collected references, rename map from old to new filename).
+    """
+    all_refs: list[MarkdownReference] = []
+    rename_map: dict[str, str] = {}
+
+    for result in results:
+        if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
+            if result.final != result.path.name:
+                refs = find_references(result.path, search_root, markdown_files, recursive=True)
+                all_refs.extend(refs)
+                rename_map[result.path.name] = result.final
+
+    return all_refs, rename_map
 
 
 def apply_batch_reference_updates(
@@ -27,15 +55,7 @@ def apply_batch_reference_updates(
     Returns:
         BatchReferenceResult with totals of what was updated.
     """
-    all_refs = []
-    rename_map: dict[str, str] = {}
-
-    for result in results:
-        if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
-            if result.final != result.path.name:
-                refs = find_references(result.path, search_root, markdown_files, recursive=True)
-                all_refs.extend(refs)
-                rename_map[result.path.name] = result.final
+    all_refs, rename_map = _collect_references(results, search_root, markdown_files)
 
     if not all_refs:
         return BatchReferenceResult(total_references=0, files_updated=0)
@@ -73,13 +93,7 @@ def count_batch_references(
     Returns:
         BatchReferenceResult with counts of references that would be updated.
     """
-    all_refs = []
-
-    for result in results:
-        if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
-            if result.final != result.path.name:
-                refs = find_references(result.path, search_root, markdown_files, recursive=True)
-                all_refs.extend(refs)
+    all_refs, _ = _collect_references(results, search_root, markdown_files)
 
     if not all_refs:
         return BatchReferenceResult(total_references=0, files_updated=0)
