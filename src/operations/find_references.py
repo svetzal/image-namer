@@ -5,7 +5,13 @@ from urllib.parse import unquote
 
 from .models import MarkdownReference
 from .ports import MarkdownFilePort
-from .text_utils import normalize_spaces
+from .text_utils import (
+    normalized_name_equals,
+    STANDARD_IMAGE_PATTERN,
+    STANDARD_LINK_PATTERN,
+    WIKI_EMBED_PATTERN,
+    WIKI_LINK_PATTERN,
+)
 
 
 def find_references(
@@ -55,10 +61,10 @@ def _get_reference_patterns() -> dict[str, re.Pattern[str]]:
         Dictionary mapping reference type to compiled pattern.
     """
     return {
-        'image': re.compile(r'!\[([^\]]*)\]\(([^)]+)\)'),
-        'link': re.compile(r'(?<!!)\[([^\]]+)\]\(([^)]+)\)'),
-        'wiki_embed': re.compile(r'!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]'),
-        'wiki_link': re.compile(r'(?<!!)\[\[([^\]|]+)(?:\|([^\]]+))?\]\]'),
+        'image': re.compile(STANDARD_IMAGE_PATTERN),
+        'link': re.compile(r'(?<!!)' + STANDARD_LINK_PATTERN),
+        'wiki_embed': re.compile(WIKI_EMBED_PATTERN),
+        'wiki_link': re.compile(r'(?<!!)' + WIKI_LINK_PATTERN),
     }
 
 
@@ -151,15 +157,8 @@ def _matches_url_decoded(ref_path: Path, image_path: Path, image_name: str) -> b
     Returns:
         True if matches after URL decoding.
     """
-    try:
-        decoded_name = unquote(str(ref_path.name))
-        if decoded_name == image_name:
-            return True
-        # Also try normalizing whitespace (various Unicode spaces to regular space)
-        if normalize_spaces(decoded_name) == normalize_spaces(image_name):
-            return True
-    except Exception:
-        pass
+    if normalized_name_equals(str(ref_path.name), image_name):
+        return True
 
     # Try URL-decoded full path
     try:
@@ -210,17 +209,10 @@ def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
     if ref_stem == Path(filename).stem:
         return True
 
-    try:
-        decoded_name = unquote(ref_name)
-        if decoded_name == filename:
-            return True
+    if normalized_name_equals(ref_name, filename):
+        return True
 
-        if normalize_spaces(decoded_name) == normalize_spaces(filename):
-            return True
-
-        if normalize_spaces(unquote(ref_stem)) == normalize_spaces(Path(filename).stem):
-            return True
-    except Exception:
-        pass
+    if normalized_name_equals(ref_stem, Path(filename).stem):
+        return True
 
     return False

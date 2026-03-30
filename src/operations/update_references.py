@@ -5,7 +5,14 @@ from urllib.parse import quote, unquote
 
 from .models import MarkdownReference, ReferenceUpdate
 from .ports import MarkdownFilePort
-from .text_utils import normalize_spaces
+from .text_utils import (
+    normalize_spaces,
+    normalized_name_equals,
+    STANDARD_IMAGE_PATTERN,
+    STANDARD_LINK_PATTERN,
+    WIKI_EMBED_PATTERN,
+    WIKI_LINK_PATTERN,
+)
 
 
 def update_references(
@@ -148,10 +155,7 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
                 # Quote special chars but keep forward slashes
                 return quote(new_decoded, safe='/')
 
-            # Try with space normalization (handle Unicode spaces)
-            normalized_decoded = normalize_spaces(decoded)
-            normalized_old = normalize_spaces(old_name)
-            if normalized_old in normalized_decoded:
+            if normalized_name_equals(Path(decoded).name, old_name):
                 new_decoded = decoded.replace(
                     _find_substring_with_different_spaces(decoded, old_name),
                     new_name
@@ -188,7 +192,7 @@ def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
 
 def _replace_standard_image(original_text: str, old_name: str, new_name: str) -> str | None:
     """Replace filename in standard Markdown image: ![alt](path)."""
-    match = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', original_text)
+    match = re.match(STANDARD_IMAGE_PATTERN, original_text)
     if match:
         alt_text = match.group(1)
         old_path = match.group(2)
@@ -199,7 +203,7 @@ def _replace_standard_image(original_text: str, old_name: str, new_name: str) ->
 
 def _replace_standard_link(original_text: str, old_name: str, new_name: str) -> str | None:
     """Replace filename in standard Markdown link: [text](path)."""
-    match = re.match(r'\[([^\]]+)\]\(([^)]+)\)', original_text)
+    match = re.match(STANDARD_LINK_PATTERN, original_text)
     if match:
         link_text = match.group(1)
         old_path = match.group(2)
@@ -210,7 +214,7 @@ def _replace_standard_link(original_text: str, old_name: str, new_name: str) -> 
 
 def _replace_wiki_embed(original_text: str, old_name: str, new_name: str) -> str | None:
     """Replace filename in Obsidian wiki embed: ![[name]] or ![[name|alias]]."""
-    match = re.match(r'!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', original_text)
+    match = re.match(WIKI_EMBED_PATTERN, original_text)
     if match:
         old_ref = match.group(1)
         alias = match.group(2)
@@ -223,7 +227,7 @@ def _replace_wiki_embed(original_text: str, old_name: str, new_name: str) -> str
 
 def _replace_wiki_link(original_text: str, old_name: str, new_name: str) -> str | None:
     """Replace filename in Obsidian wiki link: [[name]] or [[name|alias]]."""
-    match = re.match(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', original_text)
+    match = re.match(WIKI_LINK_PATTERN, original_text)
     if match:
         old_ref = match.group(1)
         alias = match.group(2)
