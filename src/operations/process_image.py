@@ -173,7 +173,7 @@ def process_single_image(
         analysis, cached = get_or_generate_analysis(
             img_path, current_name, analyzer, cache, provider, model, progress
         )
-    except Exception:
+    except (OSError, ConnectionError, TimeoutError, ValueError, RuntimeError):
         return ProcessingResult(
             source=img_path.name,
             proposed="ERROR",

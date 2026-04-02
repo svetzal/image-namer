@@ -89,7 +89,7 @@ def _build_pipeline_or_exit(provider: str, model: str, cache_root: Path) -> Anal
     except MissingApiKeyError as e:
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(2)
-    except Exception as e:
+    except (OSError, ConnectionError, ValueError, RuntimeError) as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 

@@ -161,7 +161,7 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
                     new_name
                 )
                 return quote(new_decoded, safe='/')
-    except Exception:
+    except (ValueError, TypeError):
         pass
 
     # Fall back to simple string replacement

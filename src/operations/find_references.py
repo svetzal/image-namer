@@ -165,7 +165,7 @@ def _matches_url_decoded(ref_path: Path, image_path: Path, image_name: str) -> b
         decoded_path = Path(unquote(str(ref_path)))
         if decoded_path.name == image_name or decoded_path.resolve() == image_path.resolve():
             return True
-    except Exception:
+    except (OSError, ValueError, TypeError):
         pass
 
     return False

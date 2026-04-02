@@ -148,7 +148,7 @@ class RenameWorker(QThread):
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))
 
-            except Exception as e:
+            except (OSError, ConnectionError, ValueError, RuntimeError) as e:
                 stats["errors"] += 1
                 error_msg = str(e)
                 item.update_status(RenameStatus.ERROR, f"Error: {error_msg}")

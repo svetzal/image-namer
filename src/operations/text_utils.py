@@ -42,6 +42,6 @@ def normalized_name_equals(a: str, b: str) -> bool:
             return True
         if normalize_spaces(decoded_a) == normalize_spaces(b):
             return True
-    except Exception:
+    except (ValueError, TypeError):
         pass
     return False

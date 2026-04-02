@@ -485,7 +485,7 @@ class MainWindow(QMainWindow):
                     # No models returned, use defaults
                     self.model_combo.addItems(default_models[provider])
 
-            except Exception as e:
+            except (OSError, ConnectionError, ValueError, RuntimeError) as e:
                 # Error fetching models, use defaults
                 self.status_bar.showMessage(f"Could not fetch models: {e}", 5000)
                 self.model_combo.addItems(default_models[provider])
@@ -586,7 +586,7 @@ class MainWindow(QMainWindow):
             # Scale and display
             self._rescale_current_image()
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             self.preview_label.setText(f"Error loading image:\n{e}")
             self.current_pixmap = None
         finally:
@@ -771,7 +771,7 @@ class MainWindow(QMainWindow):
                 # Refresh the view if a folder is currently loaded
                 if self.current_folder:
                     self._on_refresh_clicked()
-            except Exception as e:
+            except (OSError, PermissionError) as e:
                 QMessageBox.critical(
                     self,
                     "Error",
@@ -971,7 +971,7 @@ class MainWindow(QMainWindow):
         except MissingApiKeyError as e:
             self.status_bar.showMessage(f"Error: {e}", 5000)
             return
-        except Exception as e:
+        except (OSError, ConnectionError, ValueError, RuntimeError) as e:
             self.status_bar.showMessage(f"Error setting up LLM: {e}", 5000)
             return
 
@@ -1158,7 +1158,7 @@ class MainWindow(QMainWindow):
             if not pixmap.isNull():
                 self.current_pixmap = pixmap
                 self._rescale_current_image()
-        except Exception:
+        except OSError:
             pass
 
     def _on_single_rename_clicked(self) -> None:
@@ -1198,7 +1198,7 @@ class MainWindow(QMainWindow):
                 msg += f" — updated {total_refs_updated} reference(s)"
             self.status_bar.showMessage(msg, 5000)
 
-        except Exception as e:
+        except (OSError, PermissionError) as e:
             item.status = RenameStatus.ERROR
             item.status_message = f"Rename failed: {e}"
             item.error_message = str(e)
@@ -1280,7 +1280,7 @@ class MainWindow(QMainWindow):
                 item.source_name = item.final_name
                 item.path = new_path
 
-            except Exception as e:
+            except (OSError, PermissionError) as e:
                 error_count += 1
                 item.status = RenameStatus.ERROR
                 item.status_message = f"Rename failed: {e}"
