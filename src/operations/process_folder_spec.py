@@ -1,22 +1,20 @@
 """Tests for batch folder processing orchestration."""
 
-from unittest.mock import Mock
-
 from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_folder import compute_statistics, process_folder
 
 
-def should_return_empty_list_for_empty_input():
-    cache = Mock(spec=AnalysisCachePort)
-    analyzer = Mock(spec=ImageAnalyzerPort)
+def should_return_empty_list_for_empty_input(mocker):
+    cache = mocker.Mock(spec=AnalysisCachePort)
+    analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
     results = process_folder([], analyzer, cache, "ollama", "gemma3:27b")
 
     assert results == []
 
 
-def should_process_all_images_in_list(tmp_path):
+def should_process_all_images_in_list(tmp_path, mocker):
     imgs = [tmp_path / f"img{i}.png" for i in range(3)]
     for img in imgs:
         img.write_bytes(b"x")
@@ -32,9 +30,9 @@ def should_process_all_images_in_list(tmp_path):
             reasoning="",
         )
 
-    cache = Mock(spec=AnalysisCachePort)
+    cache = mocker.Mock(spec=AnalysisCachePort)
     cache.load.return_value = None
-    analyzer = Mock(spec=ImageAnalyzerPort)
+    analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.side_effect = fake_analyze
 
     results = process_folder(imgs, analyzer, cache, "ollama", "gemma3:27b")
@@ -42,15 +40,15 @@ def should_process_all_images_in_list(tmp_path):
     assert len(results) == 3
 
 
-def should_track_planned_names_across_images(tmp_path):
+def should_track_planned_names_across_images(tmp_path, mocker):
     img1 = tmp_path / "a.png"
     img2 = tmp_path / "b.png"
     img1.write_bytes(b"x")
     img2.write_bytes(b"y")
 
-    cache = Mock(spec=AnalysisCachePort)
+    cache = mocker.Mock(spec=AnalysisCachePort)
     cache.load.return_value = None
-    analyzer = Mock(spec=ImageAnalyzerPort)
+    analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = ImageAnalysis(
         current_name_suitable=False,
         proposed_name=ProposedName(stem="same-name", extension=".png"),

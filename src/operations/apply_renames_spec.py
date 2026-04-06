@@ -1,14 +1,12 @@
-from unittest.mock import Mock
-
 from operations.apply_renames import apply_renames
 from operations.models import ProcessingResult, RenameStatus
 from operations.ports import FileRenamerPort
 
 
-def should_rename_files_with_renamed_status(tmp_path):
+def should_rename_files_with_renamed_status(tmp_path, mocker):
     img = tmp_path / "old.png"
     img.write_bytes(b"x")
-    renamer = Mock(spec=FileRenamerPort)
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(
@@ -23,10 +21,10 @@ def should_rename_files_with_renamed_status(tmp_path):
     renamer.rename.assert_called_once_with(img, img.with_name("new.png"))
 
 
-def should_rename_files_with_collision_status(tmp_path):
+def should_rename_files_with_collision_status(tmp_path, mocker):
     img = tmp_path / "old.png"
     img.write_bytes(b"x")
-    renamer = Mock(spec=FileRenamerPort)
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(
@@ -41,8 +39,8 @@ def should_rename_files_with_collision_status(tmp_path):
     renamer.rename.assert_called_once_with(img, img.with_name("new-2.png"))
 
 
-def should_skip_unchanged_results():
-    renamer = Mock(spec=FileRenamerPort)
+def should_skip_unchanged_results(mocker):
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(
@@ -57,8 +55,8 @@ def should_skip_unchanged_results():
     renamer.rename.assert_not_called()
 
 
-def should_skip_error_results():
-    renamer = Mock(spec=FileRenamerPort)
+def should_skip_error_results(mocker):
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(
@@ -73,8 +71,8 @@ def should_skip_error_results():
     renamer.rename.assert_not_called()
 
 
-def should_skip_results_without_path():
-    renamer = Mock(spec=FileRenamerPort)
+def should_skip_results_without_path(mocker):
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(
@@ -90,10 +88,10 @@ def should_skip_results_without_path():
     renamer.rename.assert_not_called()
 
 
-def should_skip_when_final_equals_current_name(tmp_path):
+def should_skip_when_final_equals_current_name(tmp_path, mocker):
     img = tmp_path / "same.png"
     img.write_bytes(b"x")
-    renamer = Mock(spec=FileRenamerPort)
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(
@@ -108,12 +106,12 @@ def should_skip_when_final_equals_current_name(tmp_path):
     renamer.rename.assert_not_called()
 
 
-def should_return_total_renamed_count(tmp_path):
+def should_return_total_renamed_count(tmp_path, mocker):
     img1 = tmp_path / "a.png"
     img1.write_bytes(b"x")
     img2 = tmp_path / "b.jpg"
     img2.write_bytes(b"y")
-    renamer = Mock(spec=FileRenamerPort)
+    renamer = mocker.Mock(spec=FileRenamerPort)
 
     results = [
         ProcessingResult(

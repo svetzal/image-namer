@@ -1,14 +1,13 @@
 """Tests for find_references operation."""
 from pathlib import Path
-from unittest.mock import Mock
 
 from .find_references import find_references, ref_matches_filename
 from .models import MarkdownReference
 from .ports import MarkdownFilePort
 
 
-def should_find_standard_image_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_standard_image_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "test.png"
     md_file = tmp_path / "test.md"
 
@@ -25,8 +24,8 @@ def should_find_standard_image_references(tmp_path):
     mock_md.find_markdown_files.assert_called_once_with(tmp_path, recursive=False)
 
 
-def should_find_standard_link_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_standard_link_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "image.jpg"
     md_file = tmp_path / "doc.md"
 
@@ -40,8 +39,8 @@ def should_find_standard_link_references(tmp_path):
     assert refs[0].original_text == "[Link text](image.jpg)"
 
 
-def should_find_wiki_embed_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_wiki_embed_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "diagram.png"
     md_file = tmp_path / "note.md"
 
@@ -55,8 +54,8 @@ def should_find_wiki_embed_references(tmp_path):
     assert refs[0].original_text == "![[diagram.png]]"
 
 
-def should_find_wiki_embed_with_alias(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_wiki_embed_with_alias(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "photo.jpg"
     md_file = tmp_path / "article.md"
 
@@ -70,8 +69,8 @@ def should_find_wiki_embed_with_alias(tmp_path):
     assert refs[0].original_text == "![[photo.jpg|My Photo]]"
 
 
-def should_find_wiki_link_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_wiki_link_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "chart.png"
     md_file = tmp_path / "index.md"
 
@@ -85,8 +84,8 @@ def should_find_wiki_link_references(tmp_path):
     assert refs[0].original_text == "[[chart.png]]"
 
 
-def should_find_wiki_link_with_alias(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_wiki_link_with_alias(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "graph.svg"
     md_file = tmp_path / "readme.md"
 
@@ -100,8 +99,8 @@ def should_find_wiki_link_with_alias(tmp_path):
     assert refs[0].original_text == "[[graph.svg|See the graph]]"
 
 
-def should_find_multiple_references_in_same_file(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_multiple_references_in_same_file(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "image.png"
     md_file = tmp_path / "multi.md"
 
@@ -124,8 +123,8 @@ def should_find_multiple_references_in_same_file(tmp_path):
     assert refs[2].ref_type == "link"
 
 
-def should_find_references_in_multiple_files(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_references_in_multiple_files(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "shared.png"
     file1 = tmp_path / "doc1.md"
     file2 = tmp_path / "doc2.md"
@@ -142,8 +141,8 @@ def should_find_references_in_multiple_files(tmp_path):
     assert {ref.file_path for ref in refs} == {file1, file2}
 
 
-def should_pass_recursive_flag_to_port(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_pass_recursive_flag_to_port(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "nested.png"
 
     mock_md.find_markdown_files.return_value = []
@@ -153,8 +152,8 @@ def should_pass_recursive_flag_to_port(tmp_path):
     mock_md.find_markdown_files.assert_called_once_with(tmp_path, recursive=True)
 
 
-def should_not_search_recursively_when_disabled(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_not_search_recursively_when_disabled(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "nested.png"
 
     mock_md.find_markdown_files.return_value = []
@@ -164,8 +163,8 @@ def should_not_search_recursively_when_disabled(tmp_path):
     mock_md.find_markdown_files.assert_called_once_with(tmp_path, recursive=False)
 
 
-def should_return_empty_list_when_no_references_found(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_return_empty_list_when_no_references_found(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "orphan.png"
     md_file = tmp_path / "empty.md"
 
@@ -177,8 +176,8 @@ def should_return_empty_list_when_no_references_found(tmp_path):
     assert len(refs) == 0
 
 
-def should_match_stem_only_wiki_links(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_match_stem_only_wiki_links(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "document.png"
     md_file = tmp_path / "wiki.md"
 
@@ -191,8 +190,8 @@ def should_match_stem_only_wiki_links(tmp_path):
     assert refs[0].ref_type == "wiki_embed"
 
 
-def should_handle_relative_paths_in_standard_markdown(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_handle_relative_paths_in_standard_markdown(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     subdir = tmp_path / "images"
     image_path = subdir / "photo.jpg"
     md_file = tmp_path / "doc.md"
@@ -206,8 +205,8 @@ def should_handle_relative_paths_in_standard_markdown(tmp_path):
     assert refs[0].original_text == "![Photo](images/photo.jpg)"
 
 
-def should_not_match_different_images(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_not_match_different_images(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "target.png"
     md_file = tmp_path / "doc.md"
 
@@ -219,8 +218,8 @@ def should_not_match_different_images(tmp_path):
     assert len(refs) == 0
 
 
-def should_distinguish_wiki_embed_from_wiki_link(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_distinguish_wiki_embed_from_wiki_link(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "test.png"
     md_file = tmp_path / "mixed.md"
 
@@ -234,8 +233,8 @@ def should_distinguish_wiki_embed_from_wiki_link(tmp_path):
     assert refs[1].ref_type == "wiki_link"
 
 
-def should_distinguish_standard_image_from_link(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_distinguish_standard_image_from_link(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "file.jpg"
     md_file = tmp_path / "links.md"
 
@@ -249,8 +248,8 @@ def should_distinguish_standard_image_from_link(tmp_path):
     assert refs[1].ref_type == "link"
 
 
-def should_find_url_encoded_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_url_encoded_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "Screenshot 2025-11-02 at 1.00.29 PM.png"
     md_file = tmp_path / "doc.md"
 
@@ -266,8 +265,8 @@ def should_find_url_encoded_references(tmp_path):
     assert refs[0].original_text == "![One](Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png)"
 
 
-def should_find_references_with_spaces_in_paths(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_find_references_with_spaces_in_paths(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     image_path = tmp_path / "my photo.jpg"
     md_file = tmp_path / "spaces.md"
 

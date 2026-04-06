@@ -1,6 +1,5 @@
 """Tests for update_references operation."""
 from pathlib import Path
-from unittest.mock import Mock
 
 from .models import MarkdownReference
 from .ports import MarkdownFilePort
@@ -20,8 +19,8 @@ def _make_ref(
     )
 
 
-def should_update_standard_image_reference(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_standard_image_reference(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "test.md"
 
     mock_md.read_markdown_content.return_value = "![Alt text](old.png)\n"
@@ -35,8 +34,8 @@ def should_update_standard_image_reference(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "![Alt text](new.png)\n")
 
 
-def should_preserve_alt_text_in_standard_images(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_preserve_alt_text_in_standard_images(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "doc.md"
 
     mock_md.read_markdown_content.return_value = "![Important diagram](diagram.jpg)\n"
@@ -49,8 +48,8 @@ def should_preserve_alt_text_in_standard_images(tmp_path):
     )
 
 
-def should_update_standard_link_reference(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_standard_link_reference(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "links.md"
 
     mock_md.read_markdown_content.return_value = "[View image](image.png)\n"
@@ -61,8 +60,8 @@ def should_update_standard_link_reference(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "[View image](photo.png)\n")
 
 
-def should_preserve_link_text_in_standard_links(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_preserve_link_text_in_standard_links(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "nav.md"
 
     mock_md.read_markdown_content.return_value = "[Click here for more](data.svg)\n"
@@ -75,8 +74,8 @@ def should_preserve_link_text_in_standard_links(tmp_path):
     )
 
 
-def should_update_wiki_embed_reference(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_wiki_embed_reference(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "wiki.md"
 
     mock_md.read_markdown_content.return_value = "![[old.png]]\n"
@@ -87,8 +86,8 @@ def should_update_wiki_embed_reference(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "![[new.png]]\n")
 
 
-def should_preserve_alias_in_wiki_embeds(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_preserve_alias_in_wiki_embeds(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "obsidian.md"
 
     mock_md.read_markdown_content.return_value = "![[screenshot.png|My Screenshot]]\n"
@@ -101,8 +100,8 @@ def should_preserve_alias_in_wiki_embeds(tmp_path):
     )
 
 
-def should_update_wiki_link_reference(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_wiki_link_reference(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "vault.md"
 
     mock_md.read_markdown_content.return_value = "[[photo.jpg]]\n"
@@ -113,8 +112,8 @@ def should_update_wiki_link_reference(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "[[image.jpg]]\n")
 
 
-def should_preserve_alias_in_wiki_links(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_preserve_alias_in_wiki_links(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "notes.md"
 
     mock_md.read_markdown_content.return_value = "[[graph.svg|See Graph]]\n"
@@ -125,8 +124,8 @@ def should_preserve_alias_in_wiki_links(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "[[chart.svg|See Graph]]\n")
 
 
-def should_update_multiple_references_in_same_file(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_multiple_references_in_same_file(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "multi.md"
     original = (
         "![First](old.png)\n"
@@ -153,8 +152,8 @@ def should_update_multiple_references_in_same_file(tmp_path):
     assert "[Link](new.png)" in written_content
 
 
-def should_update_references_in_multiple_files(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_references_in_multiple_files(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     file1 = tmp_path / "doc1.md"
     file2 = tmp_path / "doc2.md"
 
@@ -174,8 +173,8 @@ def should_update_references_in_multiple_files(tmp_path):
     mock_md.write_markdown_content.assert_any_call(file2, "![[common.png]]\n")
 
 
-def should_handle_relative_paths_in_updates(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_handle_relative_paths_in_updates(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "doc.md"
 
     mock_md.read_markdown_content.return_value = "![Photo](images/old.jpg)\n"
@@ -186,8 +185,8 @@ def should_handle_relative_paths_in_updates(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "![Photo](images/new.jpg)\n")
 
 
-def should_return_empty_list_when_no_references():
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_return_empty_list_when_no_references(mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
 
     updates = update_references([], "old.png", "new.png", mock_md)
 
@@ -195,8 +194,8 @@ def should_return_empty_list_when_no_references():
     mock_md.read_markdown_content.assert_not_called()
 
 
-def should_handle_stem_only_wiki_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_handle_stem_only_wiki_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "wiki.md"
 
     mock_md.read_markdown_content.return_value = "![[document]]\n"
@@ -207,8 +206,8 @@ def should_handle_stem_only_wiki_references(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "![[article]]\n")
 
 
-def should_not_write_file_when_content_unchanged(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_not_write_file_when_content_unchanged(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "mixed.md"
     original = (
         "# Header\n"
@@ -229,8 +228,8 @@ def should_not_write_file_when_content_unchanged(tmp_path):
     assert "Another paragraph.\n" in written_content
 
 
-def should_handle_empty_alt_text(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_handle_empty_alt_text(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "doc.md"
 
     mock_md.read_markdown_content.return_value = "![](image.png)\n"
@@ -241,8 +240,8 @@ def should_handle_empty_alt_text(tmp_path):
     mock_md.write_markdown_content.assert_called_once_with(md_file, "![](photo.png)\n")
 
 
-def should_report_correct_replacement_counts(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_report_correct_replacement_counts(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     file1 = tmp_path / "one.md"
     file2 = tmp_path / "two.md"
 
@@ -265,8 +264,8 @@ def should_report_correct_replacement_counts(tmp_path):
     assert file2_update.replacement_count == 1
 
 
-def should_update_url_encoded_references(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_url_encoded_references(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "doc.md"
     original = "![One](Screenshot%202025-11-02%20at%201.00.29%E2%80%AFPM.png)\n"
 
@@ -288,8 +287,8 @@ def should_update_url_encoded_references(tmp_path):
     assert "Screenshot" not in written_content
 
 
-def should_preserve_url_encoding_in_updates(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_preserve_url_encoding_in_updates(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "encoded.md"
 
     mock_md.read_markdown_content.return_value = "![Image](my%20photo.jpg)\n"
@@ -302,8 +301,8 @@ def should_preserve_url_encoding_in_updates(tmp_path):
     assert "renamed-photo.jpg" in written_content or "renamed%2Dphoto.jpg" in written_content
 
 
-def should_not_write_when_no_change_needed(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_not_write_when_no_change_needed(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     md_file = tmp_path / "doc.md"
 
     # Content that doesn't actually match the reference text after substitution

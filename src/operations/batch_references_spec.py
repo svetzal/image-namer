@@ -1,7 +1,6 @@
 """Tests for batch markdown reference update logic."""
 
 from pathlib import Path
-from unittest.mock import Mock
 
 from operations.batch_references import apply_batch_reference_updates, count_batch_references
 from operations.models import ProcessingResult, RenameStatus
@@ -25,8 +24,8 @@ def _make_result(
     )
 
 
-def should_return_zero_counts_when_no_renamed_results(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_return_zero_counts_when_no_renamed_results(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [
         ProcessingResult(
             source="a.png",
@@ -44,8 +43,8 @@ def should_return_zero_counts_when_no_renamed_results(tmp_path):
     mock_md.find_markdown_files.assert_not_called()
 
 
-def should_return_zero_counts_when_no_refs_found(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_return_zero_counts_when_no_refs_found(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
 
     mock_md.find_markdown_files.return_value = []
@@ -56,8 +55,8 @@ def should_return_zero_counts_when_no_refs_found(tmp_path):
     assert result.files_updated == 0
 
 
-def should_update_refs_and_return_counts(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_update_refs_and_return_counts(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
     md_file = tmp_path / "doc.md"
 
@@ -72,8 +71,8 @@ def should_update_refs_and_return_counts(tmp_path):
     assert "new.png" in written_content
 
 
-def should_skip_error_results(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_skip_error_results(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [
         ProcessingResult(
             source="bad.png",
@@ -89,8 +88,8 @@ def should_skip_error_results(tmp_path):
     mock_md.find_markdown_files.assert_not_called()
 
 
-def should_handle_collision_status_results(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_handle_collision_status_results(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [_make_result(tmp_path, "orig.png", "name-2.png", RenameStatus.COLLISION)]
     md_file = tmp_path / "note.md"
 
@@ -104,8 +103,8 @@ def should_handle_collision_status_results(tmp_path):
     assert "name-2.png" in written_content
 
 
-def should_count_refs_without_modifying_files(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_count_refs_without_modifying_files(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
     md_file = tmp_path / "doc.md"
 
@@ -119,8 +118,8 @@ def should_count_refs_without_modifying_files(tmp_path):
     mock_md.write_markdown_content.assert_not_called()
 
 
-def should_count_return_zero_when_no_refs(tmp_path):
-    mock_md = Mock(spec=MarkdownFilePort)
+def should_count_return_zero_when_no_refs(tmp_path, mocker):
+    mock_md = mocker.Mock(spec=MarkdownFilePort)
     results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
 
     mock_md.find_markdown_files.return_value = []
