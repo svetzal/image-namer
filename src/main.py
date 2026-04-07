@@ -190,6 +190,17 @@ def _apply_renames(results: list[ProcessingResult]) -> None:
     console.print("[green]✓ All renames applied.[/green]")
 
 
+def _apply_single_rename(path: Path, final_name: str) -> None:
+    """Rename a single file on disk if the name has changed.
+
+    Args:
+        path: Original file path.
+        final_name: Target filename (stem + extension).
+    """
+    if final_name != path.name:
+        FilesystemRenamer().rename(path, path.with_name(final_name))
+
+
 def _process_single_file(path: Path, provider: str, model: str) -> ProcessingResult:
     """Validate, build pipeline, and process a single image file.
 
@@ -276,8 +287,8 @@ def file(
 
     _handle_reference_updates(path, result.final, update_refs, refs_root, dry_run)
 
-    if not dry_run and result.final != path.name:
-        FilesystemRenamer().rename(path, path.with_name(result.final))
+    if not dry_run:
+        _apply_single_rename(path, result.final)
 
 
 @app.command()
@@ -404,7 +415,7 @@ def generate(
     )
 
     if not dry_run and result.final != path.name:
-        FilesystemRenamer().rename(path, path.with_name(result.final))
+        _apply_single_rename(path, result.final)
         console.print(f"[green]Renamed to: {result.final}[/green]")
     elif not dry_run:
         console.print("[dim]No rename needed.[/dim]")

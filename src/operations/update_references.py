@@ -1,5 +1,6 @@
 """Update markdown references to renamed images."""
 import re
+from functools import partial
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -117,10 +118,10 @@ def _generate_replacement(
         The replacement text.
     """
     handlers = {
-        'image': _replace_standard_image,
-        'link': _replace_standard_link,
-        'wiki_embed': _replace_wiki_embed,
-        'wiki_link': _replace_wiki_link,
+        'image': partial(_replace_standard_ref, STANDARD_IMAGE_PATTERN, "!"),
+        'link': partial(_replace_standard_ref, STANDARD_LINK_PATTERN, ""),
+        'wiki_embed': partial(_replace_wiki_ref, WIKI_EMBED_PATTERN, "!"),
+        'wiki_link': partial(_replace_wiki_ref, WIKI_LINK_PATTERN, ""),
     }
 
     handler = handlers.get(ref.ref_type)
@@ -190,51 +191,49 @@ def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
     return needle
 
 
-def _replace_standard_image(original_text: str, old_name: str, new_name: str) -> str | None:
-    """Replace filename in standard Markdown image: ![alt](path)."""
-    match = re.match(STANDARD_IMAGE_PATTERN, original_text)
+def _replace_standard_ref(pattern: str, prefix: str, original_text: str, old_name: str, new_name: str) -> str | None:
+    """Replace filename in a standard Markdown image or link reference.
+
+    Args:
+        pattern: Regex pattern to match the reference.
+        prefix: Prefix for the output (``!`` for images, ``""`` for links).
+        original_text: The original reference text.
+        old_name: Original filename.
+        new_name: New filename.
+
+    Returns:
+        Updated reference text, or None if the pattern did not match.
+    """
+    match = re.match(pattern, original_text)
     if match:
-        alt_text = match.group(1)
+        text = match.group(1)
         old_path = match.group(2)
         new_path = _replace_in_path(old_path, old_name, new_name)
-        return f"![{alt_text}]({new_path})"
+        return f"{prefix}[{text}]({new_path})"
     return None
 
 
-def _replace_standard_link(original_text: str, old_name: str, new_name: str) -> str | None:
-    """Replace filename in standard Markdown link: [text](path)."""
-    match = re.match(STANDARD_LINK_PATTERN, original_text)
-    if match:
-        link_text = match.group(1)
-        old_path = match.group(2)
-        new_path = _replace_in_path(old_path, old_name, new_name)
-        return f"[{link_text}]({new_path})"
-    return None
+def _replace_wiki_ref(pattern: str, prefix: str, original_text: str, old_name: str, new_name: str) -> str | None:
+    """Replace filename in an Obsidian wiki embed or link reference.
 
+    Args:
+        pattern: Regex pattern to match the reference.
+        prefix: Prefix for the output (``!`` for embeds, ``""`` for links).
+        original_text: The original reference text.
+        old_name: Original filename.
+        new_name: New filename.
 
-def _replace_wiki_embed(original_text: str, old_name: str, new_name: str) -> str | None:
-    """Replace filename in Obsidian wiki embed: ![[name]] or ![[name|alias]]."""
-    match = re.match(WIKI_EMBED_PATTERN, original_text)
+    Returns:
+        Updated reference text, or None if the pattern did not match.
+    """
+    match = re.match(pattern, original_text)
     if match:
         old_ref = match.group(1)
         alias = match.group(2)
         new_ref = _replace_wiki_name(old_ref, old_name, new_name)
         if alias:
-            return f"![[{new_ref}|{alias}]]"
-        return f"![[{new_ref}]]"
-    return None
-
-
-def _replace_wiki_link(original_text: str, old_name: str, new_name: str) -> str | None:
-    """Replace filename in Obsidian wiki link: [[name]] or [[name|alias]]."""
-    match = re.match(WIKI_LINK_PATTERN, original_text)
-    if match:
-        old_ref = match.group(1)
-        alias = match.group(2)
-        new_ref = _replace_wiki_name(old_ref, old_name, new_name)
-        if alias:
-            return f"[[{new_ref}|{alias}]]"
-        return f"[[{new_ref}]]"
+            return f"{prefix}[[{new_ref}|{alias}]]"
+        return f"{prefix}[[{new_ref}]]"
     return None
 
 
