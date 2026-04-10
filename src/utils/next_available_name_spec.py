@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 from utils.fs import next_available_name
@@ -15,14 +14,11 @@ def should_pick_next_numeric_suffix(tmp_path: Path) -> None:
     assert result == "photo-4.png"
 
 
-def should_be_case_insensitive_on_macos(mocker, tmp_path: Path) -> None:
-    # Simulate macOS behavior by monkeypatching sys.platform
-    mocker.patch.object(sys, "platform", "darwin")
-
+def should_be_case_insensitive_on_macos(tmp_path: Path) -> None:
     # Existing file differs by case
     (tmp_path / "Sample.png").write_bytes(b"x")
 
-    result = next_available_name(tmp_path, "sample", ".png")
+    result = next_available_name(tmp_path, "sample", ".png", case_insensitive=True)
 
     # Since "Sample.png" exists (case-insensitive), next should be sample-2.png
     assert result == "sample-2.png"

@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Generic, TypeVar, cast
+from typing import Callable, Generic, TypeVar, cast
 
 from pydantic import BaseModel, Field
 
@@ -70,10 +70,12 @@ class CacheStore(Generic[T]):
         entry_type: type[BaseCacheEntry],
         payload_field: str,
         key_fields: tuple[str, ...],
+        hash_fn: Callable[[Path], str] = sha256_file,
     ) -> None:
         self._entry_type = entry_type
         self._payload_field = payload_field
         self._key_fields = key_fields
+        self._hash_fn = hash_fn
 
     def load(self, cache_dir: Path, image_path: Path, **key_values: str) -> T | None:
         """Load a cached payload if it exists and all key values match.
@@ -87,7 +89,7 @@ class CacheStore(Generic[T]):
             The cached payload model, or None on any miss or validation failure.
         """
         try:
-            image_hash = sha256_file(image_path)
+            image_hash = self._hash_fn(image_path)
             key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
             cache_file = cache_dir / f"{key}.json"
             if not cache_file.exists():
@@ -112,7 +114,7 @@ class CacheStore(Generic[T]):
             payload: The Pydantic model instance to cache.
             **key_values: Values for each field in key_fields.
         """
-        image_hash = sha256_file(image_path)
+        image_hash = self._hash_fn(image_path)
         key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
         cache_file = cache_dir / f"{key}.json"
         entry = self._entry_type(

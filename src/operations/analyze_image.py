@@ -34,6 +34,7 @@ def analyze_image(
     path: Path,
     current_name: str,
     llm: LLMBroker,
+    message_builder: type = MessageBuilder,
 ) -> ImageAnalysis:
     """Analyze an image and provide assessment + naming in a single LLM call.
 
@@ -51,7 +52,7 @@ def analyze_image(
     prompt = f"{UNIFIED_PROMPT}\n\nCurrent filename: '{current_name}'"
 
     messages = [
-        MessageBuilder(prompt)
+        message_builder(prompt)
         .add_image(path)
         .build()
     ]

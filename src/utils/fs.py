@@ -67,7 +67,7 @@ def ensure_cache_layout(repo_root: Path) -> Path:
     return cache_root
 
 
-def next_available_name(dir: Path, stem: str, ext: str) -> str:
+def next_available_name(dir: Path, stem: str, ext: str, case_insensitive: bool | None = None) -> str:
     """Return a non-colliding filename for the given directory.
 
     Uses numeric suffixes ``-2``, ``-3``, ... appended to the provided ``stem``
@@ -81,6 +81,8 @@ def next_available_name(dir: Path, stem: str, ext: str) -> str:
         dir: Directory to check for name collisions.
         stem: Desired filename stem (without extension).
         ext: File extension, with or without a leading dot.
+        case_insensitive: Override case-sensitivity check. When None (default),
+            auto-detects based on ``sys.platform``.
 
     Returns:
         A filename (stem + extension) that does not exist in ``dir``.
@@ -91,6 +93,8 @@ def next_available_name(dir: Path, stem: str, ext: str) -> str:
     else:
         extension = ext if ext.startswith(".") else f".{ext}"
 
+    _case_insensitive = sys.platform == "darwin" if case_insensitive is None else case_insensitive
+
     # Normalize list of existing filenames in the directory
     try:
         existing = {p.name for p in dir.iterdir()}
@@ -98,7 +102,7 @@ def next_available_name(dir: Path, stem: str, ext: str) -> str:
         existing = set()
 
     def normalize(name: str) -> str:
-        return name.lower() if sys.platform == "darwin" else name
+        return name.lower() if _case_insensitive else name
 
     existing_norm = {normalize(name) for name in existing}
 
