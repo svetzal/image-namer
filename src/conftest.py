@@ -6,6 +6,25 @@ import pytest
 from operations.models import ImageAnalysis, ProposedName
 
 
+def make_proposed_name(stem: str = "sample", extension: str = ".png") -> ProposedName:
+    return ProposedName(stem=stem, extension=extension)
+
+
+def make_analysis(
+    suitable: bool = True,
+    stem: str = "sample",
+    extension: str = ".png",
+    reasoning: str | None = None,
+) -> ImageAnalysis:
+    kwargs: dict[str, object] = {
+        "current_name_suitable": suitable,
+        "proposed_name": ProposedName(stem=stem, extension=extension),
+    }
+    if reasoning is not None:
+        kwargs["reasoning"] = reasoning
+    return ImageAnalysis(**kwargs)
+
+
 @pytest.fixture
 def cache_dirs(tmp_path: pathlib.Path) -> pathlib.Path:
     """Create standard cache directory layout and return cache root."""
@@ -27,15 +46,13 @@ class FakeLLM:
         """Record call and return a constructed pydantic model object."""
         self.calls.append((messages, object_model))
         if object_model is ProposedName:
-            data = self.payload or {"stem": "primary-subject--specific-detail", "extension": ".png"}
-            return ProposedName(**data)
+            if self.payload:
+                return ProposedName(**self.payload)
+            return make_proposed_name(stem="primary-subject--specific-detail")
         if object_model is ImageAnalysis:
-            data = self.payload or {
-                "current_name_suitable": True,
-                "proposed_name": {"stem": "primary-subject--specific-detail", "extension": ".png"},
-                "reasoning": "Test reasoning",
-            }
-            return ImageAnalysis(**data)
+            if self.payload:
+                return ImageAnalysis(**self.payload)
+            return make_analysis(stem="primary-subject--specific-detail", reasoning="Test reasoning")
         raise AssertionError("Unexpected object_model requested")
 
 

@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from conftest import make_analysis
 from constants import RUBRIC_VERSION
 from operations.cache import (
     AnalysisCacheEntry,
@@ -10,7 +11,6 @@ from operations.cache import (
     load_analysis_from_cache,
     save_analysis_to_cache,
 )
-from operations.models import ImageAnalysis, ProposedName
 
 _fake_hasher = lambda _: "abc123"  # noqa: E731
 
@@ -65,10 +65,7 @@ def should_return_none_when_cache_file_missing(store, cache_dir, image_path):
 
 
 def should_return_payload_after_save(store, cache_dir, image_path):
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="test-name", extension=".png"),
-    )
+    analysis = make_analysis(stem="test-name")
 
     store.save(
         cache_dir, image_path, analysis,
@@ -84,10 +81,7 @@ def should_return_payload_after_save(store, cache_dir, image_path):
 
 
 def should_return_none_when_image_hash_changed(store, cache_dir, image_path):
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="test-name", extension=".png"),
-    )
+    analysis = make_analysis(stem="test-name")
     store.save(
         cache_dir, image_path, analysis,
         filename="test-image.png", provider="ollama", model="gemma3:27b",
@@ -108,10 +102,7 @@ def should_return_none_when_image_hash_changed(store, cache_dir, image_path):
 
 
 def should_return_none_when_key_field_changed(store, cache_dir, image_path):
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="test-name", extension=".png"),
-    )
+    analysis = make_analysis(stem="test-name")
     store.save(
         cache_dir, image_path, analysis,
         filename="test-image.png", provider="ollama", model="gemma3:27b",
@@ -126,10 +117,7 @@ def should_return_none_when_key_field_changed(store, cache_dir, image_path):
 
 
 def should_return_none_when_rubric_version_tampered(store, cache_dir, image_path):
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="test-name", extension=".png"),
-    )
+    analysis = make_analysis(stem="test-name")
     store.save(
         cache_dir, image_path, analysis,
         filename="test-image.png", provider="ollama", model="gemma3:27b",
@@ -163,10 +151,7 @@ def should_return_none_when_cache_file_corrupted(store, cache_dir, image_path):
 
 
 def should_create_cache_directory_if_missing(store, cache_dir, image_path):
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="test-name", extension=".png"),
-    )
+    analysis = make_analysis(stem="test-name")
 
     assert not cache_dir.exists()
     store.save(
@@ -179,10 +164,7 @@ def should_create_cache_directory_if_missing(store, cache_dir, image_path):
 
 
 def should_serialize_as_valid_json(store, cache_dir, image_path):
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="test-name", extension=".png"),
-    )
+    analysis = make_analysis(stem="test-name")
     store.save(
         cache_dir, image_path, analysis,
         filename="test-image.png", provider="ollama", model="gemma3:27b",
@@ -200,14 +182,8 @@ def should_serialize_as_valid_json(store, cache_dir, image_path):
 
 
 def should_overwrite_existing_cache_entry(store, cache_dir, image_path):
-    first = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="first-name", extension=".png"),
-    )
-    second = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="second-name", extension=".png"),
-    )
+    first = make_analysis(stem="first-name")
+    second = make_analysis(stem="second-name")
 
     store.save(
         cache_dir, image_path, first,
@@ -230,11 +206,7 @@ def should_round_trip_analysis_cache(tmp_path):
     cache_dir = tmp_path / "cache" / "unified"
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"content")
-    analysis = ImageAnalysis(
-        current_name_suitable=True,
-        proposed_name=ProposedName(stem="good-name", extension=".png"),
-        reasoning="Already descriptive",
-    )
+    analysis = make_analysis(stem="good-name", reasoning="Already descriptive")
 
     save_analysis_to_cache(cache_dir, image_path, "test.png", "ollama", "gemma3:27b", analysis)
     result = load_analysis_from_cache(cache_dir, image_path, "test.png", "ollama", "gemma3:27b")

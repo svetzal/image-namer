@@ -1,6 +1,7 @@
 """Tests for batch folder processing orchestration."""
 
-from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
+from conftest import make_analysis
+from operations.models import ProcessingResult, RenameStatus
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_folder import compute_statistics, process_folder
 
@@ -24,11 +25,7 @@ def should_process_all_images_in_list(tmp_path, mocker):
     def fake_analyze(path, name):
         nonlocal call_count
         call_count += 1
-        return ImageAnalysis(
-            current_name_suitable=False,
-            proposed_name=ProposedName(stem=f"name-{call_count}", extension=".png"),
-            reasoning="",
-        )
+        return make_analysis(suitable=False, stem=f"name-{call_count}", reasoning="")
 
     cache = mocker.Mock(spec=AnalysisCachePort)
     cache.load.return_value = None
@@ -49,11 +46,7 @@ def should_track_planned_names_across_images(tmp_path, mocker):
     cache = mocker.Mock(spec=AnalysisCachePort)
     cache.load.return_value = None
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
-    analyzer.analyze.return_value = ImageAnalysis(
-        current_name_suitable=False,
-        proposed_name=ProposedName(stem="same-name", extension=".png"),
-        reasoning="",
-    )
+    analyzer.analyze.return_value = make_analysis(suitable=False, stem="same-name", reasoning="")
 
     results = process_folder(
         [img1, img2], analyzer, cache, "ollama", "gemma3:27b"

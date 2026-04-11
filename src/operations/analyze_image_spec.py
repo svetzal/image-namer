@@ -1,7 +1,8 @@
 import pytest
 
+from conftest import make_analysis
 from operations.analyze_image import UNIFIED_PROMPT, analyze_image
-from operations.models import ImageAnalysis, ProposedName
+from operations.models import ImageAnalysis
 
 
 class _FakeMessage:
@@ -17,9 +18,9 @@ class _FakeMessage:
 
 @pytest.fixture
 def fake_analysis():
-    return ImageAnalysis(
-        current_name_suitable=False,
-        proposed_name=ProposedName(stem="golden-retriever--running-in-park", extension=".png"),
+    return make_analysis(
+        suitable=False,
+        stem="golden-retriever--running-in-park",
         reasoning="Descriptive name matches content",
     )
 
