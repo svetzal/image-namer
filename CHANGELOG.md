@@ -5,13 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Next]
+## [Unreleased]
+
+## [2.2.0] - 2026-04-11
+
+### Added
+- Strict mypy type checking gate in CI pipeline
+- Project charter (CHARTER.md) for clearer project goals and non-goals
 
 ### Changed
+- Established Gateway Pattern with protocol-based ports (`AnalysisCachePort`, `ImageAnalyzerPort`, `FileRenamerPort`, `MarkdownFilePort`) for all I/O boundaries
 - Extracted rename application logic from CLI into `operations/apply_renames.py` with `FileRenamerPort` for clean port injection
+- Extracted image and folder processing into the `operations/` layer, keeping CLI commands thin
 - Extracted LLM pipeline construction into `operations/pipeline_factory.py`, eliminating duplication across commands
-- Removed CLI integration tests that violated the "only mock gateway/boundary classes" principle
-- Retained thin CLI validation smoke tests that verify argument handling without internal patching
+- Injected `MarkdownFilePort` into UI reference operations for testability
+- Consolidated LLM strategy and cache handling across CLI and GUI
+- Strengthened `CacheStore` type hints to remove redundant type-ignore comments
+- Migrated all tooling to idiomatic `uv` (replacing pip/pipx invocations)
+- Consolidated agent guidance into unified AGENTS.md
+- Removed CLI integration tests that violated the "only mock gateway/boundary classes" principle; retained thin CLI validation smoke tests
+- Updated dependencies: mojentic, PySide6 6.11.0, openai, anthropic, mkdocs-material, pytest-cov 7.1.0, and numerous transitive dependencies
 
 ## [2.1.0] - 2025-11-06
 
