@@ -6,7 +6,7 @@ Proactively loads cache to give user early feedback on what's already been proce
 from PySide6.QtCore import QThread, Signal
 
 from operations.ports import AnalysisCachePort
-from operations.process_image import normalize_extension, resolve_final_name
+from operations.process_image import resolve_final_name
 from ui.models.ui_models import RenameItem, RenameStatus
 
 
@@ -56,8 +56,7 @@ class CacheLoaderWorker(QThread):
             if analysis:
                 proposed = analysis.proposed_name
                 item.reasoning = analysis.reasoning
-                proposed_ext = normalize_extension(proposed.extension, item.path.suffix)
-                proposed_filename = f"{proposed.stem}{proposed_ext}"
+                proposed_filename = proposed.filename_with_fallback(item.path.suffix)
                 item.proposed_name = proposed_filename
 
                 if analysis.current_name_suitable:

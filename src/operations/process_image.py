@@ -11,23 +11,6 @@ from operations.models import ImageAnalysis, ProcessingResult, ProposedName, Ren
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
 
 
-def normalize_extension(proposed_ext: str, fallback_ext: str) -> str:
-    """Normalize extension to include leading dot.
-
-    Args:
-        proposed_ext: The proposed extension (may or may not have leading dot).
-        fallback_ext: Fallback extension to use if proposed is empty.
-
-    Returns:
-        Extension with leading dot.
-    """
-    if not proposed_ext:
-        return fallback_ext
-    if proposed_ext.startswith("."):
-        return proposed_ext
-    return f".{proposed_ext}"
-
-
 def find_next_available_in_batch(
     directory: Path,
     stem: str,
@@ -120,8 +103,8 @@ def resolve_final_name(
           COLLISION if a suffix was added.
     """
     proposed_stem = proposed.stem
-    proposed_ext = normalize_extension(proposed.extension, img_path.suffix)
-    proposed_filename = f"{proposed_stem}{proposed_ext}"
+    proposed_filename = proposed.filename_with_fallback(img_path.suffix)
+    proposed_ext = proposed_filename[len(proposed_stem):]
 
     if img_path.stem == proposed_stem:
         return proposed_filename, img_path.name, RenameStatus.UNCHANGED

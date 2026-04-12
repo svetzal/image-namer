@@ -14,18 +14,31 @@ class ProposedName(BaseModel):
     stem: str = Field(..., description="The stem of the filename")
     extension: str = Field(..., description="The extension of the filename. May include the leading dot")
 
+    def filename_with_fallback(self, fallback_ext: str) -> str:
+        """Compose full filename, using fallback_ext when extension is empty.
+
+        Args:
+            fallback_ext: Extension to use when self.extension is empty.
+                Should include a leading dot (e.g. ``".png"``).
+
+        Returns:
+            Full filename string with normalised extension.
+        """
+        ext = self.extension or ""
+        if not ext:
+            ext = fallback_ext
+        elif not ext.startswith('.'):
+            ext = f".{ext}"
+        return f"{self.stem}{ext}"
+
     @property
     def filename(self) -> str:
         """Full filename composed from stem and extension.
 
-        Handles both cases where `extension` includes the leading dot and where it does not.
+        Handles both cases where ``extension`` includes the leading dot and
+        where it does not.  When the extension is empty, returns the bare stem.
         """
-        ext = self.extension or ""
-        if not ext:
-            return self.stem
-        if ext.startswith('.'):
-            return f"{self.stem}{ext}"
-        return f"{self.stem}.{ext}"
+        return self.filename_with_fallback("")
 
 
 class ImageAnalysis(BaseModel):
