@@ -373,7 +373,7 @@ requires-dist = [
     { name = "mojentic", specifier = ">=1.2.1" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pyside6", marker = "extra == 'gui'", specifier = ">=6.7" },
-    { name = "rich", specifier = ">=14.3.3" },
+    { name = "rich", specifier = ">=14.3.4" },
     { name = "typer", specifier = ">=0.24.1" },
 ]
 provides-extras = ["gui"]
@@ -383,9 +383,9 @@ dev = [
     { name = "flake8", specifier = ">=7.3.0" },
     { name = "flake8-pyproject", specifier = ">=1.2.4" },
     { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-material", specifier = ">=9.7.2" },
-    { name = "mypy", specifier = ">=1.19.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "mkdocs-material", specifier = ">=9.7.6" },
+    { name = "mypy", specifier = ">=1.20.0" },
+    { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "pytest-mock", specifier = ">=3.15.1" },
 ]
