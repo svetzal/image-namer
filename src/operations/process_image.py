@@ -9,31 +9,7 @@ from pathlib import Path
 
 from operations.models import ImageAnalysis, ProcessingResult, ProposedName, RenameStatus
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
-
-
-def find_next_available_in_batch(
-    directory: Path,
-    stem: str,
-    ext: str,
-    planned_names: set[str]
-) -> str:
-    """Find next available filename considering both disk and planned renames.
-
-    Args:
-        directory: Directory to check for existing files.
-        stem: Base filename stem.
-        ext: File extension with leading dot.
-        planned_names: Set of already planned filenames.
-
-    Returns:
-        Next available filename (stem-2.ext, stem-3.ext, ...).
-    """
-    suffix_num = 2
-    while True:
-        test_name = f"{stem}-{suffix_num}{ext}"
-        if not (directory / test_name).exists() and test_name not in planned_names:
-            return test_name
-        suffix_num += 1
+from utils.fs import next_available_name
 
 
 def get_or_generate_analysis(
@@ -109,15 +85,8 @@ def resolve_final_name(
     if img_path.stem == proposed_stem:
         return proposed_filename, img_path.name, RenameStatus.UNCHANGED
 
-    candidate = proposed_filename
-    if (img_path.parent / candidate).exists() or candidate in planned_names:
-        final_name = find_next_available_in_batch(
-            img_path.parent, proposed_stem, proposed_ext, planned_names
-        )
-        status = RenameStatus.COLLISION
-    else:
-        final_name = candidate
-        status = RenameStatus.RENAMED
+    final_name = next_available_name(img_path.parent, proposed_stem, proposed_ext, planned_names=planned_names)
+    status = RenameStatus.RENAMED if final_name == proposed_filename else RenameStatus.COLLISION
 
     planned_names.add(final_name)
     return proposed_filename, final_name, status

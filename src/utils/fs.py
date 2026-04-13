@@ -67,7 +67,13 @@ def ensure_cache_layout(repo_root: Path) -> Path:
     return cache_root
 
 
-def next_available_name(dir: Path, stem: str, ext: str, case_insensitive: bool | None = None) -> str:
+def next_available_name(
+    dir: Path,
+    stem: str,
+    ext: str,
+    case_insensitive: bool | None = None,
+    planned_names: set[str] | frozenset[str] = frozenset(),
+) -> str:
     """Return a non-colliding filename for the given directory.
 
     Uses numeric suffixes ``-2``, ``-3``, ... appended to the provided ``stem``
@@ -83,9 +89,12 @@ def next_available_name(dir: Path, stem: str, ext: str, case_insensitive: bool |
         ext: File extension, with or without a leading dot.
         case_insensitive: Override case-sensitivity check. When None (default),
             auto-detects based on ``sys.platform``.
+        planned_names: Set of filenames already reserved in the current batch.
+            Candidates that appear in this set are skipped even if absent on disk.
 
     Returns:
-        A filename (stem + extension) that does not exist in ``dir``.
+        A filename (stem + extension) that does not exist in ``dir`` and is not
+        present in ``planned_names``.
     """
     # Normalize extension to include leading dot if provided and not empty
     if not ext:
@@ -105,6 +114,7 @@ def next_available_name(dir: Path, stem: str, ext: str, case_insensitive: bool |
         return name.lower() if _case_insensitive else name
 
     existing_norm = {normalize(name) for name in existing}
+    planned_norm = {normalize(name) for name in planned_names}
 
     def candidate(n: int) -> str:
         s = stem if n == 1 else f"{stem}-{n}"
@@ -113,7 +123,7 @@ def next_available_name(dir: Path, stem: str, ext: str, case_insensitive: bool |
     n = 1
     while True:
         name = candidate(n)
-        if normalize(name) not in existing_norm:
+        if normalize(name) not in existing_norm and normalize(name) not in planned_norm:
             return name
         n += 1
 

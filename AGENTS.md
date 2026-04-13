@@ -57,7 +57,7 @@ The codebase follows a clean separation between CLI and business logic:
 | `src/operations/update_references.py` | In-place file updater preserving alt text/aliases; accepts `MarkdownFilePort` for I/O |
 | `src/operations/batch_references.py` | Batch markdown reference update orchestration; accepts `MarkdownFilePort` for I/O |
 | `src/operations/text_utils.py` | Shared text normalization utilities (Unicode/whitespace); used by reference operations |
-| `src/utils/fs.py` | `sha256_file()`, `ensure_cache_layout()`, `next_available_name()` (collision resolver with macOS case-insensitivity) |
+| `src/utils/fs.py` | `sha256_file()`, `ensure_cache_layout()`, `next_available_name()` (collision resolver with macOS case-insensitivity and optional `planned_names` batch tracking) |
 
 ### Cache-First Design
 
@@ -114,7 +114,7 @@ Markdown reference updates support standard syntax `![](path)` `[](path)` and Ob
 
 ### Known Complexity Points
 
-**Collision resolution in batch**: `_process_single_image()` tracks a `planned_names` set across all files to avoid intra-run collisions. `_find_next_available_in_batch()` checks both disk and planned renames.
+**Collision resolution in batch**: `process_single_image()` tracks a `planned_names` set across all files to avoid intra-run collisions. `next_available_name()` in `utils/fs.py` accepts an optional `planned_names` parameter and checks both disk and planned renames, with macOS case-insensitive matching.
 
 **URL decoding + Unicode normalization**: Obsidian uses URL-encoded paths with non-breaking spaces. `_ref_matches_filename()` handles `unquote()` + `unicodedata.normalize('NFKC')` for matching.
 

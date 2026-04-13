@@ -22,3 +22,17 @@ def should_be_case_insensitive_on_macos(tmp_path: Path) -> None:
 
     # Since "Sample.png" exists (case-insensitive), next should be sample-2.png
     assert result == "sample-2.png"
+
+
+def should_skip_names_in_planned_names_set(tmp_path: Path) -> None:
+    result = next_available_name(tmp_path, "photo", ".png", planned_names={"photo.png"})
+
+    assert result == "photo-2.png"
+
+
+def should_skip_both_disk_and_planned_collisions(tmp_path: Path) -> None:
+    (tmp_path / "photo.png").write_bytes(b"x")
+
+    result = next_available_name(tmp_path, "photo", ".png", planned_names={"photo-2.png"})
+
+    assert result == "photo-3.png"
