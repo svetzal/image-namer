@@ -27,7 +27,7 @@ classifiers = [
 dependencies = [
     "typer>=0.24.1",
     "rich>=14.3.4",
-    "pydantic>=2.12.5",
+    "pydantic>=2.13.0",
     "mojentic>=1.2.1",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
 ]
