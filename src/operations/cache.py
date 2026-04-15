@@ -12,26 +12,14 @@ from utils.fs import sha256_file
 
 
 class BaseCacheEntry(BaseModel):
-    """Shared fields common to all cache entry types.
-
-    Attributes:
-        image_hash: SHA-256 hash of the image file.
-        rubric_version: Version of the naming rubric used for cache invalidation.
-    """
+    """Shared fields common to all cache entry types."""
 
     image_hash: str = Field(..., description="SHA-256 hash of the image")
     rubric_version: int = Field(..., description="Rubric version")
 
 
 class AnalysisCacheEntry(BaseCacheEntry):
-    """A cached unified analysis result for an image.
-
-    Attributes:
-        filename: The filename that was analyzed.
-        provider: LLM provider name.
-        model: Model name.
-        analysis: The complete analysis result.
-    """
+    """A cached unified analysis result for an image."""
 
     filename: str = Field(..., description="Filename that was analyzed")
     provider: str = Field(..., description="LLM provider name")

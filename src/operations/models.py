@@ -5,14 +5,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProposedName(BaseModel):
-    """Proposed filename components.
+    """Proposed filename components."""
 
-    Attributes:
-        stem: The stem of the filename (without extension).
-        extension: The extension of the filename. May or may not include the leading dot.
-    """
     stem: str = Field(..., description="The stem of the filename")
-    extension: str = Field(..., description="The extension of the filename. May include the leading dot")
+    extension: str = Field(..., description="The extension of the filename. May or may not include the leading dot")
 
     def filename_with_fallback(self, fallback_ext: str) -> str:
         """Compose full filename, using fallback_ext when extension is empty.
@@ -42,13 +38,8 @@ class ProposedName(BaseModel):
 
 
 class ImageAnalysis(BaseModel):
-    """Combined assessment and naming for an image in a single LLM call.
+    """Combined assessment and naming for an image in a single LLM call."""
 
-    Attributes:
-        current_name_suitable: Whether the current filename already follows the rubric.
-        proposed_name: The recommended filename (may match current if suitable).
-        reasoning: Optional explanation of the assessment and naming decision.
-    """
     current_name_suitable: bool = Field(
         ...,
         description="Whether the current filename already follows the rubric and matches image content"
@@ -59,20 +50,12 @@ class ImageAnalysis(BaseModel):
     )
     reasoning: str = Field(
         default="",
-        description="Brief explanation of the assessment and naming choice"
+        description="Optional brief explanation of the assessment and naming choice"
     )
 
 
 class MarkdownReference(BaseModel):
-    """A reference to an image in a markdown file.
-
-    Attributes:
-        file_path: The path to the markdown file containing the reference.
-        line_number: The line number (1-indexed) where the reference appears.
-        original_text: The original reference text (e.g., '![alt](image.png)').
-        image_path: The path to the image being referenced.
-        ref_type: The type of reference ('image', 'link', 'wiki', 'wiki_embed').
-    """
+    """A reference to an image in a markdown file."""
     file_path: Path = Field(..., description="Path to the markdown file")
     line_number: int = Field(..., description="Line number (1-indexed)")
     original_text: str = Field(..., description="Original reference text")
@@ -81,12 +64,7 @@ class MarkdownReference(BaseModel):
 
 
 class ReferenceUpdate(BaseModel):
-    """Result of updating references in markdown files.
-
-    Attributes:
-        file_path: The path to the markdown file that was updated.
-        replacement_count: Number of replacements made in this file.
-    """
+    """Result of updating references in markdown files."""
     file_path: Path = Field(..., description="Path to the updated markdown file")
     replacement_count: int = Field(..., description="Number of replacements made")
 
@@ -101,17 +79,7 @@ class RenameStatus(StrEnum):
 
 
 class ProcessingResult(BaseModel):
-    """Result of processing a single image file.
-
-    Attributes:
-        source: Original filename.
-        proposed: The LLM-proposed filename.
-        final: The resolved final filename after collision resolution.
-        status: What happened during processing.
-        path: Original file path (needed for rename application and reference updates).
-        reasoning: LLM reasoning for the assessment.
-        cached: Whether result came from cache.
-    """
+    """Result of processing a single image file."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -125,12 +93,7 @@ class ProcessingResult(BaseModel):
 
 
 class BatchReferenceResult(BaseModel):
-    """Result of batch markdown reference updates.
-
-    Attributes:
-        total_references: Total number of reference replacements made.
-        files_updated: Number of distinct markdown files modified.
-    """
+    """Result of batch markdown reference updates."""
 
     model_config = ConfigDict(frozen=True)
 
