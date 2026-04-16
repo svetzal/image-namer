@@ -99,3 +99,13 @@ class BatchReferenceResult(BaseModel):
 
     total_references: int = Field(..., description="Total reference replacements")
     files_updated: int = Field(..., description="Number of markdown files updated")
+
+
+class RenameOutcome(BaseModel):
+    """Result of a single file rename with optional reference updates."""
+
+    model_config = ConfigDict(frozen=True)
+
+    renamed: bool = Field(..., description="Whether the file was renamed")
+    new_path: Path = Field(..., description="Final path of the file (unchanged if not renamed)")
+    references_updated: int = Field(..., description="Number of markdown references updated")

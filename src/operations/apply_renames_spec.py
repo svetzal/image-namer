@@ -1,6 +1,8 @@
-from operations.apply_renames import apply_renames
+from pathlib import Path
+
+from operations.apply_renames import apply_rename_with_references, apply_renames
 from operations.models import ProcessingResult, RenameStatus
-from operations.ports import FileRenamerPort
+from operations.ports import FileRenamerPort, MarkdownFilePort
 
 
 def should_rename_files_with_renamed_status(tmp_path, mocker):
@@ -104,6 +106,56 @@ def should_skip_when_final_equals_current_name(tmp_path, mocker):
 
     assert count == 0
     renamer.rename.assert_not_called()
+
+
+def should_skip_when_old_and_new_names_match(mocker):
+    old_path = Path("/some/path/image.png")
+    renamer = mocker.Mock(spec=FileRenamerPort)
+
+    outcome = apply_rename_with_references(old_path, "image.png", None, renamer, None, False)
+
+    assert outcome.renamed is False
+    assert outcome.new_path == old_path
+    assert outcome.references_updated == 0
+    renamer.rename.assert_not_called()
+
+
+def should_call_renamer_with_destination_path(tmp_path, mocker):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    renamer = mocker.Mock(spec=FileRenamerPort)
+
+    outcome = apply_rename_with_references(img, "new.png", None, renamer, None, False)
+
+    assert outcome.renamed is True
+    assert outcome.new_path == tmp_path / "new.png"
+    renamer.rename.assert_called_once_with(img, tmp_path / "new.png")
+
+
+def should_return_zero_references_when_markdown_port_is_none(tmp_path, mocker):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    renamer = mocker.Mock(spec=FileRenamerPort)
+
+    outcome = apply_rename_with_references(img, "new.png", None, renamer, None, False)
+
+    assert outcome.references_updated == 0
+
+
+def should_find_and_update_references_when_markdown_port_provided(tmp_path, mocker):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    renamer = mocker.Mock(spec=FileRenamerPort)
+    markdown_files = mocker.Mock(spec=MarkdownFilePort)
+
+    mock_refs = [mocker.Mock()]
+    mock_update = mocker.Mock(replacement_count=3)
+    mocker.patch("operations.apply_renames.find_references", return_value=mock_refs)
+    mocker.patch("operations.apply_renames.update_references", return_value=[mock_update])
+
+    outcome = apply_rename_with_references(img, "new.png", tmp_path, renamer, markdown_files, True)
+
+    assert outcome.references_updated == 3
 
 
 def should_return_total_renamed_count(tmp_path, mocker):

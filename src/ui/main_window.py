@@ -29,12 +29,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from operations.adapters import FilesystemAnalysisCache, FilesystemMarkdownFiles
-from operations.find_references import find_references
+from operations.adapters import FilesystemAnalysisCache
 from operations.gateway_factory import MissingApiKeyError, create_gateway
 from operations.pipeline_factory import build_analysis_pipeline
-from operations.update_references import update_references
 from ui.models.ui_models import RenameItem, RenameStatus
+from ui.rename_actions import perform_rename_with_refs
 from ui.settings import get_setting, set_setting
 from ui.workers.cache_loader import CacheLoaderWorker
 from ui.workers.rename_worker import RenameWorker
@@ -1113,32 +1112,23 @@ class MainWindow(QMainWindow):
 
         return row, self.rename_items[row]
 
-    def _perform_single_rename_with_refs(
-        self, item: RenameItem, old_path: Path, new_path: Path, old_name: str, new_name: str
-    ) -> int:
+    def _perform_single_rename_with_refs(self, old_path: Path, new_name: str) -> int:
         """Perform single file rename and update references.
 
         Args:
-            item: RenameItem to rename.
             old_path: Current file path.
-            new_path: Target file path.
-            old_name: Current filename.
             new_name: Target filename.
 
         Returns:
             Number of references updated.
         """
-        old_path.rename(new_path)
-
-        total_refs_updated = 0
-        if self.update_refs_checkbox.isChecked() and self.current_folder is not None:
-            markdown_files = FilesystemMarkdownFiles()
-            refs = find_references(old_path, self.current_folder, markdown_files, recursive=self.recursive_scan)
-            if refs:
-                updates = update_references(refs, old_name, new_name, markdown_files)
-                total_refs_updated = sum(u.replacement_count for u in updates)
-
-        return total_refs_updated
+        return perform_rename_with_refs(
+            old_path,
+            new_name,
+            self.current_folder,
+            self.update_refs_checkbox.isChecked(),
+            self.recursive_scan,
+        )
 
     def _update_ui_after_single_rename(self, row: int, item: RenameItem) -> None:
         """Update UI elements after successful single rename.
@@ -1184,7 +1174,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            total_refs_updated = self._perform_single_rename_with_refs(item, old_path, new_path, old_name, new_name)
+            total_refs_updated = self._perform_single_rename_with_refs(old_path, new_name)
 
             item.status = RenameStatus.COMPLETED
             item.status_message = "Successfully renamed"
@@ -1260,25 +1250,21 @@ class MainWindow(QMainWindow):
         for item in items_to_rename:
             try:
                 old_path = item.path
-                new_path = old_path.parent / item.final_name
+                new_name = item.final_name
 
-                if old_path == new_path:
+                if old_path.name == new_name:
                     continue
 
-                old_path.rename(new_path)
+                refs_updated = perform_rename_with_refs(
+                    old_path, new_name, self.current_folder, update_refs, self.recursive_scan
+                )
                 renamed_count += 1
-
-                if update_refs and self.current_folder is not None:
-                    markdown_files = FilesystemMarkdownFiles()
-                    refs = find_references(old_path, self.current_folder, markdown_files, recursive=self.recursive_scan)
-                    if refs:
-                        updates = update_references(refs, item.source_name, item.final_name, markdown_files)
-                        total_refs_updated += sum(u.replacement_count for u in updates)
+                total_refs_updated += refs_updated
 
                 item.status = RenameStatus.COMPLETED
                 item.status_message = "Successfully renamed"
-                item.source_name = item.final_name
-                item.path = new_path
+                item.source_name = new_name
+                item.path = old_path.parent / new_name
 
             except (OSError, PermissionError) as e:
                 error_count += 1
