@@ -38,16 +38,8 @@ def analyze_image(
 ) -> ImageAnalysis:
     """Analyze an image and provide assessment + naming in a single LLM call.
 
-    This replaces the two-call pattern (assess_name + generate_name) with a single
+    Replaces the two-call pattern (assess_name + generate_name) with a single
     unified call that returns both pieces of information.
-
-    Args:
-        path: Path to the image file.
-        current_name: Current filename (stem + extension) to assess.
-        llm: LLM broker for making the call.
-
-    Returns:
-        ImageAnalysis containing assessment, proposed name, and reasoning.
     """
     prompt = f"{UNIFIED_PROMPT}\n\nCurrent filename: '{current_name}'"
 

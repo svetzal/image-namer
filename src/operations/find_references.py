@@ -29,15 +29,6 @@ def find_references(
     - Standard link: [text](path/to/image.png)
     - Wiki link: [[image.png]], [[image.png|alias]]
     - Wiki embed: ![[image.png]], ![[image.png|alias]]
-
-    Args:
-        image_path: Path to the image file to find references to.
-        refs_root: Root directory to search for markdown files.
-        markdown_files: Port for discovering and reading markdown files.
-        recursive: Whether to search subdirectories recursively.
-
-    Returns:
-        List of MarkdownReference objects found.
     """
     references = []
     image_name = image_path.name
@@ -55,11 +46,6 @@ def find_references(
 
 
 def _get_reference_patterns() -> dict[str, re.Pattern[str]]:
-    """Get compiled regex patterns for markdown references.
-
-    Returns:
-        Dictionary mapping reference type to compiled pattern.
-    """
     return {
         'image': re.compile(STANDARD_IMAGE_PATTERN),
         'link': re.compile(r'(?<!!)' + STANDARD_LINK_PATTERN),
@@ -76,19 +62,6 @@ def _find_references_in_line(
     image_name: str,
     patterns: dict[str, re.Pattern[str]]
 ) -> list[MarkdownReference]:
-    """Find all references in a single line.
-
-    Args:
-        line: The line to search.
-        line_num: Line number (1-indexed).
-        md_file: Path to the markdown file.
-        image_path: Path to the image being searched for.
-        image_name: Name of the image file.
-        patterns: Compiled regex patterns.
-
-    Returns:
-        List of references found in the line.
-    """
     refs = []
 
     # Check standard markdown (images and links)
@@ -121,16 +94,6 @@ def _find_references_in_line(
 
 
 def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
-    """Check if a reference path matches the image being searched for.
-
-    Args:
-        ref_path: Path from the markdown reference.
-        image_path: Full path to the image file.
-        image_name: Name of the image file.
-
-    Returns:
-        True if the reference matches the image.
-    """
     # Try direct match
     if ref_path.name == image_name:
         return True
@@ -147,16 +110,6 @@ def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
 
 
 def _matches_url_decoded(ref_path: Path, image_path: Path, image_name: str) -> bool:
-    """Check if URL-decoded reference matches the image.
-
-    Args:
-        ref_path: Path from the markdown reference.
-        image_path: Full path to the image file.
-        image_name: Name of the image file.
-
-    Returns:
-        True if matches after URL decoding.
-    """
     if normalized_name_equals(str(ref_path.name), image_name):
         return True
 
@@ -172,15 +125,6 @@ def _matches_url_decoded(ref_path: Path, image_path: Path, image_name: str) -> b
 
 
 def _matches_by_full_path(ref_path: Path, image_path: Path) -> bool:
-    """Check if reference matches by resolving full paths.
-
-    Args:
-        ref_path: Path from the markdown reference.
-        image_path: Full path to the image file.
-
-    Returns:
-        True if resolved paths match.
-    """
     try:
         return ref_path.resolve() == image_path.resolve()
     except (OSError, ValueError):
@@ -192,13 +136,6 @@ def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
 
     Handles URL-encoded paths and Unicode whitespace normalization.
     Used during batch reference updates to match references by old filename.
-
-    Args:
-        ref: MarkdownReference object to check.
-        filename: The filename to match against.
-
-    Returns:
-        True if the reference matches the filename.
     """
     ref_name = str(ref.image_path.name)
     ref_stem = str(ref.image_path.stem)

@@ -22,13 +22,6 @@ def apply_renames(
     - Status is RENAMED or COLLISION
     - A path is present
     - The final name differs from the current name
-
-    Args:
-        results: List of processing results.
-        renamer: Port for performing actual file renames.
-
-    Returns:
-        Number of files renamed.
     """
     count = 0
     for result in results:
@@ -57,17 +50,6 @@ def apply_rename_with_references(
     Short-circuits if the current filename already matches new_name. When
     markdown_files and search_root are provided, finds and updates all
     markdown references to the renamed file.
-
-    Args:
-        old_path: Current file path.
-        new_name: Target filename.
-        search_root: Root directory to search for markdown files.
-        renamer: Port for performing file renames.
-        markdown_files: Port for discovering and updating markdown files, or None.
-        recursive: Whether to search markdown subdirectories recursively.
-
-    Returns:
-        RenameOutcome describing the rename and reference update results.
     """
     if old_path.name == new_name:
         return RenameOutcome(renamed=False, new_path=old_path, references_updated=0)

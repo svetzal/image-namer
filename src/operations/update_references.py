@@ -26,15 +26,6 @@ def update_references(
 
     Groups references by file and updates all references in each file.
     Preserves alt text, link text, and Obsidian aliases.
-
-    Args:
-        references: List of MarkdownReference objects to update.
-        old_name: Original filename (including extension).
-        new_name: New filename (including extension).
-        markdown_files: Port for reading and writing markdown files.
-
-    Returns:
-        List of ReferenceUpdate objects describing changes made.
     """
     if not references:
         return []
@@ -67,18 +58,6 @@ def _update_file(
     new_name: str,
     markdown_files: MarkdownFilePort,
 ) -> int:
-    """Update all references in a single file.
-
-    Args:
-        file_path: Path to the markdown file.
-        references: List of references in this file.
-        old_name: Original filename.
-        new_name: New filename.
-        markdown_files: Port for reading and writing markdown files.
-
-    Returns:
-        Number of replacements made.
-    """
     content = markdown_files.read_markdown_content(file_path)
     original_content = content
     replacement_count = 0
@@ -105,18 +84,7 @@ def _generate_replacement(
     old_name: str,
     new_name: str
 ) -> str:
-    """Generate the replacement text for a reference.
-
-    Preserves alt text, link text, and aliases while updating the filename.
-
-    Args:
-        ref: The reference to update.
-        old_name: Original filename.
-        new_name: New filename.
-
-    Returns:
-        The replacement text.
-    """
+    """Preserves alt text, link text, and aliases while updating the filename."""
     handlers = {
         'image': partial(_replace_standard_ref, STANDARD_IMAGE_PATTERN, "!"),
         'link': partial(_replace_standard_ref, STANDARD_LINK_PATTERN, ""),
@@ -134,16 +102,7 @@ def _generate_replacement(
 
 
 def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
-    """Replace filename in a path string, handling URL encoding.
-
-    Args:
-        path_str: The path string (may be URL-encoded).
-        old_name: Original filename.
-        new_name: New filename.
-
-    Returns:
-        Updated path string with same encoding as original.
-    """
+    """Replace filename in a path string, handling URL encoding."""
     # Check if path is URL-encoded by trying to decode it
     try:
         decoded = unquote(path_str)
@@ -170,15 +129,7 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
 
 
 def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
-    """Find a substring that matches after space normalization.
-
-    Args:
-        haystack: String to search in.
-        needle: String to search for (with regular spaces).
-
-    Returns:
-        The actual substring from haystack, or needle if not found.
-    """
+    """Find a substring that matches after Unicode space normalization."""
     # Normalize the needle for comparison
     normalized_needle = normalize_spaces(needle)
 
@@ -192,18 +143,6 @@ def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
 
 
 def _replace_standard_ref(pattern: str, prefix: str, original_text: str, old_name: str, new_name: str) -> str | None:
-    """Replace filename in a standard Markdown image or link reference.
-
-    Args:
-        pattern: Regex pattern to match the reference.
-        prefix: Prefix for the output (``!`` for images, ``""`` for links).
-        original_text: The original reference text.
-        old_name: Original filename.
-        new_name: New filename.
-
-    Returns:
-        Updated reference text, or None if the pattern did not match.
-    """
     match = re.match(pattern, original_text)
     if match:
         text = match.group(1)
@@ -214,18 +153,6 @@ def _replace_standard_ref(pattern: str, prefix: str, original_text: str, old_nam
 
 
 def _replace_wiki_ref(pattern: str, prefix: str, original_text: str, old_name: str, new_name: str) -> str | None:
-    """Replace filename in an Obsidian wiki embed or link reference.
-
-    Args:
-        pattern: Regex pattern to match the reference.
-        prefix: Prefix for the output (``!`` for embeds, ``""`` for links).
-        original_text: The original reference text.
-        old_name: Original filename.
-        new_name: New filename.
-
-    Returns:
-        Updated reference text, or None if the pattern did not match.
-    """
     match = re.match(pattern, original_text)
     if match:
         old_ref = match.group(1)
@@ -238,18 +165,7 @@ def _replace_wiki_ref(pattern: str, prefix: str, original_text: str, old_name: s
 
 
 def _replace_wiki_name(wiki_ref: str, old_name: str, new_name: str) -> str:
-    """Replace filename in a wiki-style reference.
-
-    Handles both full filename and stem-only references.
-
-    Args:
-        wiki_ref: The wiki reference (e.g., 'image.png' or 'image').
-        old_name: Original filename with extension.
-        new_name: New filename with extension.
-
-    Returns:
-        Updated wiki reference.
-    """
+    """Handles both full filename and stem-only references."""
     old_stem = Path(old_name).stem
     new_stem = Path(new_name).stem
 

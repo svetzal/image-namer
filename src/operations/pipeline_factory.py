@@ -14,12 +14,6 @@ from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 
 
 class AnalysisPipeline:
-    """Holds the constructed analysis pipeline components.
-
-    Attributes:
-        analyzer: Image analyzer for LLM-based analysis.
-        cache: Analysis cache for load/save operations.
-    """
 
     def __init__(self, analyzer: ImageAnalyzerPort, cache: AnalysisCachePort) -> None:
         self.analyzer = analyzer
@@ -33,18 +27,8 @@ def build_analysis_pipeline(
 ) -> AnalysisPipeline:
     """Build the full analysis pipeline from provider configuration.
 
-    Args:
-        provider: LLM provider name ("ollama" or "openai").
-        model: Model identifier string.
-        cache_root: Path to the .image_namer cache root directory.
-
-    Returns:
-        AnalysisPipeline with configured analyzer and cache.
-
-    Raises:
-        MissingApiKeyError: If the provider requires an API key not found
-            in the environment.
-        ValueError: If provider is not recognized.
+    Raises MissingApiKeyError if the provider requires an API key not present
+    in the environment.
     """
     gateway = create_gateway(provider)
     llm = LLMBroker(gateway=gateway, model=model)

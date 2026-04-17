@@ -23,21 +23,8 @@ def get_or_generate_analysis(
 ) -> tuple[ImageAnalysis, bool]:
     """Get analysis from cache or generate via analyzer.
 
-    Args:
-        img_path: Path to the image file.
-        current_name: Current filename (used as cache key component).
-        analyzer: Image analyzer for generating analysis on cache miss.
-        cache: Analysis cache for loading/saving results.
-        provider: LLM provider name for cache key.
-        model: Model name for cache key.
-        progress: Optional progress callback for cache-hit/miss notifications.
-
-    Returns:
-        Tuple of (ImageAnalysis result, cached flag). cached is True when the
-        result was loaded from cache, False when freshly generated.
-
-    Raises:
-        Exception: Propagates any analyzer failure to the caller.
+    Returns a tuple of (ImageAnalysis, cached). cached is True when the
+    result was loaded from cache, False when freshly generated.
     """
     analysis = cache.load(img_path, current_name, provider, model)
     if analysis is not None:
@@ -63,20 +50,6 @@ def resolve_final_name(
 
     Mutates ``planned_names`` by adding the resolved final filename when a rename
     is needed (RENAMED or COLLISION status).
-
-    Args:
-        img_path: Path to the image file (used for idempotency check and collision detection).
-        proposed: Proposed filename components from the LLM.
-        planned_names: Set of already reserved filenames in the current batch.
-            This set is mutated when a name is reserved.
-
-    Returns:
-        Tuple of (proposed_filename, final_filename, status) where:
-
-        - proposed_filename: The raw LLM proposal as a full filename string.
-        - final_filename: The collision-resolved filename that will be used.
-        - status: UNCHANGED if no rename needed, RENAMED for clean rename,
-          COLLISION if a suffix was added.
     """
     proposed_stem = proposed.stem
     proposed_filename = proposed.filename_with_fallback(img_path.suffix)
@@ -105,19 +78,6 @@ def process_single_image(
 
     Uses a unified single-LLM-call strategy (assess + name in one call) with
     cache-first optimisation. All errors are captured in the result rather than raised.
-
-    Args:
-        img_path: Path to the image file.
-        analyzer: Image analyzer for generating analysis.
-        cache: Analysis cache for loading/saving results.
-        planned_names: Set of already planned filenames to avoid collisions.
-            This set is mutated when a name is reserved.
-        provider: LLM provider name for cache key.
-        model: Model name for cache key.
-        progress: Optional progress callback for cache-hit/miss notifications.
-
-    Returns:
-        ProcessingResult describing what happened.
     """
     current_name = img_path.name
 

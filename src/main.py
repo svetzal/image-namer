@@ -40,14 +40,6 @@ console = Console()
 
 
 def _validate_file_type(path: Path) -> None:
-    """Validate that file is a supported image type.
-
-    Args:
-        path: Path to the file to validate.
-
-    Raises:
-        typer.Exit: If file type is not supported.
-    """
     suffix = path.suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
         console.print(
@@ -57,33 +49,13 @@ def _validate_file_type(path: Path) -> None:
 
 
 def _validate_provider(provider: str) -> None:
-    """Validate that provider is supported.
-
-    Args:
-        provider: The provider name to validate.
-
-    Raises:
-        typer.Exit: If provider is invalid.
-    """
     if provider not in SUPPORTED_PROVIDERS:
         console.print(f"[red]Invalid provider: {provider}[/red]")
         raise typer.Exit(2)
 
 
 def _build_pipeline_or_exit(provider: str, model: str, cache_root: Path) -> AnalysisPipeline:
-    """Build analysis pipeline or exit with an error message.
-
-    Args:
-        provider: LLM provider name.
-        model: Model identifier string.
-        cache_root: Path to the .image_namer cache root directory.
-
-    Returns:
-        Configured AnalysisPipeline.
-
-    Raises:
-        typer.Exit: On any pipeline construction failure.
-    """
+    """Build analysis pipeline, exiting with an error message on failure."""
     try:
         return build_analysis_pipeline(provider, model, cache_root)
     except MissingApiKeyError as e:
@@ -135,12 +107,6 @@ def _handle_reference_updates(
 
 
 def _display_results_table(results: list[ProcessingResult], dry_run: bool) -> None:
-    """Display results in a formatted table.
-
-    Args:
-        results: List of processing results.
-        dry_run: Whether in dry-run mode.
-    """
     table = Table(title=f"image-namer: folder ({'dry-run' if dry_run else 'apply'})")
     table.add_column("Source", style="dim")
     table.add_column("Proposed", style="bold")
@@ -167,11 +133,6 @@ def _display_results_table(results: list[ProcessingResult], dry_run: bool) -> No
 
 
 def _print_statistics(results: list[ProcessingResult]) -> None:
-    """Print summary statistics for processed files.
-
-    Args:
-        results: List of processing results.
-    """
     stats = compute_statistics(results)
     console.print(
         f"\n[dim]Summary: {stats[RenameStatus.RENAMED]} renamed, "
@@ -181,22 +142,11 @@ def _print_statistics(results: list[ProcessingResult]) -> None:
 
 
 def _apply_renames(results: list[ProcessingResult]) -> None:
-    """Apply the renames to the filesystem.
-
-    Args:
-        results: List of processing results.
-    """
     apply_renames(results, FilesystemRenamer())
     console.print("[green]✓ All renames applied.[/green]")
 
 
 def _apply_single_rename(path: Path, final_name: str) -> None:
-    """Rename a single file on disk if the name has changed.
-
-    Args:
-        path: Original file path.
-        final_name: Target filename (stem + extension).
-    """
     if final_name != path.name:
         FilesystemRenamer().rename(path, path.with_name(final_name))
 
@@ -258,11 +208,7 @@ def file(
         file_okay=False
     ),
 ) -> None:
-    """Rename a single file based on its visual contents.
-
-    Validates types, calls vision naming, enforces idempotency, resolves collisions,
-    and optionally renames the file when --apply is used.
-    """
+    """Rename a single file based on its visual contents."""
     result = _process_single_file(path, provider, model)
 
     status_labels = {
@@ -322,11 +268,7 @@ def folder(
         file_okay=False
     ),
 ) -> None:
-    """Rename all images in a directory based on their visual contents.
-
-    Processes all supported image files in the directory (flat by default, or
-    recursively with --recursive). Shows a summary table of all renames.
-    """
+    """Rename all images in a directory based on their visual contents."""
     _validate_provider(provider)
 
     image_files = collect_image_files(path, recursive)
@@ -390,17 +332,7 @@ def generate(
         True, "--dry-run/--apply", help="Preview only vs. actually rename"
     ),
 ) -> None:
-    """Propose a new filename for a given image file.
-
-    Analyzes the image using a vision model and proposes a content-based filename.
-    The file is never modified in dry-run mode (default).
-
-    Args:
-        path: Path to the image file.
-        provider: LLM provider to use (defaults to `ollama`).
-        model: Visual model identifier (defaults to `gemma3:27b`).
-        dry_run: When true, only prints the proposal; `--apply` reserved for future.
-    """
+    """Propose a new filename for a given image file."""
     result = _process_single_file(path, provider, model)
 
     console.print(
@@ -422,7 +354,6 @@ def generate(
 
 
 def main() -> None:
-    """Programmatic entry point for console_scripts wrappers."""
     app()
 
 

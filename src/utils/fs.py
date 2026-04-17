@@ -18,14 +18,9 @@ CACHE_ROOT_NAME: Final[str] = ".image_namer"
 def sha256_file(path: Path) -> str:
     """Compute the SHA-256 hex digest of a file's contents.
 
-    Args:
-        path: Path to the file to hash. Must exist and be readable.
-
-    Returns:
-        Hexadecimal SHA-256 digest string (lowercase, 64 chars).
+    Streams the file in chunks to support large files without high memory usage.
     """
     h = hashlib.sha256()
-    # Stream file in chunks to support large files without high memory usage
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
@@ -46,12 +41,6 @@ def ensure_cache_layout(repo_root: Path) -> Path:
       - version (file; created if missing; contains the current RUBRIC_VERSION)
 
     The operation is idempotent: calling it multiple times is safe.
-
-    Args:
-        repo_root: Root directory of the repository/workspace.
-
-    Returns:
-        Path to the cache root directory (repo_root / ".image_namer").
     """
     cache_root = repo_root / CACHE_ROOT_NAME
     (cache_root / "cache" / "analysis").mkdir(parents=True, exist_ok=True)
@@ -82,19 +71,6 @@ def next_available_name(
 
     On macOS (Darwin), the check is case-insensitive to align with the default
     case-insensitive filesystem behavior.
-
-    Args:
-        dir: Directory to check for name collisions.
-        stem: Desired filename stem (without extension).
-        ext: File extension, with or without a leading dot.
-        case_insensitive: Override case-sensitivity check. When None (default),
-            auto-detects based on ``sys.platform``.
-        planned_names: Set of filenames already reserved in the current batch.
-            Candidates that appear in this set are skipped even if absent on disk.
-
-    Returns:
-        A filename (stem + extension) that does not exist in ``dir`` and is not
-        present in ``planned_names``.
     """
     # Normalize extension to include leading dot if provided and not empty
     if not ext:
@@ -129,15 +105,6 @@ def next_available_name(
 
 
 def collect_image_files(path: Path, recursive: bool) -> list[Path]:
-    """Collect all image files in a directory.
-
-    Args:
-        path: Directory to search.
-        recursive: Whether to search recursively.
-
-    Returns:
-        List of image file paths, sorted by name for consistent ordering.
-    """
     if recursive:
         files = [p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
     else:

@@ -13,16 +13,7 @@ def _collect_references(
     search_root: Path,
     markdown_files: MarkdownFilePort,
 ) -> tuple[list[MarkdownReference], dict[str, str]]:
-    """Collect markdown references and rename map for renamed/collision results.
-
-    Args:
-        results: List of processing results from folder processing.
-        search_root: Root directory to search for markdown files.
-        markdown_files: Port for discovering and reading markdown files.
-
-    Returns:
-        Tuple of (all collected references, rename map from old to new filename).
-    """
+    """Collect markdown references and rename map for RENAMED/COLLISION results where name differs."""
     all_refs: list[MarkdownReference] = []
     rename_map: dict[str, str] = {}
 
@@ -43,17 +34,8 @@ def apply_batch_reference_updates(
 ) -> BatchReferenceResult:
     """Find and apply markdown reference updates for renamed files.
 
-    Collects all markdown references to renamed files and updates them.
     Only processes results with RENAMED or COLLISION status where the
     final name differs from the source.
-
-    Args:
-        results: List of processing results from folder processing.
-        search_root: Root directory to search for markdown files.
-        markdown_files: Port for discovering, reading, and writing markdown files.
-
-    Returns:
-        BatchReferenceResult with totals of what was updated.
     """
     all_refs, rename_map = _collect_references(results, search_root, markdown_files)
 
@@ -84,14 +66,6 @@ def count_batch_references(
     """Count markdown references for renamed files without applying updates.
 
     Used for dry-run mode to preview what would be updated.
-
-    Args:
-        results: List of processing results from folder processing.
-        search_root: Root directory to search for markdown files.
-        markdown_files: Port for discovering and reading markdown files.
-
-    Returns:
-        BatchReferenceResult with counts of references that would be updated.
     """
     all_refs, _ = _collect_references(results, search_root, markdown_files)
 

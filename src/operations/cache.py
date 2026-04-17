@@ -12,14 +12,12 @@ from utils.fs import sha256_file
 
 
 class BaseCacheEntry(BaseModel):
-    """Shared fields common to all cache entry types."""
 
     image_hash: str = Field(..., description="SHA-256 hash of the image")
     rubric_version: int = Field(..., description="Rubric version")
 
 
 class AnalysisCacheEntry(BaseCacheEntry):
-    """A cached unified analysis result for an image."""
 
     filename: str = Field(..., description="Filename that was analyzed")
     provider: str = Field(..., description="LLM provider name")
@@ -28,15 +26,7 @@ class AnalysisCacheEntry(BaseCacheEntry):
 
 
 def build_cache_key(image_hash: str, *parts: str) -> str:
-    """Generate a cache key from an image hash and arbitrary string parts.
-
-    Args:
-        image_hash: SHA-256 hash of the image file.
-        *parts: Additional parts to include in the key (provider, model, filename, etc.).
-
-    Returns:
-        Cache key string with all parts joined by double underscores and rubric version appended.
-    """
+    """Cache key with all parts joined by double underscores, rubric version appended."""
     sanitized = [p.replace("/", "_").replace(":", "_") for p in parts]
     return "__".join([image_hash, *sanitized, f"v{RUBRIC_VERSION}"])
 
@@ -66,16 +56,7 @@ class CacheStore(Generic[T]):
         self._hash_fn = hash_fn
 
     def load(self, cache_dir: Path, image_path: Path, **key_values: str) -> T | None:
-        """Load a cached payload if it exists and all key values match.
-
-        Args:
-            cache_dir: Directory to search for the cache file.
-            image_path: Path to the image file (used to compute hash).
-            **key_values: Values for each field in key_fields.
-
-        Returns:
-            The cached payload model, or None on any miss or validation failure.
-        """
+        """Load a cached payload if it exists and all key values match."""
         try:
             image_hash = self._hash_fn(image_path)
             key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
@@ -94,14 +75,6 @@ class CacheStore(Generic[T]):
             return None
 
     def save(self, cache_dir: Path, image_path: Path, payload: T, **key_values: str) -> None:
-        """Save a payload to the cache.
-
-        Args:
-            cache_dir: Directory to write the cache file into (created if missing).
-            image_path: Path to the image file (used to compute hash).
-            payload: The Pydantic model instance to cache.
-            **key_values: Values for each field in key_fields.
-        """
         image_hash = self._hash_fn(image_path)
         key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
         cache_file = cache_dir / f"{key}.json"
@@ -132,18 +105,6 @@ def load_analysis_from_cache(
     provider: str,
     model: str,
 ) -> ImageAnalysis | None:
-    """Load a cached unified analysis result if it exists and is valid.
-
-    Args:
-        cache_dir: Path to the cache/unified directory.
-        image_path: Path to the image file.
-        filename: The filename to check against cache.
-        provider: LLM provider name.
-        model: Model name.
-
-    Returns:
-        Cached ImageAnalysis if found and valid, None otherwise.
-    """
     return _analysis_store.load(
         cache_dir, image_path, filename=filename, provider=provider, model=model
     )
@@ -157,16 +118,6 @@ def save_analysis_to_cache(
     model: str,
     analysis: ImageAnalysis,
 ) -> None:
-    """Save a unified analysis result to the cache.
-
-    Args:
-        cache_dir: Path to the cache/unified directory.
-        image_path: Path to the image file.
-        filename: The filename that was analyzed.
-        provider: LLM provider name.
-        model: Model name.
-        analysis: The analysis result to cache.
-    """
     _analysis_store.save(
         cache_dir, image_path, analysis, filename=filename, provider=provider, model=model
     )

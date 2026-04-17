@@ -13,27 +13,13 @@ def normalize_spaces(text: str) -> str:
 
     Applies NFKC Unicode normalization then collapses all whitespace variants
     (non-breaking spaces, narrow no-break spaces, etc.) to a single ASCII space.
-
-    Args:
-        text: Text to normalize.
-
-    Returns:
-        Text with all Unicode whitespace normalized to ASCII space.
     """
     normalized = unicodedata.normalize('NFKC', text)
     return ' '.join(normalized.split())
 
 
 def normalized_name_equals(a: str, b: str) -> bool:
-    """Check if two names are equal after URL decoding and Unicode space normalization.
-
-    Args:
-        a: First name (may be URL-encoded or contain Unicode spaces).
-        b: Second name (plain text reference).
-
-    Returns:
-        True if the names are equivalent after decoding and normalization.
-    """
+    """Check if two names are equal after URL decoding and Unicode space normalization."""
     if a == b:
         return True
     try:

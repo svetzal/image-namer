@@ -5,21 +5,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProposedName(BaseModel):
-    """Proposed filename components."""
 
     stem: str = Field(..., description="The stem of the filename")
     extension: str = Field(..., description="The extension of the filename. May or may not include the leading dot")
 
     def filename_with_fallback(self, fallback_ext: str) -> str:
-        """Compose full filename, using fallback_ext when extension is empty.
-
-        Args:
-            fallback_ext: Extension to use when self.extension is empty.
-                Should include a leading dot (e.g. ``".png"``).
-
-        Returns:
-            Full filename string with normalised extension.
-        """
+        """Compose full filename, using fallback_ext when extension is empty."""
         ext = self.extension or ""
         if not ext:
             ext = fallback_ext
@@ -38,7 +29,6 @@ class ProposedName(BaseModel):
 
 
 class ImageAnalysis(BaseModel):
-    """Combined assessment and naming for an image in a single LLM call."""
 
     current_name_suitable: bool = Field(
         ...,
@@ -55,7 +45,6 @@ class ImageAnalysis(BaseModel):
 
 
 class MarkdownReference(BaseModel):
-    """A reference to an image in a markdown file."""
     file_path: Path = Field(..., description="Path to the markdown file")
     line_number: int = Field(..., description="Line number (1-indexed)")
     original_text: str = Field(..., description="Original reference text")
@@ -64,7 +53,6 @@ class MarkdownReference(BaseModel):
 
 
 class ReferenceUpdate(BaseModel):
-    """Result of updating references in markdown files."""
     file_path: Path = Field(..., description="Path to the updated markdown file")
     replacement_count: int = Field(..., description="Number of replacements made")
 
@@ -79,7 +67,6 @@ class RenameStatus(StrEnum):
 
 
 class ProcessingResult(BaseModel):
-    """Result of processing a single image file."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -93,7 +80,6 @@ class ProcessingResult(BaseModel):
 
 
 class BatchReferenceResult(BaseModel):
-    """Result of batch markdown reference updates."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -102,7 +88,6 @@ class BatchReferenceResult(BaseModel):
 
 
 class RenameOutcome(BaseModel):
-    """Result of a single file rename with optional reference updates."""
 
     model_config = ConfigDict(frozen=True)
 
