@@ -51,7 +51,7 @@ class CacheLoaderWorker(QThread):
             if self._stop_requested:
                 break
 
-            analysis = self._cache.load(item.path, item.source_name, self.provider, self.model)
+            analysis = self._cache.load(item.path, item.source_name)
 
             if analysis:
                 proposed = analysis.proposed_name

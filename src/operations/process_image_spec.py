@@ -21,9 +21,7 @@ def should_return_unchanged_when_cached_analysis_is_suitable(tmp_image_path, moc
     cache.load.return_value = make_analysis()
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     assert result.status == RenameStatus.UNCHANGED
     assert result.final == tmp_image_path.name
@@ -34,9 +32,7 @@ def should_not_call_analyze_when_cached_analysis_is_suitable(tmp_image_path, moc
     cache.load.return_value = make_analysis()
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    process_single_image(tmp_image_path, analyzer, cache, set())
 
     analyzer.analyze.assert_not_called()
 
@@ -47,9 +43,7 @@ def should_call_analyze_image_and_cache_result_on_cache_miss(tmp_image_path, moc
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = make_analysis()
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     analyzer.analyze.assert_called_once()
     cache.save.assert_called_once()
@@ -62,9 +56,7 @@ def should_return_error_when_analyze_raises(tmp_image_path, mocker):
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.side_effect = RuntimeError("LLM failed")
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     assert result.status == RenameStatus.ERROR
     assert result.proposed == "ERROR"
@@ -75,9 +67,7 @@ def should_propose_new_name_when_analysis_unsuitable(tmp_image_path, mocker):
     cache.load.return_value = make_analysis(suitable=False, stem="new-name")
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     assert result.status == RenameStatus.RENAMED
     assert result.proposed == "new-name.png"
@@ -91,9 +81,7 @@ def should_return_unchanged_when_stem_matches_proposed(tmp_path, mocker):
     cache.load.return_value = make_analysis(suitable=False, stem="already-named")
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        img, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(img, analyzer, cache, set())
 
     assert result.status == RenameStatus.UNCHANGED
     assert result.final == "already-named.png"
@@ -107,9 +95,7 @@ def should_resolve_collision_with_existing_file(tmp_path, mocker):
     cache.load.return_value = make_analysis(suitable=False, stem="taken-name")
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        img, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(img, analyzer, cache, set())
 
     assert result.status == RenameStatus.COLLISION
     assert result.final == "taken-name-2.png"
@@ -123,9 +109,7 @@ def should_resolve_collision_with_planned_names(tmp_path, mocker):
     cache.load.return_value = make_analysis(suitable=False, stem="wanted-name")
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        img, analyzer, cache, planned, "ollama", "gemma3:27b"
-    )
+    result = process_single_image(img, analyzer, cache, planned)
 
     assert result.status == RenameStatus.COLLISION
     assert result.final == "wanted-name-2.png"
@@ -139,9 +123,7 @@ def should_add_final_name_to_planned_names(tmp_path, mocker):
     cache.load.return_value = make_analysis(suitable=False, stem="new-name")
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    process_single_image(
-        img, analyzer, cache, planned, "ollama", "gemma3:27b"
-    )
+    process_single_image(img, analyzer, cache, planned)
 
     assert "new-name.png" in planned
 
@@ -151,9 +133,7 @@ def should_populate_reasoning_on_processing_result(tmp_image_path, mocker):
     cache.load.return_value = make_analysis(reasoning="The current name is descriptive.")
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     assert result.reasoning == "The current name is descriptive."
 
@@ -163,9 +143,7 @@ def should_populate_cached_true_when_analysis_comes_from_cache(tmp_image_path, m
     cache.load.return_value = make_analysis()
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     assert result.cached is True
 
@@ -176,9 +154,7 @@ def should_populate_cached_false_when_analysis_is_freshly_generated(tmp_image_pa
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = make_analysis()
 
-    result = process_single_image(
-        tmp_image_path, analyzer, cache, set(), "ollama", "gemma3:27b"
-    )
+    result = process_single_image(tmp_image_path, analyzer, cache, set())
 
     assert result.cached is False
 
@@ -193,9 +169,7 @@ def should_return_cached_analysis_when_available(tmp_image_path, mocker):
     cache.load.return_value = expected
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    result, cached = get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b"
-    )
+    result, cached = get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache)
 
     assert result == expected
     analyzer.analyze.assert_not_called()
@@ -208,9 +182,7 @@ def should_call_analyze_image_on_cache_miss(tmp_image_path, mocker):
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = expected
 
-    result, cached = get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b"
-    )
+    result, cached = get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache)
 
     assert result == expected
 
@@ -221,9 +193,7 @@ def should_save_to_cache_on_miss(tmp_image_path, mocker):
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = make_analysis()
 
-    get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b"
-    )
+    get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache)
 
     cache.save.assert_called_once()
 
@@ -235,9 +205,7 @@ def should_raise_on_llm_failure(tmp_image_path, mocker):
     analyzer.analyze.side_effect = RuntimeError("LLM failed")
 
     with pytest.raises(RuntimeError, match="LLM failed"):
-        get_or_generate_analysis(
-            tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b"
-        )
+        get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache)
 
 
 def should_return_true_for_cached_when_analysis_is_in_cache(tmp_image_path, mocker):
@@ -245,9 +213,7 @@ def should_return_true_for_cached_when_analysis_is_in_cache(tmp_image_path, mock
     cache.load.return_value = make_analysis()
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    _, cached = get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b"
-    )
+    _, cached = get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache)
 
     assert cached is True
 
@@ -258,9 +224,7 @@ def should_return_false_for_cached_when_analysis_is_not_in_cache(tmp_image_path,
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = make_analysis()
 
-    _, cached = get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b"
-    )
+    _, cached = get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache)
 
     assert cached is False
 
@@ -272,9 +236,7 @@ def should_call_on_cache_hit_callback_when_analysis_is_cached(tmp_image_path, mo
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     progress = mocker.Mock(spec=ProgressCallback)
 
-    get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b", progress
-    )
+    get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache, progress)
 
     progress.on_cache_hit.assert_called_once_with(tmp_image_path, analysis)
     progress.on_cache_miss.assert_not_called()
@@ -292,9 +254,7 @@ def should_call_on_cache_miss_and_on_analysis_complete_callbacks_on_miss(tmp_ima
     progress.on_cache_miss.side_effect = lambda path: call_order.append("miss")
     progress.on_analysis_complete.side_effect = lambda path, a: call_order.append("complete")
 
-    get_or_generate_analysis(
-        tmp_image_path, "sample.png", analyzer, cache, "ollama", "gemma3:27b", progress
-    )
+    get_or_generate_analysis(tmp_image_path, "sample.png", analyzer, cache, progress)
 
     progress.on_cache_miss.assert_called_once_with(tmp_image_path)
     progress.on_analysis_complete.assert_called_once_with(tmp_image_path, analysis)

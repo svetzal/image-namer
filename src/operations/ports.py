@@ -18,8 +18,6 @@ class AnalysisCachePort(Protocol):
         self,
         image_path: Path,
         filename: str,
-        provider: str,
-        model: str,
     ) -> ImageAnalysis | None:
         ...
 
@@ -27,8 +25,6 @@ class AnalysisCachePort(Protocol):
         self,
         image_path: Path,
         filename: str,
-        provider: str,
-        model: str,
         analysis: ImageAnalysis,
     ) -> None:
         ...

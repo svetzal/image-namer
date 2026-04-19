@@ -17,8 +17,6 @@ def get_or_generate_analysis(
     current_name: str,
     analyzer: ImageAnalyzerPort,
     cache: AnalysisCachePort,
-    provider: str,
-    model: str,
     progress: ProgressCallback | None = None,
 ) -> tuple[ImageAnalysis, bool]:
     """Get analysis from cache or generate via analyzer.
@@ -26,7 +24,7 @@ def get_or_generate_analysis(
     Returns a tuple of (ImageAnalysis, cached). cached is True when the
     result was loaded from cache, False when freshly generated.
     """
-    analysis = cache.load(img_path, current_name, provider, model)
+    analysis = cache.load(img_path, current_name)
     if analysis is not None:
         if progress is not None:
             progress.on_cache_hit(img_path, analysis)
@@ -35,7 +33,7 @@ def get_or_generate_analysis(
     if progress is not None:
         progress.on_cache_miss(img_path)
     analysis = analyzer.analyze(img_path, current_name)
-    cache.save(img_path, current_name, provider, model, analysis)
+    cache.save(img_path, current_name, analysis)
     if progress is not None:
         progress.on_analysis_complete(img_path, analysis)
     return analysis, False
@@ -70,8 +68,6 @@ def process_single_image(
     analyzer: ImageAnalyzerPort,
     cache: AnalysisCachePort,
     planned_names: set[str],
-    provider: str,
-    model: str,
     progress: ProgressCallback | None = None,
 ) -> ProcessingResult:
     """Process a single image file to determine its new name.
@@ -83,7 +79,7 @@ def process_single_image(
 
     try:
         analysis, cached = get_or_generate_analysis(
-            img_path, current_name, analyzer, cache, provider, model, progress
+            img_path, current_name, analyzer, cache, progress
         )
     except (OSError, ConnectionError, TimeoutError, ValueError, RuntimeError):
         return ProcessingResult(

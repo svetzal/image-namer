@@ -86,8 +86,10 @@ Pipeline construction is centralised in `build_analysis_pipeline()`:
 
 ```python
 pipeline = build_analysis_pipeline(provider, model, cache_root)
-result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
+result = process_single_image(path, pipeline.analyzer, pipeline.cache, set())
 ```
+
+`AnalysisPipeline` carries `provider` and `model` as fields. `FilesystemAnalysisCache` binds `provider` and `model` at construction, so `AnalysisCachePort.load()` and `.save()` no longer accept those parameters.
 
 ### Provider Configuration
 

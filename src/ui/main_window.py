@@ -889,7 +889,7 @@ class MainWindow(QMainWindow):
 
         # Setup cache
         cache_root = ensure_cache_layout(self.current_folder)
-        cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
+        cache = FilesystemAnalysisCache(cache_root / "cache" / "unified", provider=provider, model=model)
 
         # Create and start cache loader
         self.cache_loader = CacheLoaderWorker(

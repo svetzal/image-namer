@@ -10,7 +10,7 @@ def should_return_empty_list_for_empty_input(mocker):
     cache = mocker.Mock(spec=AnalysisCachePort)
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
 
-    results = process_folder([], analyzer, cache, "ollama", "gemma3:27b")
+    results = process_folder([], analyzer, cache)
 
     assert results == []
 
@@ -32,7 +32,7 @@ def should_process_all_images_in_list(tmp_path, mocker):
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.side_effect = fake_analyze
 
-    results = process_folder(imgs, analyzer, cache, "ollama", "gemma3:27b")
+    results = process_folder(imgs, analyzer, cache)
 
     assert len(results) == 3
 
@@ -48,9 +48,7 @@ def should_track_planned_names_across_images(tmp_path, mocker):
     analyzer = mocker.Mock(spec=ImageAnalyzerPort)
     analyzer.analyze.return_value = make_analysis(suitable=False, stem="same-name", reasoning="")
 
-    results = process_folder(
-        [img1, img2], analyzer, cache, "ollama", "gemma3:27b"
-    )
+    results = process_folder([img1, img2], analyzer, cache)
 
     assert results[0].status == RenameStatus.RENAMED
     assert results[0].final == "same-name.png"

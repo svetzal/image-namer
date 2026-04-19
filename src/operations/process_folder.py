@@ -15,8 +15,6 @@ def process_folder(
     image_files: list[Path],
     analyzer: ImageAnalyzerPort,
     cache: AnalysisCachePort,
-    provider: str,
-    model: str,
     progress: ProgressCallback | None = None,
 ) -> list[ProcessingResult]:
     """Process all image files in a list, tracking cross-file name collisions.
@@ -25,8 +23,6 @@ def process_folder(
         image_files: List of image file paths to process.
         analyzer: Image analyzer for generating analysis.
         cache: Analysis cache for loading/saving results.
-        provider: LLM provider name for cache key.
-        model: Model name for cache key.
         progress: Optional progress callback for cache-hit/miss notifications.
 
     Returns:
@@ -34,7 +30,7 @@ def process_folder(
     """
     planned_names: set[str] = set()
     return [
-        process_single_image(img, analyzer, cache, planned_names, provider, model, progress)
+        process_single_image(img, analyzer, cache, planned_names, progress)
         for img in image_files
     ]
 

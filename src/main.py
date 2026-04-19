@@ -6,7 +6,7 @@ Command logic is kept thin; all business logic lives in operations/.
 
 import sys
 from pathlib import Path
-from typing import Final
+from typing import Annotated, Final
 
 import typer
 from rich.console import Console
@@ -34,6 +34,12 @@ if sys.version_info < (3, 13):  # pragma: no cover - defensive
     raise RuntimeError("Requires Python 3.13+")
 
 SUPPORTED_PROVIDERS: Final[set[str]] = {"ollama", "openai"}
+
+Provider = Annotated[str, typer.Option("--provider", help="Model provider: ollama or openai", envvar="LLM_PROVIDER")]
+Model = Annotated[str, typer.Option(
+    "--model", help="Visual model to use (default aligns with Ollama gemma3:27b)", envvar="LLM_MODEL"
+)]
+DryRun = Annotated[bool, typer.Option("--dry-run/--apply", help="Preview only vs. actually rename")]
 
 app = typer.Typer(help="Rename image files based on their visual contents.")
 console = Console()
@@ -171,7 +177,7 @@ def _process_single_file(path: Path, provider: str, model: str) -> ProcessingRes
     cache_root = ensure_cache_layout(Path.cwd())
     pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
-    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set(), provider, model)
+    result = process_single_image(path, pipeline.analyzer, pipeline.cache, set())
 
     if result.status == RenameStatus.ERROR:
         console.print(f"[red]Error processing {path.name}[/red]")
@@ -185,21 +191,9 @@ def file(
     path: Path = typer.Argument(
         ..., exists=True, dir_okay=False, readable=True, help="Path to an image file"
     ),
-    provider: str = typer.Option(
-        "ollama",
-        "--provider",
-        help="Model provider: ollama or openai",
-        envvar="LLM_PROVIDER",
-    ),
-    model: str = typer.Option(
-        "gemma3:27b",
-        "--model",
-        help="Visual model to use (default aligns with Ollama gemma3:27b)",
-        envvar="LLM_MODEL",
-    ),
-    dry_run: bool = typer.Option(
-        True, "--dry-run/--apply", help="Preview only vs. actually rename"
-    ),
+    provider: Provider = "ollama",
+    model: Model = "gemma3:27b",
+    dry_run: DryRun = True,
     update_refs: bool = typer.Option(
         False, "--update-refs/--no-update-refs", help="Update markdown/wiki references when renaming"
     ),
@@ -242,21 +236,9 @@ def folder(
     path: Path = typer.Argument(
         ..., exists=True, file_okay=False, readable=True, help="Path to a directory containing images"
     ),
-    provider: str = typer.Option(
-        "ollama",
-        "--provider",
-        help="Model provider: ollama or openai",
-        envvar="LLM_PROVIDER",
-    ),
-    model: str = typer.Option(
-        "gemma3:27b",
-        "--model",
-        help="Visual model to use (default aligns with Ollama gemma3:27b)",
-        envvar="LLM_MODEL",
-    ),
-    dry_run: bool = typer.Option(
-        True, "--dry-run/--apply", help="Preview only vs. actually rename"
-    ),
+    provider: Provider = "ollama",
+    model: Model = "gemma3:27b",
+    dry_run: DryRun = True,
     recursive: bool = typer.Option(
         False, "--recursive", help="Process subdirectories recursively"
     ),
@@ -281,7 +263,7 @@ def folder(
     cache_root = ensure_cache_layout(Path.cwd())
     pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
-    results = process_folder(image_files, pipeline.analyzer, pipeline.cache, provider, model)
+    results = process_folder(image_files, pipeline.analyzer, pipeline.cache)
 
     _display_results_table(results, dry_run)
     _print_statistics(results)
@@ -316,21 +298,9 @@ def generate(
     path: Path = typer.Argument(
         ..., exists=True, dir_okay=False, readable=True, help="Path to an image file"
     ),
-    provider: str = typer.Option(
-        "ollama",
-        "--provider",
-        help="Model provider: ollama or openai",
-        envvar="LLM_PROVIDER",
-    ),
-    model: str = typer.Option(
-        "gemma3:27b",
-        "--model",
-        help="Visual model to use (default aligns with Ollama gemma3:27b)",
-        envvar="LLM_MODEL",
-    ),
-    dry_run: bool = typer.Option(
-        True, "--dry-run/--apply", help="Preview only vs. actually rename"
-    ),
+    provider: Provider = "ollama",
+    model: Model = "gemma3:27b",
+    dry_run: DryRun = True,
 ) -> None:
     """Propose a new filename for a given image file."""
     result = _process_single_file(path, provider, model)

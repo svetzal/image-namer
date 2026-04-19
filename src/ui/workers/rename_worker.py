@@ -112,8 +112,6 @@ class RenameWorker(QThread):
                     self._analyzer,
                     self._cache,
                     planned_names,
-                    self.provider,
-                    self.model,
                     progress_cb,
                 )
 

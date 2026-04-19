@@ -17,33 +17,31 @@ class FilesystemAnalysisCache:
     """Filesystem-backed implementation of AnalysisCachePort.
 
     Wraps the existing cache module functions, binding them to a specific
-    cache directory at construction time.
+    cache directory, provider, and model at construction time.
     """
 
-    def __init__(self, cache_dir: Path) -> None:
+    def __init__(self, cache_dir: Path, provider: str, model: str) -> None:
         self._cache_dir = cache_dir
+        self._provider = provider
+        self._model = model
 
     def load(
         self,
         image_path: Path,
         filename: str,
-        provider: str,
-        model: str,
     ) -> ImageAnalysis | None:
         return load_analysis_from_cache(
-            self._cache_dir, image_path, filename, provider, model
+            self._cache_dir, image_path, filename, self._provider, self._model
         )
 
     def save(
         self,
         image_path: Path,
         filename: str,
-        provider: str,
-        model: str,
         analysis: ImageAnalysis,
     ) -> None:
         save_analysis_to_cache(
-            self._cache_dir, image_path, filename, provider, model, analysis
+            self._cache_dir, image_path, filename, self._provider, self._model, analysis
         )
 
 

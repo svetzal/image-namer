@@ -15,9 +15,17 @@ from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 
 class AnalysisPipeline:
 
-    def __init__(self, analyzer: ImageAnalyzerPort, cache: AnalysisCachePort) -> None:
+    def __init__(
+        self,
+        analyzer: ImageAnalyzerPort,
+        cache: AnalysisCachePort,
+        provider: str,
+        model: str,
+    ) -> None:
         self.analyzer = analyzer
         self.cache = cache
+        self.provider = provider
+        self.model = model
 
 
 def build_analysis_pipeline(
@@ -32,6 +40,6 @@ def build_analysis_pipeline(
     """
     gateway = create_gateway(provider)
     llm = LLMBroker(gateway=gateway, model=model)
-    cache = FilesystemAnalysisCache(cache_root / "cache" / "unified")
+    cache = FilesystemAnalysisCache(cache_root / "cache" / "unified", provider=provider, model=model)
     analyzer = MojenticImageAnalyzer(llm)
-    return AnalysisPipeline(analyzer=analyzer, cache=cache)
+    return AnalysisPipeline(analyzer=analyzer, cache=cache, provider=provider, model=model)
