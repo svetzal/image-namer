@@ -4,6 +4,13 @@ import typing as t
 import pytest
 
 from operations.models import ImageAnalysis, ProposedName
+from operations.ports import (
+    AnalysisCachePort,
+    FileRenamerPort,
+    ImageAnalyzerPort,
+    MarkdownFilePort,
+    ProgressCallback,
+)
 
 
 def make_proposed_name(stem: str = "sample", extension: str = ".png") -> ProposedName:
@@ -66,3 +73,28 @@ def tmp_image_path(tmp_path: pathlib.Path) -> pathlib.Path:
 @pytest.fixture
 def fake_llm() -> FakeLLM:
     return FakeLLM()
+
+
+@pytest.fixture
+def mock_cache(mocker):
+    return mocker.Mock(spec=AnalysisCachePort)
+
+
+@pytest.fixture
+def mock_analyzer(mocker):
+    return mocker.Mock(spec=ImageAnalyzerPort)
+
+
+@pytest.fixture
+def mock_renamer(mocker):
+    return mocker.Mock(spec=FileRenamerPort)
+
+
+@pytest.fixture
+def mock_markdown_files(mocker):
+    return mocker.Mock(spec=MarkdownFilePort)
+
+
+@pytest.fixture
+def mock_progress(mocker):
+    return mocker.Mock(spec=ProgressCallback)

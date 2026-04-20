@@ -2,20 +2,16 @@
 
 from conftest import make_analysis
 from operations.models import ProcessingResult, RenameStatus
-from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_folder import compute_statistics, process_folder
 
 
-def should_return_empty_list_for_empty_input(mocker):
-    cache = mocker.Mock(spec=AnalysisCachePort)
-    analyzer = mocker.Mock(spec=ImageAnalyzerPort)
-
-    results = process_folder([], analyzer, cache)
+def should_return_empty_list_for_empty_input(mock_cache, mock_analyzer):
+    results = process_folder([], mock_analyzer, mock_cache)
 
     assert results == []
 
 
-def should_process_all_images_in_list(tmp_path, mocker):
+def should_process_all_images_in_list(tmp_path, mock_cache, mock_analyzer):
     imgs = [tmp_path / f"img{i}.png" for i in range(3)]
     for img in imgs:
         img.write_bytes(b"x")
@@ -27,28 +23,24 @@ def should_process_all_images_in_list(tmp_path, mocker):
         call_count += 1
         return make_analysis(suitable=False, stem=f"name-{call_count}", reasoning="")
 
-    cache = mocker.Mock(spec=AnalysisCachePort)
-    cache.load.return_value = None
-    analyzer = mocker.Mock(spec=ImageAnalyzerPort)
-    analyzer.analyze.side_effect = fake_analyze
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.side_effect = fake_analyze
 
-    results = process_folder(imgs, analyzer, cache)
+    results = process_folder(imgs, mock_analyzer, mock_cache)
 
     assert len(results) == 3
 
 
-def should_track_planned_names_across_images(tmp_path, mocker):
+def should_track_planned_names_across_images(tmp_path, mock_cache, mock_analyzer):
     img1 = tmp_path / "a.png"
     img2 = tmp_path / "b.png"
     img1.write_bytes(b"x")
     img2.write_bytes(b"y")
 
-    cache = mocker.Mock(spec=AnalysisCachePort)
-    cache.load.return_value = None
-    analyzer = mocker.Mock(spec=ImageAnalyzerPort)
-    analyzer.analyze.return_value = make_analysis(suitable=False, stem="same-name", reasoning="")
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = make_analysis(suitable=False, stem="same-name", reasoning="")
 
-    results = process_folder([img1, img2], analyzer, cache)
+    results = process_folder([img1, img2], mock_analyzer, mock_cache)
 
     assert results[0].status == RenameStatus.RENAMED
     assert results[0].final == "same-name.png"
