@@ -83,3 +83,17 @@ class RenameItem(BaseModel):
             RenameStatus.COMPLETED: "✓",
         }
         return icons.get(self.status, "?")
+
+
+class BatchRenameResult(BaseModel):
+    """Outcome of a batch rename operation.
+
+    Attributes:
+        renamed_count: Number of files successfully renamed.
+        error_count: Number of files that failed to rename.
+        total_refs_updated: Total markdown references updated across all files.
+    """
+
+    renamed_count: int = 0
+    error_count: int = 0
+    total_refs_updated: int = 0
