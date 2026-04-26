@@ -11,7 +11,7 @@ from operations.models import ImageAnalysis
 from operations.models import RenameStatus as OpsRenameStatus
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_image import process_single_image
-from ui.models.ui_models import RenameItem, RenameStatus
+from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
 
 _OPS_TO_UI_STATUS = {
     OpsRenameStatus.RENAMED: RenameStatus.READY,
@@ -59,7 +59,7 @@ class RenameWorker(QThread):
     progress_updated = Signal(int, int)  # current, total
     item_status_changed = Signal(int, str, str)  # row_index, status, detail_message
     item_processed = Signal(int, RenameItem)  # row_index, result
-    finished = Signal(dict)  # summary stats
+    finished = Signal(object)  # summary stats (AnalysisStats)
     error_occurred = Signal(int, str)  # row_index, error_message
 
     def __init__(
@@ -89,7 +89,7 @@ class RenameWorker(QThread):
 
     def run(self) -> None:
         """Process items, emitting signals for real-time UI updates."""
-        stats = {"renamed": 0, "unchanged": 0, "cached": 0, "errors": 0}
+        stats = AnalysisStats()
         planned_names: set[str] = set()
 
         for i, item in enumerate(self.items):
@@ -98,7 +98,7 @@ class RenameWorker(QThread):
 
             if item.manually_edited:
                 item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
-                stats["renamed"] += 1
+                stats.renamed += 1
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))
                 continue
@@ -119,35 +119,35 @@ class RenameWorker(QThread):
                 item.cached = result.cached
 
                 if result.cached:
-                    stats["cached"] += 1
+                    stats.cached += 1
 
                 if result.status == OpsRenameStatus.ERROR:
-                    stats["errors"] += 1
+                    stats.errors += 1
                     item.update_status(RenameStatus.ERROR, "Error during analysis")
                     self.error_occurred.emit(i, "Error during analysis")
                 elif result.status == OpsRenameStatus.UNCHANGED:
                     item.proposed_name = result.proposed
                     item.final_name = result.final
                     item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
-                    stats["unchanged"] += 1
+                    stats.unchanged += 1
                 elif result.status == OpsRenameStatus.COLLISION:
                     item.proposed_name = result.proposed
                     item.final_name = result.final
                     item.update_status(
                         RenameStatus.COLLISION, f"Collision resolved: {result.final}"
                     )
-                    stats["renamed"] += 1
+                    stats.renamed += 1
                 else:
                     item.proposed_name = result.proposed
                     item.final_name = result.final
                     item.update_status(RenameStatus.READY, "Ready to rename")
-                    stats["renamed"] += 1
+                    stats.renamed += 1
 
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))
 
             except (OSError, ConnectionError, ValueError, RuntimeError) as e:
-                stats["errors"] += 1
+                stats.errors += 1
                 error_msg = str(e)
                 item.update_status(RenameStatus.ERROR, f"Error: {error_msg}")
                 item.error_message = error_msg

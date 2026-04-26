@@ -94,3 +94,34 @@ class RenameOutcome(BaseModel):
     renamed: bool = Field(..., description="Whether the file was renamed")
     new_path: Path = Field(..., description="Final path of the file (unchanged if not renamed)")
     references_updated: int = Field(..., description="Number of markdown references updated")
+
+
+class AnalysisResult(BaseModel):
+    """Result of analyzing an image, including cache status."""
+
+    analysis: ImageAnalysis = Field(..., description="The image analysis result")
+    cached: bool = Field(..., description="Whether the result came from cache")
+
+
+class ResolvedName(BaseModel):
+    """Result of resolving a final filename with collision detection."""
+
+    proposed_filename: str = Field(..., description="The LLM-proposed filename")
+    final_name: str = Field(..., description="The resolved final filename (may differ due to collisions)")
+    status: RenameStatus = Field(..., description="Status of the rename operation")
+
+
+class FolderStatistics(BaseModel):
+    """Statistics for a batch folder processing operation."""
+
+    renamed: int = Field(default=0, description="Number of files renamed")
+    unchanged: int = Field(default=0, description="Number of files with suitable names")
+    collision: int = Field(default=0, description="Number of files with name collisions")
+    error: int = Field(default=0, description="Number of files that encountered errors")
+
+
+class CollectedReferences(BaseModel):
+    """Result of collecting markdown references to renamed files."""
+
+    references: list[MarkdownReference] = Field(..., description="List of found markdown references")
+    rename_map: dict[str, str] = Field(..., description="Mapping of old filenames to new filenames")

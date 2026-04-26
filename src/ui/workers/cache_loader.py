@@ -69,10 +69,10 @@ class CacheLoaderWorker(QThread):
                         )
                 else:
                     if not item.manually_edited:
-                        _, final_name, _ = resolve_final_name(
+                        resolved = resolve_final_name(
                             item.path, proposed, planned_names
                         )
-                        item.final_name = final_name
+                        item.final_name = resolved.final_name
                         item.update_status(RenameStatus.READY, "Ready (from cache)")
                     else:
                         item.update_status(RenameStatus.READY, "Ready (filename locked by user)")

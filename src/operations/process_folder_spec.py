@@ -58,16 +58,19 @@ def should_count_all_statuses():
 
     stats = compute_statistics(results)
 
-    assert stats[RenameStatus.RENAMED] == 1
-    assert stats[RenameStatus.UNCHANGED] == 1
-    assert stats[RenameStatus.COLLISION] == 1
-    assert stats[RenameStatus.ERROR] == 1
+    assert stats.renamed == 1
+    assert stats.unchanged == 1
+    assert stats.collision == 1
+    assert stats.error == 1
 
 
 def should_return_zeros_for_empty_results():
     stats = compute_statistics([])
 
-    assert all(count == 0 for count in stats.values())
+    assert stats.renamed == 0
+    assert stats.unchanged == 0
+    assert stats.collision == 0
+    assert stats.error == 0
 
 
 def should_handle_all_same_status():
@@ -78,5 +81,5 @@ def should_handle_all_same_status():
 
     stats = compute_statistics(results)
 
-    assert stats[RenameStatus.UNCHANGED] == 5
-    assert stats[RenameStatus.RENAMED] == 0
+    assert stats.unchanged == 5
+    assert stats.renamed == 0

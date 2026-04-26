@@ -141,9 +141,9 @@ def _display_results_table(results: list[ProcessingResult], dry_run: bool) -> No
 def _print_statistics(results: list[ProcessingResult]) -> None:
     stats = compute_statistics(results)
     console.print(
-        f"\n[dim]Summary: {stats[RenameStatus.RENAMED]} renamed, "
-        f"{stats[RenameStatus.UNCHANGED]} unchanged, "
-        f"{stats[RenameStatus.COLLISION]} collision(s), {stats[RenameStatus.ERROR]} error(s)[/dim]"
+        f"\n[dim]Summary: {stats.renamed} renamed, "
+        f"{stats.unchanged} unchanged, "
+        f"{stats.collision} collision(s), {stats.error} error(s)[/dim]"
     )
 
 

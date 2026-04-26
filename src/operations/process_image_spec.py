@@ -142,9 +142,9 @@ def should_return_cached_analysis_when_available(tmp_image_path, mock_cache, moc
     expected = make_analysis()
     mock_cache.load.return_value = expected
 
-    result, cached = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
+    result = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
 
-    assert result == expected
+    assert result.analysis == expected
     mock_analyzer.analyze.assert_not_called()
 
 
@@ -153,9 +153,9 @@ def should_call_analyze_image_on_cache_miss(tmp_image_path, mock_cache, mock_ana
     mock_cache.load.return_value = None
     mock_analyzer.analyze.return_value = expected
 
-    result, cached = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
+    result = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
 
-    assert result == expected
+    assert result.analysis == expected
 
 
 def should_save_to_cache_on_miss(tmp_image_path, mock_cache, mock_analyzer):
@@ -178,18 +178,18 @@ def should_raise_on_llm_failure(tmp_image_path, mock_cache, mock_analyzer):
 def should_return_true_for_cached_when_analysis_is_in_cache(tmp_image_path, mock_cache, mock_analyzer):
     mock_cache.load.return_value = make_analysis()
 
-    _, cached = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
+    result = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
 
-    assert cached is True
+    assert result.cached is True
 
 
 def should_return_false_for_cached_when_analysis_is_not_in_cache(tmp_image_path, mock_cache, mock_analyzer):
     mock_cache.load.return_value = None
     mock_analyzer.analyze.return_value = make_analysis()
 
-    _, cached = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
+    result = get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache)
 
-    assert cached is False
+    assert result.cached is False
 
 
 def should_call_on_cache_hit_callback_when_analysis_is_cached(
@@ -232,10 +232,10 @@ def should_return_unchanged_when_stem_matches(tmp_path):
     img.write_bytes(b"x")
     proposed = ProposedName(stem="already-named", extension=".png")
 
-    proposed_fn, final_fn, status = resolve_final_name(img, proposed, set())
+    result = resolve_final_name(img, proposed, set())
 
-    assert status == RenameStatus.UNCHANGED
-    assert final_fn == img.name
+    assert result.status == RenameStatus.UNCHANGED
+    assert result.final_name == img.name
 
 
 def should_return_renamed_when_no_collision(tmp_path):
@@ -243,11 +243,11 @@ def should_return_renamed_when_no_collision(tmp_path):
     img.write_bytes(b"x")
     proposed = ProposedName(stem="new-name", extension=".png")
 
-    proposed_fn, final_fn, status = resolve_final_name(img, proposed, set())
+    result = resolve_final_name(img, proposed, set())
 
-    assert status == RenameStatus.RENAMED
-    assert final_fn == "new-name.png"
-    assert proposed_fn == "new-name.png"
+    assert result.status == RenameStatus.RENAMED
+    assert result.final_name == "new-name.png"
+    assert result.proposed_filename == "new-name.png"
 
 
 def should_return_collision_when_disk_file_exists(tmp_path):
@@ -256,10 +256,10 @@ def should_return_collision_when_disk_file_exists(tmp_path):
     (tmp_path / "taken-name.png").write_bytes(b"existing")
     proposed = ProposedName(stem="taken-name", extension=".png")
 
-    proposed_fn, final_fn, status = resolve_final_name(img, proposed, set())
+    result = resolve_final_name(img, proposed, set())
 
-    assert status == RenameStatus.COLLISION
-    assert final_fn == "taken-name-2.png"
+    assert result.status == RenameStatus.COLLISION
+    assert result.final_name == "taken-name-2.png"
 
 
 def should_return_collision_when_planned_name_taken(tmp_path):
@@ -268,10 +268,10 @@ def should_return_collision_when_planned_name_taken(tmp_path):
     proposed = ProposedName(stem="wanted-name", extension=".png")
     planned = {"wanted-name.png"}
 
-    proposed_fn, final_fn, status = resolve_final_name(img, proposed, planned)
+    result = resolve_final_name(img, proposed, planned)
 
-    assert status == RenameStatus.COLLISION
-    assert final_fn == "wanted-name-2.png"
+    assert result.status == RenameStatus.COLLISION
+    assert result.final_name == "wanted-name-2.png"
 
 
 def should_add_resolved_name_to_planned_names(tmp_path):
@@ -290,9 +290,9 @@ def should_normalize_extension_without_dot(tmp_path):
     img.write_bytes(b"x")
     proposed = ProposedName(stem="new-name", extension="jpg")
 
-    _, final_fn, _ = resolve_final_name(img, proposed, set())
+    result = resolve_final_name(img, proposed, set())
 
-    assert final_fn.endswith(".jpg")
+    assert result.final_name.endswith(".jpg")
 
 
 def should_use_fallback_extension_when_empty(tmp_path):
@@ -300,6 +300,6 @@ def should_use_fallback_extension_when_empty(tmp_path):
     img.write_bytes(b"x")
     proposed = ProposedName(stem="new-name", extension="")
 
-    _, final_fn, _ = resolve_final_name(img, proposed, set())
+    result = resolve_final_name(img, proposed, set())
 
-    assert final_fn.endswith(".png")
+    assert result.final_name.endswith(".png")

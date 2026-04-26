@@ -3,7 +3,6 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Any
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent
@@ -17,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ui.models.ui_models import RenameItem
+from ui.models.ui_models import AnalysisStats, RenameItem
 from ui.processing_coordinator import ProcessingCoordinator
 from ui.widgets.bottom_control_panel import BottomControlPanel
 from ui.widgets.image_preview_panel import ImagePreviewPanel
@@ -181,11 +180,11 @@ class MainWindow(QMainWindow):
         if row < self.table_manager.rowCount():
             self.table_manager.update_row(row, item)
 
-    def _on_analysis_finished(self, stats: dict[str, Any]) -> None:
-        renamed = stats.get("renamed", 0)
-        unchanged = stats.get("unchanged", 0)
-        cached = stats.get("cached", 0)
-        errors = stats.get("errors", 0)
+    def _on_analysis_finished(self, stats: AnalysisStats) -> None:
+        renamed = stats.renamed
+        unchanged = stats.unchanged
+        cached = stats.cached
+        errors = stats.errors
 
         summary = f"Complete: {renamed} renamed, {unchanged} unchanged"
         if cached > 0:
@@ -321,11 +320,11 @@ class MainWindow(QMainWindow):
             return
 
         row = selected_rows[0].row()
-        success, error_msg, refs_updated = self.coordinator.rename_single(
+        result = self.coordinator.rename_single(
             row, self.toolbar.update_refs, self.toolbar.recursive
         )
 
-        if error_msg == "no_change":
+        if result.error_message == "no_change":
             self.status_bar.showMessage(
                 "No change: final name matches current name", 3000
             )
@@ -335,17 +334,18 @@ class MainWindow(QMainWindow):
         item = self.coordinator.rename_items[row]
         self.table_manager.update_row_status(row, item.status_icon, item.status_message)
 
-        if success:
+        if result.success:
             self.preview_panel.set_filename_label(f"Selected: {item.source_name}")
             self.metadata_panel.update(item)
             self.preview_panel.show_image(item.path)
+            refs_updated = result.references_updated
             msg = "Renamed 1 file"
             if refs_updated > 0:
                 msg += f" — updated {refs_updated} reference(s)"
             self.status_bar.showMessage(msg, 5000)
             self.bottom_panel.update_rename_button(None, None)
         else:
-            QMessageBox.critical(self, "Error", f"Failed to rename file:\n{error_msg}")
+            QMessageBox.critical(self, "Error", f"Failed to rename file:\n{result.error_message}")
             self.status_bar.showMessage("Rename failed", 5000)
             self.bottom_panel.update_rename_button(item.source_name, item.final_name)
 

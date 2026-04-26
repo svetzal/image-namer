@@ -5,14 +5,13 @@ emits signals and returns values so MainWindow can handle presentation.
 """
 
 from pathlib import Path
-from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 
 from operations.adapters import FilesystemAnalysisCache
 from operations.gateway_factory import MissingApiKeyError
 from operations.pipeline_factory import build_analysis_pipeline
-from ui.models.ui_models import BatchRenameResult, RenameItem, RenameStatus
+from ui.models.ui_models import AnalysisStats, BatchRenameResult, RenameItem, RenameResult, RenameStatus
 from ui.rename_actions import perform_batch_rename, perform_rename_with_refs
 from ui.workers.cache_loader import CacheLoaderWorker
 from ui.workers.rename_worker import RenameWorker
@@ -32,7 +31,7 @@ class ProcessingCoordinator(QObject):
     analysis_progress: "Signal" = Signal(int, int)        # current, total
     item_status_changed: "Signal" = Signal(int, str, str)  # row, status, message
     item_updated: "Signal" = Signal(int, object)          # row, RenameItem
-    analysis_finished: "Signal" = Signal(dict)
+    analysis_finished: "Signal" = Signal(object)
     error_occurred: "Signal" = Signal(int, str)           # row (-1 = setup error), message
 
     def __init__(self, parent: "QObject | None" = None) -> None:
@@ -160,7 +159,7 @@ class ProcessingCoordinator(QObject):
     def _on_worker_error(self, row: int, error_msg: str) -> None:
         self.error_occurred.emit(row, error_msg)
 
-    def _on_worker_finished(self, stats: dict[str, Any]) -> None:
+    def _on_worker_finished(self, stats: AnalysisStats) -> None:
         self.analysis_finished.emit(stats)
 
     # ------------------------------------------------------------------
@@ -177,16 +176,16 @@ class ProcessingCoordinator(QObject):
 
     def rename_single(
         self, row: int, update_refs: bool, recursive: bool
-    ) -> tuple[bool, str, int]:
+    ) -> RenameResult:
         """Rename the item at row and optionally update markdown references.
 
         Returns:
-            (True, "", refs_updated) on success.
-            (False, "no_change", 0) when old and new names are identical.
-            (False, error_message, 0) on failure.
+            RenameResult with success=True and references_updated on success.
+            RenameResult with success=False and error_message="no_change" when names are identical.
+            RenameResult with success=False and error_message set on failure.
         """
         if not self.rename_items or row < 0 or row >= len(self.rename_items):
-            return False, "Invalid selection", 0
+            return RenameResult(success=False, error_message="Invalid selection")
 
         item = self.rename_items[row]
         old_path = item.path
@@ -194,7 +193,7 @@ class ProcessingCoordinator(QObject):
         new_name = item.final_name or item.source_name
 
         if old_name == new_name or old_path == old_path.parent / new_name:
-            return False, "no_change", 0
+            return RenameResult(success=False, error_message="no_change")
 
         try:
             refs_updated = perform_rename_with_refs(
@@ -204,12 +203,12 @@ class ProcessingCoordinator(QObject):
             item.status_message = "Successfully renamed"
             item.source_name = new_name
             item.path = old_path.parent / new_name
-            return True, "", refs_updated
+            return RenameResult(success=True, references_updated=refs_updated)
         except (OSError, PermissionError) as e:
             item.status = RenameStatus.ERROR
             item.status_message = f"Rename failed: {e}"
             item.error_message = str(e)
-            return False, str(e), 0
+            return RenameResult(success=False, error_message=str(e))
 
     def rename_batch(self, update_refs: bool, recursive: bool) -> BatchRenameResult:
         """Rename all ready items in batch and return aggregate counts."""

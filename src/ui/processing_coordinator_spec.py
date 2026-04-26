@@ -195,11 +195,11 @@ def should_rename_single_returns_success(tmp_path, qapp, mocker):
         )
     ]
 
-    success, error_msg, refs = coord.rename_single(0, update_refs=True, recursive=False)
+    result = coord.rename_single(0, update_refs=True, recursive=False)
 
-    assert success is True
-    assert error_msg == ""
-    assert refs == 2
+    assert result.success is True
+    assert result.error_message == ""
+    assert result.references_updated == 2
     assert coord.rename_items[0].source_name == "new.png"
     assert coord.rename_items[0].status == RenameStatus.COMPLETED
 
@@ -216,10 +216,10 @@ def should_rename_single_returns_no_change_when_names_match(tmp_path, qapp):
         )
     ]
 
-    success, error_msg, refs = coord.rename_single(0, update_refs=False, recursive=False)
+    result = coord.rename_single(0, update_refs=False, recursive=False)
 
-    assert success is False
-    assert error_msg == "no_change"
+    assert result.success is False
+    assert result.error_message == "no_change"
 
 
 def should_rename_single_returns_error_on_os_error(tmp_path, qapp, mocker):
@@ -239,10 +239,10 @@ def should_rename_single_returns_error_on_os_error(tmp_path, qapp, mocker):
         )
     ]
 
-    success, error_msg, refs = coord.rename_single(0, update_refs=False, recursive=False)
+    result = coord.rename_single(0, update_refs=False, recursive=False)
 
-    assert success is False
-    assert "permission denied" in error_msg
+    assert result.success is False
+    assert "permission denied" in result.error_message
     assert coord.rename_items[0].status == RenameStatus.ERROR
 
 
