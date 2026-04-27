@@ -12,7 +12,7 @@ from operations.adapters import FilesystemAnalysisCache
 from operations.gateway_factory import MissingApiKeyError
 from operations.pipeline_factory import build_analysis_pipeline
 from ui.models.ui_models import AnalysisStats, BatchRenameResult, RenameItem, RenameResult, RenameStatus
-from ui.rename_actions import perform_batch_rename, perform_rename_with_refs
+from ui.rename_actions import perform_batch_rename, rename_single_item
 from ui.workers.cache_loader import CacheLoaderWorker
 from ui.workers.rename_worker import RenameWorker
 from utils.fs import collect_image_files, ensure_cache_layout
@@ -195,20 +195,7 @@ class ProcessingCoordinator(QObject):
         if old_name == new_name or old_path == old_path.parent / new_name:
             return RenameResult(success=False, error_message="no_change")
 
-        try:
-            refs_updated = perform_rename_with_refs(
-                old_path, new_name, self.current_folder, update_refs, recursive
-            )
-            item.status = RenameStatus.COMPLETED
-            item.status_message = "Successfully renamed"
-            item.source_name = new_name
-            item.path = old_path.parent / new_name
-            return RenameResult(success=True, references_updated=refs_updated)
-        except (OSError, PermissionError) as e:
-            item.status = RenameStatus.ERROR
-            item.status_message = f"Rename failed: {e}"
-            item.error_message = str(e)
-            return RenameResult(success=False, error_message=str(e))
+        return rename_single_item(item, self.current_folder, update_refs, recursive)
 
     def rename_batch(self, update_refs: bool, recursive: bool) -> BatchRenameResult:
         """Rename all ready items in batch and return aggregate counts."""

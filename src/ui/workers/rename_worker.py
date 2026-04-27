@@ -117,6 +117,8 @@ class RenameWorker(QThread):
 
                 item.reasoning = result.reasoning
                 item.cached = result.cached
+                item.proposed_name = result.proposed
+                item.final_name = result.final
 
                 if result.cached:
                     stats.cached += 1
@@ -126,20 +128,14 @@ class RenameWorker(QThread):
                     item.update_status(RenameStatus.ERROR, "Error during analysis")
                     self.error_occurred.emit(i, "Error during analysis")
                 elif result.status == OpsRenameStatus.UNCHANGED:
-                    item.proposed_name = result.proposed
-                    item.final_name = result.final
                     item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
                     stats.unchanged += 1
                 elif result.status == OpsRenameStatus.COLLISION:
-                    item.proposed_name = result.proposed
-                    item.final_name = result.final
                     item.update_status(
                         RenameStatus.COLLISION, f"Collision resolved: {result.final}"
                     )
                     stats.renamed += 1
                 else:
-                    item.proposed_name = result.proposed
-                    item.final_name = result.final
                     item.update_status(RenameStatus.READY, "Ready to rename")
                     stats.renamed += 1
 

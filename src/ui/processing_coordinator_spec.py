@@ -182,7 +182,7 @@ def should_get_items_to_rename_returns_ready_items(tmp_path, qapp):
 # ------------------------------------------------------------------
 
 def should_rename_single_returns_success(tmp_path, qapp, mocker):
-    mocker.patch("ui.processing_coordinator.perform_rename_with_refs", return_value=2)
+    mocker.patch("ui.rename_actions.perform_rename_with_refs", return_value=2)
 
     coord = ProcessingCoordinator()
     coord.current_folder = tmp_path
@@ -224,7 +224,7 @@ def should_rename_single_returns_no_change_when_names_match(tmp_path, qapp):
 
 def should_rename_single_returns_error_on_os_error(tmp_path, qapp, mocker):
     mocker.patch(
-        "ui.processing_coordinator.perform_rename_with_refs",
+        "ui.rename_actions.perform_rename_with_refs",
         side_effect=OSError("permission denied"),
     )
 
