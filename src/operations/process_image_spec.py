@@ -5,10 +5,57 @@ import pytest
 from conftest import make_analysis
 from operations.models import ProposedName, RenameStatus
 from operations.process_image import (
+    build_processing_result,
     get_or_generate_analysis,
     process_single_image,
     resolve_final_name,
 )
+
+
+# ---------------------------------------------------------------------------
+# build_processing_result
+# ---------------------------------------------------------------------------
+
+def should_return_unchanged_when_analysis_is_suitable(tmp_image_path):
+    analysis = make_analysis(suitable=True)
+
+    result = build_processing_result(tmp_image_path, analysis, cached=False, planned_names=set())
+
+    assert result.status == RenameStatus.UNCHANGED
+    assert result.proposed == tmp_image_path.name
+    assert result.final == tmp_image_path.name
+
+
+def should_return_renamed_when_analysis_needs_new_name(tmp_path):
+    img = tmp_path / "old-name.png"
+    img.write_bytes(b"x")
+    analysis = make_analysis(suitable=False, stem="new-name")
+
+    result = build_processing_result(img, analysis, cached=False, planned_names=set())
+
+    assert result.status == RenameStatus.RENAMED
+    assert result.proposed == "new-name.png"
+    assert result.final == "new-name.png"
+
+
+def should_return_collision_when_target_name_already_taken(tmp_path):
+    img = tmp_path / "source.png"
+    img.write_bytes(b"x")
+    (tmp_path / "taken-name.png").write_bytes(b"existing")
+    analysis = make_analysis(suitable=False, stem="taken-name")
+
+    result = build_processing_result(img, analysis, cached=False, planned_names=set())
+
+    assert result.status == RenameStatus.COLLISION
+    assert result.final == "taken-name-2.png"
+
+
+def should_propagate_cached_flag_to_processing_result(tmp_image_path):
+    analysis = make_analysis(suitable=True)
+
+    result = build_processing_result(tmp_image_path, analysis, cached=True, planned_names=set())
+
+    assert result.cached is True
 
 
 # ---------------------------------------------------------------------------

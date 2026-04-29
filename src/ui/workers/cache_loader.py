@@ -5,8 +5,9 @@ Proactively loads cache to give user early feedback on what's already been proce
 
 from PySide6.QtCore import QThread, Signal
 
+from operations.models import RenameStatus as OpsRenameStatus
 from operations.ports import AnalysisCachePort
-from operations.process_image import resolve_final_name
+from operations.process_image import build_processing_result
 from ui.models.ui_models import RenameItem, RenameStatus
 
 
@@ -54,14 +55,14 @@ class CacheLoaderWorker(QThread):
             analysis = self._cache.load(item.path, item.source_name)
 
             if analysis:
-                proposed = analysis.proposed_name
-                item.reasoning = analysis.reasoning
-                proposed_filename = proposed.filename_with_fallback(item.path.suffix)
-                item.proposed_name = proposed_filename
+                result = build_processing_result(item.path, analysis, True, planned_names)
+                item.reasoning = result.reasoning
+                item.proposed_name = result.proposed
+                item.cached = True
 
-                if analysis.current_name_suitable:
+                if result.status == OpsRenameStatus.UNCHANGED:
                     if not item.manually_edited:
-                        item.final_name = item.source_name
+                        item.final_name = result.final
                         item.update_status(RenameStatus.UNCHANGED, "Already suitable (cached)")
                     else:
                         item.update_status(
@@ -69,15 +70,11 @@ class CacheLoaderWorker(QThread):
                         )
                 else:
                     if not item.manually_edited:
-                        resolved = resolve_final_name(
-                            item.path, proposed, planned_names
-                        )
-                        item.final_name = resolved.final_name
+                        item.final_name = result.final
                         item.update_status(RenameStatus.READY, "Ready (from cache)")
                     else:
                         item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
 
-                item.cached = True
                 cached_count += 1
                 self.item_cache_loaded.emit(i, item)
 

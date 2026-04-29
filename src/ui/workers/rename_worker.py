@@ -13,13 +13,6 @@ from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from operations.process_image import process_single_image
 from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
 
-_OPS_TO_UI_STATUS = {
-    OpsRenameStatus.RENAMED: RenameStatus.READY,
-    OpsRenameStatus.UNCHANGED: RenameStatus.UNCHANGED,
-    OpsRenameStatus.COLLISION: RenameStatus.COLLISION,
-    OpsRenameStatus.ERROR: RenameStatus.ERROR,
-}
-
 
 class _SignalProgressCallback:
     """Emits Qt signals during analysis cache-hit/miss events.

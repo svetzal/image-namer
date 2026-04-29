@@ -7,7 +7,7 @@ Protocol-based ports — errors are captured in ProcessingResult.
 
 from pathlib import Path
 
-from operations.models import AnalysisResult, ProcessingResult, ProposedName, RenameStatus, ResolvedName
+from operations.models import AnalysisResult, ImageAnalysis, ProcessingResult, ProposedName, RenameStatus, ResolvedName
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
 from utils.fs import next_available_name
 
@@ -67,6 +67,48 @@ def resolve_final_name(
     return ResolvedName(proposed_filename=proposed_filename, final_name=final_name, status=status)
 
 
+def build_processing_result(
+    img_path: Path,
+    analysis: ImageAnalysis,
+    cached: bool,
+    planned_names: set[str],
+) -> ProcessingResult:
+    """Build a ProcessingResult from an analysis, handling suitability and collision resolution."""
+    if analysis.current_name_suitable:
+        return ProcessingResult(
+            source=img_path.name,
+            proposed=img_path.name,
+            final=img_path.name,
+            status=RenameStatus.UNCHANGED,
+            path=img_path,
+            reasoning=analysis.reasoning,
+            cached=cached,
+        )
+
+    resolved = resolve_final_name(img_path, analysis.proposed_name, planned_names)
+
+    if resolved.status == RenameStatus.UNCHANGED:
+        return ProcessingResult(
+            source=img_path.name,
+            proposed=resolved.proposed_filename,
+            final=img_path.name,
+            status=RenameStatus.UNCHANGED,
+            path=img_path,
+            reasoning=analysis.reasoning,
+            cached=cached,
+        )
+
+    return ProcessingResult(
+        source=img_path.name,
+        proposed=resolved.proposed_filename,
+        final=resolved.final_name,
+        status=resolved.status,
+        path=img_path,
+        reasoning=analysis.reasoning,
+        cached=cached,
+    )
+
+
 def process_single_image(
     img_path: Path,
     analyzer: ImageAnalyzerPort,
@@ -93,38 +135,6 @@ def process_single_image(
             status=RenameStatus.ERROR,
         )
 
-    if analysis_result.analysis.current_name_suitable:
-        return ProcessingResult(
-            source=img_path.name,
-            proposed=img_path.name,
-            final=img_path.name,
-            status=RenameStatus.UNCHANGED,
-            path=img_path,
-            reasoning=analysis_result.analysis.reasoning,
-            cached=analysis_result.cached,
-        )
-
-    resolved = resolve_final_name(
-        img_path, analysis_result.analysis.proposed_name, planned_names
-    )
-
-    if resolved.status == RenameStatus.UNCHANGED:
-        return ProcessingResult(
-            source=img_path.name,
-            proposed=resolved.proposed_filename,
-            final=img_path.name,
-            status=RenameStatus.UNCHANGED,
-            path=img_path,
-            reasoning=analysis_result.analysis.reasoning,
-            cached=analysis_result.cached,
-        )
-
-    return ProcessingResult(
-        source=img_path.name,
-        proposed=resolved.proposed_filename,
-        final=resolved.final_name,
-        status=resolved.status,
-        path=img_path,
-        reasoning=analysis_result.analysis.reasoning,
-        cached=analysis_result.cached,
+    return build_processing_result(
+        img_path, analysis_result.analysis, analysis_result.cached, planned_names
     )
