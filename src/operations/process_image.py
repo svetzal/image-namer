@@ -86,18 +86,6 @@ def build_processing_result(
         )
 
     resolved = resolve_final_name(img_path, analysis.proposed_name, planned_names)
-
-    if resolved.status == RenameStatus.UNCHANGED:
-        return ProcessingResult(
-            source=img_path.name,
-            proposed=resolved.proposed_filename,
-            final=img_path.name,
-            status=RenameStatus.UNCHANGED,
-            path=img_path,
-            reasoning=analysis.reasoning,
-            cached=cached,
-        )
-
     return ProcessingResult(
         source=img_path.name,
         proposed=resolved.proposed_filename,

@@ -308,3 +308,16 @@ def should_ref_not_match_different_filename(tmp_path):
     )
 
     assert ref_matches_filename(ref, "photo.png") is False
+
+
+def should_agree_on_url_encoded_stem_only_standard_ref(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "my photo.png"
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Alt](my%20photo)\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+    assert ref_matches_filename(refs[0], "my photo.png") is True

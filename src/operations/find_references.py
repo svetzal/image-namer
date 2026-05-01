@@ -93,42 +93,36 @@ def _find_references_in_line(
     return refs
 
 
-def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
-    # Try direct match
-    if ref_path.name == image_name:
+def _names_match(ref_name: str, target_name: str) -> bool:
+    if ref_name == target_name:
         return True
-
-    # Try URL-decoded matches
-    if _matches_url_decoded(ref_path, image_path, image_name):
+    if Path(ref_name).stem == Path(target_name).stem:
         return True
-
-    # Match by full path
-    if _matches_by_full_path(ref_path, image_path):
+    if normalized_name_equals(ref_name, target_name):
         return True
-
+    if normalized_name_equals(Path(ref_name).stem, Path(target_name).stem):
+        return True
     return False
 
 
-def _matches_url_decoded(ref_path: Path, image_path: Path, image_name: str) -> bool:
-    if normalized_name_equals(str(ref_path.name), image_name):
+def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
+    if _names_match(str(ref_path.name), image_name):
         return True
 
-    # Try URL-decoded full path
+    try:
+        if ref_path.resolve() == image_path.resolve():
+            return True
+    except (OSError, ValueError):
+        pass
+
     try:
         decoded_path = Path(unquote(str(ref_path)))
-        if decoded_path.name == image_name or decoded_path.resolve() == image_path.resolve():
+        if decoded_path.resolve() == image_path.resolve():
             return True
     except (OSError, ValueError, TypeError):
         pass
 
     return False
-
-
-def _matches_by_full_path(ref_path: Path, image_path: Path) -> bool:
-    try:
-        return ref_path.resolve() == image_path.resolve()
-    except (OSError, ValueError):
-        return False
 
 
 def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
@@ -137,19 +131,4 @@ def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
     Handles URL-encoded paths and Unicode whitespace normalization.
     Used during batch reference updates to match references by old filename.
     """
-    ref_name = str(ref.image_path.name)
-    ref_stem = str(ref.image_path.stem)
-
-    if ref_name == filename:
-        return True
-
-    if ref_stem == Path(filename).stem:
-        return True
-
-    if normalized_name_equals(ref_name, filename):
-        return True
-
-    if normalized_name_equals(ref_stem, Path(filename).stem):
-        return True
-
-    return False
+    return _names_match(str(ref.image_path.name), filename)
