@@ -5,20 +5,21 @@ is shared across CLI commands.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SkipValidation
 from mojentic.llm import LLMBroker
 
 from operations.adapters import FilesystemAnalysisCache, MojenticImageAnalyzer
 from operations.gateway_factory import create_gateway
+from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 
 
 class AnalysisPipeline(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    analyzer: Any
-    cache: Any
+    analyzer: Annotated[ImageAnalyzerPort, SkipValidation]
+    cache: Annotated[AnalysisCachePort, SkipValidation]
     provider: str
     model: str
 
