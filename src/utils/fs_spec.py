@@ -23,10 +23,7 @@ def should_ensure_cache_layout_and_write_version(tmp_path: Path) -> None:
     cache_root = ensure_cache_layout(root)
 
     assert cache_root == root / ".image_namer"
-    assert (cache_root / "cache" / "analysis").is_dir()
-    assert (cache_root / "cache" / "names").is_dir()
-    assert (cache_root / "cache" / "refs").is_dir()
-    assert (cache_root / "runs").is_dir()
+    assert (cache_root / "cache" / "unified").is_dir()
 
     version_file = cache_root / "version"
     assert version_file.is_file()

@@ -34,20 +34,13 @@ def ensure_cache_layout(repo_root: Path) -> Path:
 
     - .image_namer/
       - cache/
-        - analysis/
-        - names/
-        - refs/
-      - runs/
+        - unified/
       - version (file; created if missing; contains the current RUBRIC_VERSION)
 
     The operation is idempotent: calling it multiple times is safe.
     """
     cache_root = repo_root / CACHE_ROOT_NAME
-    (cache_root / "cache" / "analysis").mkdir(parents=True, exist_ok=True)
-    (cache_root / "cache" / "names").mkdir(parents=True, exist_ok=True)
-    (cache_root / "cache" / "refs").mkdir(parents=True, exist_ok=True)
     (cache_root / "cache" / "unified").mkdir(parents=True, exist_ok=True)
-    (cache_root / "runs").mkdir(parents=True, exist_ok=True)
 
     version_file = cache_root / "version"
     if not version_file.exists():
