@@ -1,4 +1,4 @@
-"""Batch markdown reference update orchestration."""
+"""Batch and single-file markdown reference update orchestration."""
 
 from pathlib import Path
 
@@ -61,6 +61,38 @@ def apply_batch_reference_updates(
     return BatchReferenceResult(
         total_references=sum(updates_by_file.values()),
         files_updated=len(updates_by_file),
+    )
+
+
+def count_single_file_references(
+    path: Path,
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+) -> BatchReferenceResult:
+    """Count markdown references to a single file without applying updates."""
+    refs = find_references(path, search_root, markdown_files, recursive=True)
+    if not refs:
+        return BatchReferenceResult(total_references=0, files_updated=0)
+    return BatchReferenceResult(
+        total_references=len(refs),
+        files_updated=len({r.file_path for r in refs}),
+    )
+
+
+def apply_single_file_reference_updates(
+    path: Path,
+    final_name: str,
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+) -> BatchReferenceResult:
+    """Find and apply markdown reference updates for a single renamed file."""
+    refs = find_references(path, search_root, markdown_files, recursive=True)
+    if not refs:
+        return BatchReferenceResult(total_references=0, files_updated=0)
+    updates = update_references(refs, path.name, final_name, markdown_files)
+    return BatchReferenceResult(
+        total_references=sum(u.replacement_count for u in updates),
+        files_updated=len(updates),
     )
 
 

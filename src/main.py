@@ -11,22 +11,25 @@ from typing import Annotated, Final
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 from constants import SUPPORTED_EXTENSIONS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
-from operations.batch_references import apply_batch_reference_updates, count_batch_references
-from operations.find_references import find_references
+from operations.batch_references import (
+    apply_batch_reference_updates,
+    apply_single_file_reference_updates,
+    count_batch_references,
+    count_single_file_references,
+)
+from operations.display import display_results_table, print_reference_result, print_statistics
 from operations.gateway_factory import MissingApiKeyError
 from operations.models import (
     ProcessingResult,
     RenameStatus,
 )
 from operations.pipeline_factory import AnalysisPipeline, build_analysis_pipeline
-from operations.process_folder import compute_statistics, process_folder
+from operations.process_folder import process_folder
 from operations.process_image import process_single_image
-from operations.update_references import update_references
 from utils.fs import collect_image_files, ensure_cache_layout
 
 # Runtime Python version enforcement (see REVIEW.md #12)
@@ -79,72 +82,15 @@ def _handle_reference_updates(
     refs_root: Path | None,
     dry_run: bool
 ) -> None:
-    """Handle updating markdown references if requested.
-
-    Args:
-        path: Original file path.
-        final_name: Final filename after rename.
-        update_refs: Whether to update references.
-        refs_root: Root directory to search for references.
-        dry_run: Whether in dry-run mode.
-    """
     if not update_refs or final_name == path.name:
         return
-
     search_root = refs_root if refs_root else path.parent
     markdown_files = FilesystemMarkdownFiles()
-    refs = find_references(path, search_root, markdown_files, recursive=True)
-
-    if refs:
-        if not dry_run:
-            updates = update_references(refs, path.name, final_name, markdown_files)
-            total_replacements = sum(u.replacement_count for u in updates)
-            console.print(
-                f"[green]Updated {total_replacements} reference(s) "
-                f"across {len(updates)} file(s)[/green]"
-            )
-        else:
-            console.print(
-                f"[dim]Would update {len(refs)} reference(s) "
-                f"across {len(set(r.file_path for r in refs))} file(s)[/dim]"
-            )
+    if dry_run:
+        ref_result = count_single_file_references(path, search_root, markdown_files)
     else:
-        console.print("[dim]No markdown references found[/dim]")
-
-
-def _display_results_table(results: list[ProcessingResult], dry_run: bool) -> None:
-    table = Table(title=f"image-namer: folder ({'dry-run' if dry_run else 'apply'})")
-    table.add_column("Source", style="dim")
-    table.add_column("Proposed", style="bold")
-    table.add_column("Final", style="green")
-    table.add_column("Status", style="cyan")
-
-    status_display_map = {
-        RenameStatus.RENAMED: "✓ rename",
-        RenameStatus.UNCHANGED: "= unchanged",
-        RenameStatus.COLLISION: "⚠ collision",
-        RenameStatus.ERROR: "✗ error",
-    }
-
-    for result in results:
-        status_display = status_display_map.get(result.status, result.status.value)
-        table.add_row(
-            result.source,
-            result.proposed,
-            result.final,
-            status_display,
-        )
-
-    console.print(table)
-
-
-def _print_statistics(results: list[ProcessingResult]) -> None:
-    stats = compute_statistics(results)
-    console.print(
-        f"\n[dim]Summary: {stats.renamed} renamed, "
-        f"{stats.unchanged} unchanged, "
-        f"{stats.collision} collision(s), {stats.error} error(s)[/dim]"
-    )
+        ref_result = apply_single_file_reference_updates(path, final_name, search_root, markdown_files)
+    print_reference_result(console, ref_result, dry_run)
 
 
 def _apply_renames(results: list[ProcessingResult]) -> None:
@@ -265,8 +211,8 @@ def folder(
 
     results = process_folder(image_files, pipeline.analyzer, pipeline.cache)
 
-    _display_results_table(results, dry_run)
-    _print_statistics(results)
+    display_results_table(console, results, dry_run)
+    print_statistics(console, results)
 
     if update_refs:
         search_root = refs_root if refs_root else path
@@ -275,19 +221,7 @@ def folder(
             ref_result = count_batch_references(results, search_root, markdown_files)
         else:
             ref_result = apply_batch_reference_updates(results, search_root, markdown_files)
-
-        if ref_result.total_references == 0:
-            console.print("[dim]No markdown references found[/dim]")
-        elif dry_run:
-            console.print(
-                f"[dim]Would update {ref_result.total_references} reference(s) "
-                f"across {ref_result.files_updated} file(s)[/dim]"
-            )
-        else:
-            console.print(
-                f"[green]Updated {ref_result.total_references} reference(s) "
-                f"across {ref_result.files_updated} file(s)[/green]"
-            )
+        print_reference_result(console, ref_result, dry_run)
 
     if not dry_run:
         _apply_renames(results)

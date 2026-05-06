@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from operations.batch_references import apply_batch_reference_updates, count_batch_references
+from operations.batch_references import (
+    apply_batch_reference_updates,
+    apply_single_file_reference_updates,
+    count_batch_references,
+    count_single_file_references,
+)
 from operations.models import ProcessingResult, RenameStatus
 
 
@@ -120,3 +125,59 @@ def should_count_return_zero_when_no_refs(tmp_path, mock_markdown_files):
 
     assert result.total_references == 0
     assert result.files_updated == 0
+
+
+def should_count_single_file_references(tmp_path, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"fake-image")
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
+
+    result = count_single_file_references(img, tmp_path, mock_markdown_files)
+
+    assert result.total_references == 1
+    assert result.files_updated == 1
+    mock_markdown_files.write_markdown_content.assert_not_called()
+
+
+def should_count_single_file_references_returns_zero_when_no_refs(tmp_path, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"fake-image")
+
+    mock_markdown_files.find_markdown_files.return_value = []
+
+    result = count_single_file_references(img, tmp_path, mock_markdown_files)
+
+    assert result.total_references == 0
+    assert result.files_updated == 0
+
+
+def should_apply_single_file_reference_updates(tmp_path, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"fake-image")
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
+
+    result = apply_single_file_reference_updates(img, "new.png", tmp_path, mock_markdown_files)
+
+    assert result.total_references == 1
+    assert result.files_updated == 1
+    written_content = mock_markdown_files.write_markdown_content.call_args[0][1]
+    assert "new.png" in written_content
+
+
+def should_apply_single_file_reference_updates_returns_zero_when_no_refs(tmp_path, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"fake-image")
+
+    mock_markdown_files.find_markdown_files.return_value = []
+
+    result = apply_single_file_reference_updates(img, "new.png", tmp_path, mock_markdown_files)
+
+    assert result.total_references == 0
+    assert result.files_updated == 0
+    mock_markdown_files.write_markdown_content.assert_not_called()
