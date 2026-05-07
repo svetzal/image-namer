@@ -4,6 +4,7 @@ These are the imperative-shell implementations of the Protocol contracts
 defined in ports.py. They perform real I/O (filesystem, LLM calls).
 """
 
+from collections.abc import Callable
 from pathlib import Path
 
 from mojentic.llm import LLMBroker
@@ -52,15 +53,16 @@ class MojenticImageAnalyzer:
     at construction time.
     """
 
-    def __init__(self, llm: LLMBroker) -> None:
+    def __init__(self, llm: LLMBroker, *, analyze_fn: Callable[..., ImageAnalysis] = analyze_image) -> None:
         self._llm = llm
+        self._analyze_fn = analyze_fn
 
     def analyze(
         self,
         path: Path,
         current_name: str,
     ) -> ImageAnalysis:
-        return analyze_image(path, current_name, llm=self._llm)
+        return self._analyze_fn(path, current_name, llm=self._llm)
 
 
 class FilesystemRenamer:

@@ -28,31 +28,27 @@ class DescribeFilesystemAnalysisCache:
 
     class DescribeLoad:
 
-        def should_delegate_to_load_analysis_from_cache(
-            self, mocker, cache_dir: Path, cache: FilesystemAnalysisCache, tmp_image_path: Path
+        def should_return_none_when_no_cache_exists(
+            self, cache: FilesystemAnalysisCache, tmp_image_path: Path
         ):
-            mock_load = mocker.patch("operations.adapters.load_analysis_from_cache", return_value=None)
-
-            cache.load(tmp_image_path, "sample.png")
-
-            mock_load.assert_called_once_with(
-                cache_dir, tmp_image_path, "sample.png", "ollama", "gemma3:27b"
-            )
-
-        def should_return_analysis_when_cache_hit(
-            self, mocker, cache: FilesystemAnalysisCache, tmp_image_path: Path
-        ):
-            expected = make_analysis()
-            mocker.patch("operations.adapters.load_analysis_from_cache", return_value=expected)
-
             result = cache.load(tmp_image_path, "sample.png")
 
-            assert result is expected
+            assert result is None
+
+        def should_return_previously_saved_analysis(
+            self, cache: FilesystemAnalysisCache, tmp_image_path: Path
+        ):
+            expected = make_analysis()
+
+            cache.save(tmp_image_path, "sample.png", expected)
+            result = cache.load(tmp_image_path, "sample.png")
+
+            assert result == expected
 
         def should_return_none_when_cache_miss(
-            self, mocker, cache: FilesystemAnalysisCache, tmp_image_path: Path
+            self, cache: FilesystemAnalysisCache, tmp_image_path: Path
         ):
-            mocker.patch("operations.adapters.load_analysis_from_cache", return_value=None)
+            cache.save(tmp_image_path, "other.png", make_analysis())
 
             result = cache.load(tmp_image_path, "sample.png")
 
@@ -60,17 +56,15 @@ class DescribeFilesystemAnalysisCache:
 
     class DescribeSave:
 
-        def should_delegate_to_save_analysis_to_cache(
-            self, mocker, cache_dir: Path, cache: FilesystemAnalysisCache, tmp_image_path: Path
+        def should_persist_analysis_to_cache_directory(
+            self, cache_dir: Path, cache: FilesystemAnalysisCache, tmp_image_path: Path
         ):
-            mock_save = mocker.patch("operations.adapters.save_analysis_to_cache")
             analysis = make_analysis()
 
             cache.save(tmp_image_path, "sample.png", analysis)
 
-            mock_save.assert_called_once_with(
-                cache_dir, tmp_image_path, "sample.png", "ollama", "gemma3:27b", analysis
-            )
+            json_files = list(cache_dir.glob("*.json"))
+            assert len(json_files) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -84,24 +78,28 @@ class DescribeMojenticImageAnalyzer:
         return mocker.MagicMock()
 
     @pytest.fixture
-    def analyzer(self, mock_llm) -> MojenticImageAnalyzer:
-        return MojenticImageAnalyzer(mock_llm)
+    def mock_analyze(self, mocker):
+        return mocker.Mock()
+
+    @pytest.fixture
+    def analyzer(self, mock_llm, mock_analyze) -> MojenticImageAnalyzer:
+        return MojenticImageAnalyzer(mock_llm, analyze_fn=mock_analyze)
 
     def should_delegate_analyze_to_analyze_image(
-        self, mocker, analyzer: MojenticImageAnalyzer, mock_llm, tmp_image_path: Path
+        self, analyzer: MojenticImageAnalyzer, mock_llm, mock_analyze, tmp_image_path: Path
     ):
         expected = make_analysis(suitable=False, stem="golden-retriever--running-in-park")
-        mock_analyze = mocker.patch("operations.adapters.analyze_image", return_value=expected)
+        mock_analyze.return_value = expected
 
         analyzer.analyze(tmp_image_path, "sample.png")
 
         mock_analyze.assert_called_once_with(tmp_image_path, "sample.png", llm=mock_llm)
 
     def should_return_image_analysis_result(
-        self, mocker, analyzer: MojenticImageAnalyzer, tmp_image_path: Path
+        self, analyzer: MojenticImageAnalyzer, mock_analyze, tmp_image_path: Path
     ):
         expected = make_analysis(suitable=False, stem="golden-retriever--running-in-park")
-        mocker.patch("operations.adapters.analyze_image", return_value=expected)
+        mock_analyze.return_value = expected
 
         result = analyzer.analyze(tmp_image_path, "sample.png")
 

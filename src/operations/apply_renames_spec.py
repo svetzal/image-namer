@@ -129,18 +129,16 @@ def should_return_zero_references_when_markdown_port_is_none(tmp_path, mock_rena
     assert outcome.references_updated == 0
 
 
-def should_find_and_update_references_when_markdown_port_provided(tmp_path, mocker, mock_renamer, mock_markdown_files):
+def should_find_and_update_references_when_markdown_port_provided(tmp_path, mock_renamer, mock_markdown_files):
     img = tmp_path / "old.png"
     img.write_bytes(b"x")
-
-    mock_refs = [mocker.Mock()]
-    mock_update = mocker.Mock(replacement_count=3)
-    mocker.patch("operations.apply_renames.find_references", return_value=mock_refs)
-    mocker.patch("operations.apply_renames.update_references", return_value=[mock_update])
+    md_file = tmp_path / "notes.md"
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![alt](old.png)"
 
     outcome = apply_rename_with_references(img, "new.png", tmp_path, mock_renamer, mock_markdown_files, True)
 
-    assert outcome.references_updated == 3
+    assert outcome.references_updated == 1
 
 
 def should_return_total_renamed_count(tmp_path, mock_renamer):
