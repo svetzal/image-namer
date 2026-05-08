@@ -16,10 +16,8 @@ from constants import SUPPORTED_EXTENSIONS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
 from operations.batch_references import (
-    apply_batch_reference_updates,
-    apply_single_file_reference_updates,
-    count_batch_references,
-    count_single_file_references,
+    process_batch_references,
+    process_single_file_references,
 )
 from operations.display import display_results_table, print_reference_result, print_statistics
 from operations.gateway_factory import MissingApiKeyError
@@ -86,10 +84,7 @@ def _handle_reference_updates(
         return
     search_root = refs_root if refs_root else path.parent
     markdown_files = FilesystemMarkdownFiles()
-    if dry_run:
-        ref_result = count_single_file_references(path, search_root, markdown_files)
-    else:
-        ref_result = apply_single_file_reference_updates(path, final_name, search_root, markdown_files)
+    ref_result = process_single_file_references(path, final_name, search_root, markdown_files, dry_run=dry_run)
     print_reference_result(console, ref_result, dry_run)
 
 
@@ -217,10 +212,7 @@ def folder(
     if update_refs:
         search_root = refs_root if refs_root else path
         markdown_files = FilesystemMarkdownFiles()
-        if dry_run:
-            ref_result = count_batch_references(results, search_root, markdown_files)
-        else:
-            ref_result = apply_batch_reference_updates(results, search_root, markdown_files)
+        ref_result = process_batch_references(results, search_root, markdown_files, dry_run=dry_run)
         print_reference_result(console, ref_result, dry_run)
 
     if not dry_run:

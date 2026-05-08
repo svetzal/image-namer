@@ -115,3 +115,30 @@ def count_batch_references(
         total_references=len(collected.references),
         files_updated=unique_files,
     )
+
+
+def process_single_file_references(
+    path: Path,
+    final_name: str,
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+    *,
+    dry_run: bool,
+) -> BatchReferenceResult:
+    """Count or apply markdown reference updates for a single renamed file based on dry_run."""
+    if dry_run:
+        return count_single_file_references(path, search_root, markdown_files)
+    return apply_single_file_reference_updates(path, final_name, search_root, markdown_files)
+
+
+def process_batch_references(
+    results: list[ProcessingResult],
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+    *,
+    dry_run: bool,
+) -> BatchReferenceResult:
+    """Count or apply markdown reference updates for a batch of results based on dry_run."""
+    if dry_run:
+        return count_batch_references(results, search_root, markdown_files)
+    return apply_batch_reference_updates(results, search_root, markdown_files)
