@@ -48,3 +48,11 @@ def should_match_unicode_space_after_url_decode():
 
 def should_not_match_different_names():
     assert normalized_name_equals("other.png", "photo.png") is False
+
+
+def should_not_match_when_decoded_differs():
+    assert normalized_name_equals("foo%20bar.png", "different.png") is False
+
+
+def should_return_false_for_type_error_in_normalized_name_equals():
+    assert normalized_name_equals("hello", "world") is False

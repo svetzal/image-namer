@@ -1,7 +1,7 @@
 import hashlib
 from pathlib import Path
 
-from utils.fs import collect_image_files, ensure_cache_layout, sha256_file
+from utils.fs import collect_image_files, ensure_cache_layout, next_available_name, sha256_file
 from constants import RUBRIC_VERSION
 
 
@@ -91,3 +91,17 @@ def should_return_sorted_files(tmp_path: Path) -> None:
     files = collect_image_files(tmp_path, recursive=False)
 
     assert [f.name for f in files] == ["a.png", "b.png", "c.png"]
+
+
+def should_produce_filename_without_extension_when_ext_empty(tmp_path: Path) -> None:
+    result = next_available_name(tmp_path, "stem", "")
+
+    assert result == "stem"
+
+
+def should_handle_nonexistent_directory_as_empty(tmp_path: Path) -> None:
+    nonexistent = tmp_path / "does_not_exist"
+
+    result = next_available_name(nonexistent, "photo", ".png")
+
+    assert result == "photo.png"

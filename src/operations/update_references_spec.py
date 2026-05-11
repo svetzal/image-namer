@@ -2,7 +2,14 @@
 from pathlib import Path
 
 from .models import MarkdownReference
-from .update_references import update_references
+from .update_references import (
+    _find_substring_with_different_spaces,
+    _generate_replacement,
+    _replace_standard_ref,
+    _replace_wiki_ref,
+    _replace_wiki_name,
+    update_references,
+)
 
 
 def _make_ref(
@@ -292,3 +299,68 @@ def should_not_write_when_no_change_needed(tmp_path, mock_markdown_files):
     update_references(refs, "same.png", "same.png", mock_markdown_files)
 
     mock_markdown_files.write_markdown_content.assert_not_called()
+
+
+def should_return_original_text_for_unknown_ref_type(tmp_path):
+    ref = MarkdownReference(
+        file_path=tmp_path / "doc.md",
+        line_number=1,
+        original_text="some original text",
+        image_path=Path("old.png"),
+        ref_type="unknown",
+    )
+
+    result = _generate_replacement(ref, "old.png", "new.png")
+
+    assert result == "some original text"
+
+
+def should_find_substring_with_non_breaking_space():
+    haystack = "my photo.png"
+    needle = "my photo.png"
+
+    result = _find_substring_with_different_spaces(haystack, needle)
+
+    assert result == "my photo.png"
+
+
+def should_return_needle_when_no_match_in_find_substring():
+    haystack = "something completely different"
+    needle = "not found"
+
+    result = _find_substring_with_different_spaces(haystack, needle)
+
+    assert result == "not found"
+
+
+def should_return_none_for_malformed_standard_ref():
+    result = _replace_standard_ref(r'!\[([^\]]*)\]\(([^)]+)\)', "!", "not a standard ref", "old.png", "new.png")
+
+    assert result is None
+
+
+def should_return_none_for_malformed_wiki_ref():
+    result = _replace_wiki_ref(r'!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', "!", "not a wiki ref", "old.png", "new.png")
+
+    assert result is None
+
+
+def should_return_unchanged_wiki_name_when_no_match():
+    result = _replace_wiki_name("unrelated.png", "old.png", "new.png")
+
+    assert result == "unrelated.png"
+
+
+def should_handle_url_encoded_path_with_unicode_space(tmp_path, mock_markdown_files):
+    md_file = tmp_path / "doc.md"
+    # narrow no-break space ( ) encoded as %E2%80%AF
+    original = "![One](my%E2%80%AFphoto.png)\n"
+
+    mock_markdown_files.read_markdown_content.return_value = original
+    refs = [_make_ref(md_file, 1, "![One](my%E2%80%AFphoto.png)", "my%E2%80%AFphoto.png", "image")]
+
+    updates = update_references(refs, "my photo.png", "renamed.png", mock_markdown_files)
+
+    assert len(updates) == 1
+    written = mock_markdown_files.write_markdown_content.call_args[0][1]
+    assert "renamed.png" in written

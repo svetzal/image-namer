@@ -321,3 +321,55 @@ def should_agree_on_url_encoded_stem_only_standard_ref(tmp_path, mock_markdown_f
 
     assert len(refs) == 1
     assert ref_matches_filename(refs[0], "my photo.png") is True
+
+
+def should_match_ref_path_resolving_to_same_absolute_path(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "photo.png"
+    image_path.write_bytes(b"x")
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = f"![Alt]({image_path})\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+
+
+def should_not_raise_on_oserror_during_path_resolution(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "photo.png"
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Alt](other.png)\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert refs == []
+
+
+def should_match_url_decoded_path_resolving_to_image(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "my photo.png"
+    image_path.write_bytes(b"x")
+    md_file = tmp_path / "doc.md"
+    encoded = str(image_path).replace(" ", "%20")
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = f"![Alt]({encoded})\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+
+
+def should_match_wiki_link_by_stem_only(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "diagram.png"
+    md_file = tmp_path / "wiki.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "[[diagram]]\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+    assert refs[0].ref_type == "wiki_link"
