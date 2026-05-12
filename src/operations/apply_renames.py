@@ -6,10 +6,9 @@ actual filesystem mutations to an injected FileRenamerPort.
 
 from pathlib import Path
 
-from operations.find_references import find_references
+from operations.batch_references import process_single_file_references
 from operations.models import ProcessingResult, RenameOutcome, RenameStatus
 from operations.ports import FileRenamerPort, MarkdownFilePort
-from operations.update_references import update_references
 
 
 def apply_renames(
@@ -59,9 +58,9 @@ def apply_rename_with_references(
 
     references_updated = 0
     if markdown_files is not None and search_root is not None:
-        refs = find_references(old_path, search_root, markdown_files, recursive=recursive)
-        if refs:
-            updates = update_references(refs, old_path.name, new_name, markdown_files)
-            references_updated = sum(u.replacement_count for u in updates)
+        ref_result = process_single_file_references(
+            old_path, new_name, search_root, markdown_files, dry_run=False
+        )
+        references_updated = ref_result.total_references
 
     return RenameOutcome(renamed=True, new_path=new_path, references_updated=references_updated)

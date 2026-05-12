@@ -33,20 +33,60 @@ def _collect_references(
     return CollectedReferences(references=all_refs, rename_map=rename_map)
 
 
-def apply_batch_reference_updates(
+def _update_single_file_references(
+    path: Path,
+    final_name: str,
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+    *,
+    dry_run: bool,
+) -> BatchReferenceResult:
+    refs = find_references(path, search_root, markdown_files, recursive=True)
+    if not refs:
+        return BatchReferenceResult(total_references=0, files_updated=0)
+    if dry_run:
+        return BatchReferenceResult(
+            total_references=len(refs),
+            files_updated=len({r.file_path for r in refs}),
+        )
+    updates = update_references(refs, path.name, final_name, markdown_files)
+    return BatchReferenceResult(
+        total_references=sum(u.replacement_count for u in updates),
+        files_updated=len(updates),
+    )
+
+
+def process_single_file_references(
+    path: Path,
+    final_name: str,
+    search_root: Path,
+    markdown_files: MarkdownFilePort,
+    *,
+    dry_run: bool,
+) -> BatchReferenceResult:
+    """Count or apply markdown reference updates for a single renamed file based on dry_run."""
+    return _update_single_file_references(path, final_name, search_root, markdown_files, dry_run=dry_run)
+
+
+def process_batch_references(
     results: list[ProcessingResult],
     search_root: Path,
     markdown_files: MarkdownFilePort,
+    *,
+    dry_run: bool,
 ) -> BatchReferenceResult:
-    """Find and apply markdown reference updates for renamed files.
-
-    Only processes results with RENAMED or COLLISION status where the
-    final name differs from the source.
-    """
+    """Count or apply markdown reference updates for a batch of results based on dry_run."""
     collected = _collect_references(results, search_root, markdown_files)
 
     if not collected.references:
         return BatchReferenceResult(total_references=0, files_updated=0)
+
+    if dry_run:
+        unique_files = len({r.file_path for r in collected.references})
+        return BatchReferenceResult(
+            total_references=len(collected.references),
+            files_updated=unique_files,
+        )
 
     updates_by_file: dict[Path, int] = {}
     for old_name, new_name in collected.rename_map.items():
@@ -62,83 +102,3 @@ def apply_batch_reference_updates(
         total_references=sum(updates_by_file.values()),
         files_updated=len(updates_by_file),
     )
-
-
-def count_single_file_references(
-    path: Path,
-    search_root: Path,
-    markdown_files: MarkdownFilePort,
-) -> BatchReferenceResult:
-    """Count markdown references to a single file without applying updates."""
-    refs = find_references(path, search_root, markdown_files, recursive=True)
-    if not refs:
-        return BatchReferenceResult(total_references=0, files_updated=0)
-    return BatchReferenceResult(
-        total_references=len(refs),
-        files_updated=len({r.file_path for r in refs}),
-    )
-
-
-def apply_single_file_reference_updates(
-    path: Path,
-    final_name: str,
-    search_root: Path,
-    markdown_files: MarkdownFilePort,
-) -> BatchReferenceResult:
-    """Find and apply markdown reference updates for a single renamed file."""
-    refs = find_references(path, search_root, markdown_files, recursive=True)
-    if not refs:
-        return BatchReferenceResult(total_references=0, files_updated=0)
-    updates = update_references(refs, path.name, final_name, markdown_files)
-    return BatchReferenceResult(
-        total_references=sum(u.replacement_count for u in updates),
-        files_updated=len(updates),
-    )
-
-
-def count_batch_references(
-    results: list[ProcessingResult],
-    search_root: Path,
-    markdown_files: MarkdownFilePort,
-) -> BatchReferenceResult:
-    """Count markdown references for renamed files without applying updates.
-
-    Used for dry-run mode to preview what would be updated.
-    """
-    collected = _collect_references(results, search_root, markdown_files)
-
-    if not collected.references:
-        return BatchReferenceResult(total_references=0, files_updated=0)
-
-    unique_files = len({r.file_path for r in collected.references})
-    return BatchReferenceResult(
-        total_references=len(collected.references),
-        files_updated=unique_files,
-    )
-
-
-def process_single_file_references(
-    path: Path,
-    final_name: str,
-    search_root: Path,
-    markdown_files: MarkdownFilePort,
-    *,
-    dry_run: bool,
-) -> BatchReferenceResult:
-    """Count or apply markdown reference updates for a single renamed file based on dry_run."""
-    if dry_run:
-        return count_single_file_references(path, search_root, markdown_files)
-    return apply_single_file_reference_updates(path, final_name, search_root, markdown_files)
-
-
-def process_batch_references(
-    results: list[ProcessingResult],
-    search_root: Path,
-    markdown_files: MarkdownFilePort,
-    *,
-    dry_run: bool,
-) -> BatchReferenceResult:
-    """Count or apply markdown reference updates for a batch of results based on dry_run."""
-    if dry_run:
-        return count_batch_references(results, search_root, markdown_files)
-    return apply_batch_reference_updates(results, search_root, markdown_files)
