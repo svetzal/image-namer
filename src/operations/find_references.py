@@ -7,10 +7,8 @@ from .models import MarkdownReference
 from .ports import MarkdownFilePort
 from .text_utils import (
     normalized_name_equals,
-    STANDARD_IMAGE_PATTERN,
-    STANDARD_LINK_PATTERN,
-    WIKI_EMBED_PATTERN,
-    WIKI_LINK_PATTERN,
+    REFERENCE_PATTERNS,
+    WIKI_REF_TYPES,
 )
 
 
@@ -47,10 +45,10 @@ def find_references(
 
 def _get_reference_patterns() -> dict[str, re.Pattern[str]]:
     return {
-        'image': re.compile(STANDARD_IMAGE_PATTERN),
-        'link': re.compile(r'(?<!!)' + STANDARD_LINK_PATTERN),
-        'wiki_embed': re.compile(WIKI_EMBED_PATTERN),
-        'wiki_link': re.compile(r'(?<!!)' + WIKI_LINK_PATTERN),
+        ref_type: re.compile(
+            (r'(?<!!)' if not pattern.startswith('!') else '') + pattern
+        )
+        for ref_type, pattern in REFERENCE_PATTERNS.items()
     }
 
 
@@ -64,31 +62,28 @@ def _find_references_in_line(
 ) -> list[MarkdownReference]:
     refs = []
 
-    # Check standard markdown (images and links)
-    for ref_type in ['image', 'link']:
-        for match in patterns[ref_type].finditer(line):
-            ref_path = Path(match.group(2))
-            if _matches_image(ref_path, image_path, image_name):
-                refs.append(MarkdownReference(
-                    file_path=md_file,
-                    line_number=line_num,
-                    original_text=match.group(0),
-                    image_path=ref_path,
-                    ref_type=ref_type
-                ))
-
-    # Check wiki-style (embeds and links)
-    for ref_type in ['wiki_embed', 'wiki_link']:
-        for match in patterns[ref_type].finditer(line):
-            ref_name = match.group(1)
-            if ref_name == image_name or ref_name == image_path.stem:
-                refs.append(MarkdownReference(
-                    file_path=md_file,
-                    line_number=line_num,
-                    original_text=match.group(0),
-                    image_path=Path(ref_name),
-                    ref_type=ref_type
-                ))
+    for ref_type, pattern_re in patterns.items():
+        for match in pattern_re.finditer(line):
+            if ref_type in WIKI_REF_TYPES:
+                ref_name = match.group(1)
+                if _names_match(ref_name, image_name):
+                    refs.append(MarkdownReference(
+                        file_path=md_file,
+                        line_number=line_num,
+                        original_text=match.group(0),
+                        image_path=Path(ref_name),
+                        ref_type=ref_type
+                    ))
+            else:
+                ref_path = Path(match.group(2))
+                if _matches_image(ref_path, image_path, image_name):
+                    refs.append(MarkdownReference(
+                        file_path=md_file,
+                        line_number=line_num,
+                        original_text=match.group(0),
+                        image_path=ref_path,
+                        ref_type=ref_type
+                    ))
 
     return refs
 

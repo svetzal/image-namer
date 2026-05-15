@@ -7,6 +7,22 @@ STANDARD_LINK_PATTERN = r'\[([^\]]+)\]\(([^)]+)\)'
 WIKI_EMBED_PATTERN = r'!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]'
 WIKI_LINK_PATTERN = r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]'
 
+REFERENCE_PATTERNS: dict[str, str] = {
+    'image': STANDARD_IMAGE_PATTERN,
+    'link': STANDARD_LINK_PATTERN,
+    'wiki_embed': WIKI_EMBED_PATTERN,
+    'wiki_link': WIKI_LINK_PATTERN,
+}
+
+WIKI_REF_TYPES: frozenset[str] = frozenset({'wiki_embed', 'wiki_link'})
+
+REF_TYPE_PREFIXES: dict[str, str] = {
+    'image': '!',
+    'link': '',
+    'wiki_embed': '!',
+    'wiki_link': '',
+}
+
 
 def normalize_spaces(text: str) -> str:
     """Normalize all whitespace characters to regular ASCII spaces.

@@ -373,3 +373,29 @@ def should_match_wiki_link_by_stem_only(tmp_path, mock_markdown_files):
 
     assert len(refs) == 1
     assert refs[0].ref_type == "wiki_link"
+
+
+def should_find_wiki_embed_with_url_encoded_name(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "my photo.png"
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![[my%20photo.png]]\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+    assert refs[0].ref_type == "wiki_embed"
+
+
+def should_find_wiki_link_with_unicode_normalized_name(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "my photo.png"
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "[[my photo.png]]\n"
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+    assert refs[0].ref_type == "wiki_link"

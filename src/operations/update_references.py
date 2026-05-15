@@ -1,6 +1,5 @@
 """Update markdown references to renamed images."""
 import re
-from functools import partial
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -9,10 +8,9 @@ from .ports import MarkdownFilePort
 from .text_utils import (
     normalize_spaces,
     normalized_name_equals,
-    STANDARD_IMAGE_PATTERN,
-    STANDARD_LINK_PATTERN,
-    WIKI_EMBED_PATTERN,
-    WIKI_LINK_PATTERN,
+    REFERENCE_PATTERNS,
+    WIKI_REF_TYPES,
+    REF_TYPE_PREFIXES,
 )
 
 
@@ -85,20 +83,17 @@ def _generate_replacement(
     new_name: str
 ) -> str:
     """Preserves alt text, link text, and aliases while updating the filename."""
-    handlers = {
-        'image': partial(_replace_standard_ref, STANDARD_IMAGE_PATTERN, "!"),
-        'link': partial(_replace_standard_ref, STANDARD_LINK_PATTERN, ""),
-        'wiki_embed': partial(_replace_wiki_ref, WIKI_EMBED_PATTERN, "!"),
-        'wiki_link': partial(_replace_wiki_ref, WIKI_LINK_PATTERN, ""),
-    }
+    pattern = REFERENCE_PATTERNS.get(ref.ref_type)
+    if pattern is None:
+        return ref.original_text
 
-    handler = handlers.get(ref.ref_type)
-    if handler:
-        result = handler(ref.original_text, old_name, new_name)
-        if result:
-            return result
+    prefix = REF_TYPE_PREFIXES[ref.ref_type]
+    if ref.ref_type in WIKI_REF_TYPES:
+        result = _replace_wiki_ref(pattern, prefix, ref.original_text, old_name, new_name)
+    else:
+        result = _replace_standard_ref(pattern, prefix, ref.original_text, old_name, new_name)
 
-    return ref.original_text
+    return result if result else ref.original_text
 
 
 def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
