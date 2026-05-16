@@ -1,4 +1,5 @@
 """Update markdown references to renamed images."""
+import logging
 import re
 from pathlib import Path
 from urllib.parse import quote, unquote
@@ -12,6 +13,8 @@ from .text_utils import (
     WIKI_REF_TYPES,
     REF_TYPE_PREFIXES,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def update_references(
@@ -116,8 +119,10 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
                     new_name
                 )
                 return quote(new_decoded, safe='/')
-    except (ValueError, TypeError):
-        pass
+    except (ValueError, TypeError) as e:
+        logger.debug(
+            "URL decoding failed for path %r: %s: %s", path_str, type(e).__name__, e
+        )
 
     # Fall back to simple string replacement
     return path_str.replace(old_name, new_name)

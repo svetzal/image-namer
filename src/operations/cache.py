@@ -1,6 +1,7 @@
 """Cache operations for storing and retrieving LLM results."""
 
 import json
+import logging
 from pathlib import Path
 from typing import Callable, Generic, TypeVar, cast
 
@@ -9,6 +10,8 @@ from pydantic import BaseModel, Field
 from constants import RUBRIC_VERSION
 from operations.models import ImageAnalysis
 from utils.fs import sha256_file
+
+logger = logging.getLogger(__name__)
 
 
 class BaseCacheEntry(BaseModel):
@@ -57,6 +60,7 @@ class CacheStore(Generic[T]):
 
     def load(self, cache_dir: Path, image_path: Path, **key_values: str) -> T | None:
         """Load a cached payload if it exists and all key values match."""
+        cache_file: Path | None = None
         try:
             image_hash = self._hash_fn(image_path)
             key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
@@ -71,7 +75,11 @@ class CacheStore(Generic[T]):
                 if getattr(entry, field_name) != key_values[field_name]:
                     return None
             return cast(T, getattr(entry, self._payload_field))
-        except (OSError, json.JSONDecodeError, ValueError):
+        except (OSError, json.JSONDecodeError, ValueError) as e:
+            logger.debug(
+                "Cache load failed (image=%s, cache_file=%s): %s: %s",
+                image_path, cache_file, type(e).__name__, e,
+            )
             return None
 
     def save(self, cache_dir: Path, image_path: Path, payload: T, **key_values: str) -> None:

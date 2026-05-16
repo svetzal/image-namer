@@ -388,6 +388,21 @@ def should_find_wiki_embed_with_url_encoded_name(tmp_path, mock_markdown_files):
     assert refs[0].ref_type == "wiki_embed"
 
 
+def should_log_debug_when_path_resolution_raises(tmp_path, mocker):
+    from operations.find_references import _matches_image
+
+    image_path = tmp_path / "photo.png"
+    mock_ref = mocker.MagicMock(spec=Path)
+    mock_ref.name = "other.png"
+    mock_ref.resolve.side_effect = OSError("permission denied")
+    debug_spy = mocker.spy(_matches_image.__globals__["logger"], "debug")
+
+    result = _matches_image(mock_ref, image_path, "photo.png")
+
+    assert result is False
+    debug_spy.assert_called()
+
+
 def should_find_wiki_link_with_unicode_normalized_name(tmp_path, mock_markdown_files):
     image_path = tmp_path / "my photo.png"
     md_file = tmp_path / "doc.md"

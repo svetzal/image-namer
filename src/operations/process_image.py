@@ -5,11 +5,14 @@ for a single image file. I/O boundaries (cache, LLM analysis) are injected via
 Protocol-based ports — errors are captured in ProcessingResult.
 """
 
+import logging
 from pathlib import Path
 
 from operations.models import AnalysisResult, ImageAnalysis, ProcessingResult, ProposedName, RenameStatus, ResolvedName
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
 from utils.fs import next_available_name
+
+logger = logging.getLogger(__name__)
 
 
 def get_or_generate_analysis(
@@ -115,7 +118,10 @@ def process_single_image(
         analysis_result = get_or_generate_analysis(
             img_path, current_name, analyzer, cache, progress
         )
-    except (OSError, ConnectionError, TimeoutError, ValueError, RuntimeError):
+    except (OSError, ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
+        logger.warning(
+            "Failed to process %s: %s: %s", img_path.name, type(e).__name__, e
+        )
         return ProcessingResult(
             source=img_path.name,
             proposed="ERROR",

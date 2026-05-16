@@ -1,4 +1,5 @@
 import json
+import logging
 
 import pytest
 
@@ -200,6 +201,22 @@ def should_overwrite_existing_cache_entry(store, cache_dir, image_path):
 
     assert loaded is not None
     assert loaded.proposed_name.stem == "second-name"
+
+
+def should_log_debug_when_cache_file_is_corrupted(store, cache_dir, image_path, caplog):
+    cache_dir.mkdir(parents=True)
+    key = build_cache_key("abc123", "test-image.png", "ollama", "gemma3:27b")
+    (cache_dir / f"{key}.json").write_text("invalid json {{{", encoding="utf-8")
+
+    with caplog.at_level(logging.DEBUG, logger="operations.cache"):
+        result = store.load(
+            cache_dir, image_path,
+            filename="test-image.png", provider="ollama", model="gemma3:27b",
+        )
+
+    assert result is None
+    assert any("JSONDecodeError" in r.getMessage() for r in caplog.records)
+    assert any("test-image.png" in r.getMessage() for r in caplog.records)
 
 
 def should_round_trip_analysis_cache(tmp_path):

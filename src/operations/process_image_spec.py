@@ -1,5 +1,7 @@
 """Tests for single-image processing orchestration."""
 
+import logging
+
 import pytest
 
 from conftest import make_analysis
@@ -98,6 +100,18 @@ def should_return_error_when_analyze_raises(tmp_image_path, mock_cache, mock_ana
 
     assert result.status == RenameStatus.ERROR
     assert result.proposed == "ERROR"
+
+
+def should_log_warning_when_analyze_raises_connection_error(tmp_image_path, mock_cache, mock_analyzer, caplog):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.side_effect = ConnectionError("Network unavailable")
+
+    with caplog.at_level(logging.WARNING, logger="operations.process_image"):
+        result = process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
+
+    assert result.status == RenameStatus.ERROR
+    assert any(tmp_image_path.name in r.getMessage() for r in caplog.records)
+    assert any("ConnectionError" in r.getMessage() for r in caplog.records)
 
 
 def should_propose_new_name_when_analysis_unsuitable(tmp_image_path, mock_cache, mock_analyzer):

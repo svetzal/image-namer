@@ -1,4 +1,5 @@
 """Find markdown references to images."""
+import logging
 import re
 from pathlib import Path
 from urllib.parse import unquote
@@ -10,6 +11,8 @@ from .text_utils import (
     REFERENCE_PATTERNS,
     WIKI_REF_TYPES,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def find_references(
@@ -107,15 +110,21 @@ def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
     try:
         if ref_path.resolve() == image_path.resolve():
             return True
-    except (OSError, ValueError):
-        pass
+    except (OSError, ValueError) as e:
+        logger.debug(
+            "Path resolution failed (ref=%s, image=%s): %s: %s",
+            ref_path, image_path, type(e).__name__, e,
+        )
 
     try:
         decoded_path = Path(unquote(str(ref_path)))
         if decoded_path.resolve() == image_path.resolve():
             return True
-    except (OSError, ValueError, TypeError):
-        pass
+    except (OSError, ValueError, TypeError) as e:
+        logger.debug(
+            "URL-decoded path resolution failed (ref=%s, image=%s): %s: %s",
+            ref_path, image_path, type(e).__name__, e,
+        )
 
     return False
 

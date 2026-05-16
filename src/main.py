@@ -4,6 +4,7 @@ This module defines the Typer application and all CLI commands.
 Command logic is kept thin; all business logic lives in operations/.
 """
 
+import logging
 import sys
 from pathlib import Path
 from typing import Annotated, Final
@@ -30,6 +31,8 @@ from operations.process_folder import process_folder
 from operations.process_image import process_single_image
 from utils.fs import collect_image_files, ensure_cache_layout
 
+logging.basicConfig(level=logging.WARNING)
+
 # Runtime Python version enforcement (see REVIEW.md #12)
 if sys.version_info < (3, 13):  # pragma: no cover - defensive
     raise RuntimeError("Requires Python 3.13+")
@@ -44,6 +47,14 @@ DryRun = Annotated[bool, typer.Option("--dry-run/--apply", help="Preview only vs
 
 app = typer.Typer(help="Rename image files based on their visual contents.")
 console = Console()
+
+
+@app.callback()
+def _configure_logging(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+) -> None:
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
 
 def _validate_file_type(path: Path) -> None:

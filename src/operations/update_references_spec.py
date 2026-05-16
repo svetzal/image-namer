@@ -5,6 +5,7 @@ from .models import MarkdownReference
 from .update_references import (
     _find_substring_with_different_spaces,
     _generate_replacement,
+    _replace_in_path,
     _replace_standard_ref,
     _replace_wiki_ref,
     _replace_wiki_name,
@@ -349,6 +350,25 @@ def should_return_unchanged_wiki_name_when_no_match():
     result = _replace_wiki_name("unrelated.png", "old.png", "new.png")
 
     assert result == "unrelated.png"
+
+
+def should_log_debug_when_url_decode_fails(mocker):
+    from urllib.parse import unquote as real_unquote
+
+    actual_logger = _replace_in_path.__globals__["logger"]
+    debug_spy = mocker.spy(actual_logger, "debug")
+
+    def raising_unquote(s, *a, **kw):
+        raise ValueError("decode error")
+
+    _replace_in_path.__globals__["unquote"] = raising_unquote
+    try:
+        result = _replace_in_path("encoded%20name.png", "encoded%20name", "new-name")
+    finally:
+        _replace_in_path.__globals__["unquote"] = real_unquote
+
+    assert "new-name" in result
+    debug_spy.assert_called_once()
 
 
 def should_handle_url_encoded_path_with_unicode_space(tmp_path, mock_markdown_files):
