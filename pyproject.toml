@@ -25,10 +25,10 @@ classifiers = [
 ]
 # Main runtime dependencies. Keep minimal; GUI is optional for headless use.
 dependencies = [
-    "typer>=0.24.1",
-    "rich>=14.3.4",
-    "pydantic>=2.13.0",
-    "mojentic>=1.2.1",
+    "typer>=0.25.1",
+    "rich>=15.0.0",
+    "pydantic>=2.13.4",
+    "mojentic>=1.4.0",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
 ]
 
@@ -48,7 +48,7 @@ dev = [
     "pytest-mock>=3.15.1",
     "flake8>=7.3.0",
     "flake8-pyproject>=1.2.4",
-    "mypy>=1.20.0",
+    "mypy>=2.1.0",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.6",
 ]
