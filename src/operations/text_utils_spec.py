@@ -1,5 +1,5 @@
 """Tests for shared text normalization utilities."""
-from operations.text_utils import normalize_spaces, normalized_name_equals
+from operations.text_utils import names_match, normalize_spaces, normalized_name_equals
 
 
 def should_normalize_multiple_regular_spaces():
@@ -56,3 +56,23 @@ def should_not_match_when_decoded_differs():
 
 def should_return_false_for_type_error_in_normalized_name_equals():
     assert normalized_name_equals("hello", "world") is False
+
+
+def should_match_identical_names_via_names_match():
+    assert names_match("photo.png", "photo.png") is True
+
+
+def should_match_by_stem_only():
+    assert names_match("photo", "photo.png") is True
+
+
+def should_match_url_encoded_name_via_names_match():
+    assert names_match("my%20photo.png", "my photo.png") is True
+
+
+def should_match_url_encoded_stem():
+    assert names_match("my%20photo", "my photo.png") is True
+
+
+def should_not_match_different_names_via_names_match():
+    assert names_match("other.png", "photo.png") is False

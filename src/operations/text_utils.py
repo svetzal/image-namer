@@ -1,5 +1,6 @@
 """Shared text normalization utilities for reference operations."""
 import unicodedata
+from pathlib import Path
 from urllib.parse import unquote
 
 STANDARD_IMAGE_PATTERN = r'!\[([^\]]*)\]\(([^)]+)\)'
@@ -46,4 +47,15 @@ def normalized_name_equals(a: str, b: str) -> bool:
             return True
     except (ValueError, TypeError):
         pass
+    return False
+
+
+def names_match(ref_name: str, target_name: str) -> bool:
+    """Check if two filenames match by name or stem, with URL decoding and Unicode normalization."""
+    if Path(ref_name).stem == Path(target_name).stem:
+        return True
+    if normalized_name_equals(ref_name, target_name):
+        return True
+    if normalized_name_equals(Path(ref_name).stem, Path(target_name).stem):
+        return True
     return False

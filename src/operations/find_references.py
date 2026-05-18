@@ -7,7 +7,7 @@ from urllib.parse import unquote
 from .models import MarkdownReference
 from .ports import MarkdownFilePort
 from .text_utils import (
-    normalized_name_equals,
+    names_match,
     REFERENCE_PATTERNS,
     WIKI_REF_TYPES,
 )
@@ -69,7 +69,7 @@ def _find_references_in_line(
         for match in pattern_re.finditer(line):
             if ref_type in WIKI_REF_TYPES:
                 ref_name = match.group(1)
-                if _names_match(ref_name, image_name):
+                if names_match(ref_name, image_name):
                     refs.append(MarkdownReference(
                         file_path=md_file,
                         line_number=line_num,
@@ -91,20 +91,8 @@ def _find_references_in_line(
     return refs
 
 
-def _names_match(ref_name: str, target_name: str) -> bool:
-    if ref_name == target_name:
-        return True
-    if Path(ref_name).stem == Path(target_name).stem:
-        return True
-    if normalized_name_equals(ref_name, target_name):
-        return True
-    if normalized_name_equals(Path(ref_name).stem, Path(target_name).stem):
-        return True
-    return False
-
-
 def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
-    if _names_match(str(ref_path.name), image_name):
+    if names_match(str(ref_path.name), image_name):
         return True
 
     try:
@@ -135,4 +123,4 @@ def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
     Handles URL-encoded paths and Unicode whitespace normalization.
     Used during batch reference updates to match references by old filename.
     """
-    return _names_match(str(ref.image_path.name), filename)
+    return names_match(str(ref.image_path.name), filename)
