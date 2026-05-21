@@ -53,6 +53,14 @@ class CacheStore(Generic[T]):
         key_fields: tuple[str, ...],
         hash_fn: Callable[[Path], str] = sha256_file,
     ) -> None:
+        """Initialize the cache store.
+
+        Args:
+            entry_type: The Pydantic model class wrapping the cached payload.
+            payload_field: Name of the field on entry_type that holds the payload.
+            key_fields: Ordered tuple of field names used to build the cache key.
+            hash_fn: Function to compute the image hash; defaults to sha256_file.
+        """
         self._entry_type = entry_type
         self._payload_field = payload_field
         self._key_fields = key_fields
@@ -83,6 +91,14 @@ class CacheStore(Generic[T]):
             return None
 
     def save(self, cache_dir: Path, image_path: Path, payload: T, **key_values: str) -> None:
+        """Persist a payload to the cache directory.
+
+        Args:
+            cache_dir: Directory in which to write the cache file.
+            image_path: Path to the image being cached (used to compute the hash).
+            payload: The Pydantic model instance to cache.
+            **key_values: Keyword arguments corresponding to key_fields values.
+        """
         image_hash = self._hash_fn(image_path)
         key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
         cache_file = cache_dir / f"{key}.json"
@@ -113,6 +129,18 @@ def load_analysis_from_cache(
     provider: str,
     model: str,
 ) -> ImageAnalysis | None:
+    """Load a cached unified analysis result for the given image.
+
+    Args:
+        cache_dir: Root cache directory.
+        image_path: Path to the image file.
+        filename: Filename component of the cache key.
+        provider: LLM provider identifier.
+        model: Model name.
+
+    Returns:
+        The cached ImageAnalysis, or None if absent or stale.
+    """
     return _analysis_store.load(
         cache_dir, image_path, filename=filename, provider=provider, model=model
     )
@@ -126,6 +154,16 @@ def save_analysis_to_cache(
     model: str,
     analysis: ImageAnalysis,
 ) -> None:
+    """Persist a unified analysis result to the filesystem cache.
+
+    Args:
+        cache_dir: Root cache directory.
+        image_path: Path to the image file.
+        filename: Filename component of the cache key.
+        provider: LLM provider identifier.
+        model: Model name.
+        analysis: The analysis result to cache.
+    """
     _analysis_store.save(
         cache_dir, image_path, analysis, filename=filename, provider=provider, model=model
     )

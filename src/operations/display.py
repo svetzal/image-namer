@@ -12,6 +12,13 @@ from operations.process_folder import compute_statistics
 
 
 def display_results_table(console: Console, results: list[ProcessingResult], dry_run: bool) -> None:
+    """Render a Rich table of processing results to the console.
+
+    Args:
+        console: Rich Console instance to print to.
+        results: List of ProcessingResult objects from the folder run.
+        dry_run: If True, the table title reflects dry-run mode.
+    """
     table = Table(title=f"image-namer: folder ({'dry-run' if dry_run else 'apply'})")
     table.add_column("Source", style="dim")
     table.add_column("Proposed", style="bold")
@@ -33,6 +40,12 @@ def display_results_table(console: Console, results: list[ProcessingResult], dry
 
 
 def print_statistics(console: Console, results: list[ProcessingResult]) -> None:
+    """Print a one-line summary of rename statistics to the console.
+
+    Args:
+        console: Rich Console instance to print to.
+        results: List of ProcessingResult objects from the folder run.
+    """
     stats = compute_statistics(results)
     console.print(
         f"\n[dim]Summary: {stats.renamed} renamed, "
@@ -42,6 +55,13 @@ def print_statistics(console: Console, results: list[ProcessingResult]) -> None:
 
 
 def print_reference_result(console: Console, ref_result: BatchReferenceResult, dry_run: bool) -> None:
+    """Print a summary of markdown reference update results.
+
+    Args:
+        console: Rich Console instance to print to.
+        ref_result: BatchReferenceResult containing update counts.
+        dry_run: If True, reports what would be changed rather than what was.
+    """
     if ref_result.total_references == 0:
         console.print("[dim]No markdown references found[/dim]")
     elif dry_run:
