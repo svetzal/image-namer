@@ -18,3 +18,6 @@ SUPPORTED_EXTENSIONS: Final[set[str]] = {
     ".tif",
     ".tiff",
 }
+
+SUPPORTED_PROVIDERS: Final[tuple[str, ...]] = ("ollama", "openai")
+DEFAULT_MODELS: Final[dict[str, str]] = {"ollama": "gemma3:27b", "openai": "gpt-4o"}

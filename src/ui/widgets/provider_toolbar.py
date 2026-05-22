@@ -3,6 +3,7 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QToolBar, QWidget
 
+from constants import DEFAULT_MODELS, SUPPORTED_PROVIDERS
 from operations.gateway_factory import MissingApiKeyError, create_gateway
 from ui.settings import get_setting, set_setting
 
@@ -26,7 +27,7 @@ class ProviderToolbar(QToolBar):
 
         self.addWidget(QLabel("Provider:"))
         self._provider_combo = QComboBox()
-        self._provider_combo.addItems(["ollama", "openai"])
+        self._provider_combo.addItems(list(SUPPORTED_PROVIDERS))
         self._provider_combo.setCurrentText(saved_provider)
         self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
         self.addWidget(self._provider_combo)
@@ -76,7 +77,7 @@ class ProviderToolbar(QToolBar):
     def _update_model_list(self) -> None:
         """Refresh the model combo with models available from the gateway."""
         provider = self._provider_combo.currentText()
-        default_models = {"ollama": ["gemma3:27b"], "openai": ["gpt-4o"]}
+        fallback = [DEFAULT_MODELS[provider]]
 
         self._model_combo.blockSignals(True)
         try:
@@ -85,12 +86,12 @@ class ProviderToolbar(QToolBar):
                 try:
                     gateway = create_gateway(provider)
                 except MissingApiKeyError:
-                    self._model_combo.addItems(default_models[provider])
+                    self._model_combo.addItems(fallback)
                     return
                 models = gateway.get_available_models()
-                self._model_combo.addItems(models if models else default_models[provider])
+                self._model_combo.addItems(models if models else fallback)
             except (OSError, ConnectionError, ValueError, RuntimeError):
-                self._model_combo.addItems(default_models[provider])
+                self._model_combo.addItems(fallback)
         finally:
             self._model_combo.blockSignals(False)
 

@@ -7,6 +7,8 @@ import os
 
 from mojentic.llm.gateways import OllamaGateway, OpenAIGateway
 
+from constants import SUPPORTED_PROVIDERS
+
 
 class MissingApiKeyError(Exception):
     """Raised when a required API key is not set in the environment."""
@@ -26,11 +28,11 @@ def create_gateway(provider: str) -> OllamaGateway | OpenAIGateway:
             the environment.
         ValueError: If provider is not recognised.
     """
+    if provider not in SUPPORTED_PROVIDERS:
+        raise ValueError(f"Unknown provider: {provider!r}")
     if provider == "ollama":
         return OllamaGateway()
-    if provider == "openai":
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise MissingApiKeyError("OPENAI_API_KEY environment variable not set")
-        return OpenAIGateway(api_key=api_key)
-    raise ValueError(f"Unknown provider: {provider!r}")
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise MissingApiKeyError("OPENAI_API_KEY environment variable not set")
+    return OpenAIGateway(api_key=api_key)

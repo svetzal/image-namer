@@ -7,13 +7,13 @@ Command logic is kept thin; all business logic lives in operations/.
 import logging
 import sys
 from pathlib import Path
-from typing import Annotated, Final
+from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from constants import SUPPORTED_EXTENSIONS
+from constants import SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
 from operations.batch_references import (
@@ -36,8 +36,6 @@ logging.basicConfig(level=logging.WARNING)
 # Runtime Python version enforcement (see REVIEW.md #12)
 if sys.version_info < (3, 13):  # pragma: no cover - defensive
     raise RuntimeError("Requires Python 3.13+")
-
-SUPPORTED_PROVIDERS: Final[set[str]] = {"ollama", "openai"}
 
 Provider = Annotated[str, typer.Option("--provider", help="Model provider: ollama or openai", envvar="LLM_PROVIDER")]
 Model = Annotated[str, typer.Option(
