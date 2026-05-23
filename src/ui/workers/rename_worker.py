@@ -10,6 +10,7 @@ from PySide6.QtCore import QThread, Signal
 from operations.models import ImageAnalysis
 from operations.models import RenameStatus as OpsRenameStatus
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort
+from constants import LLM_OPERATIONAL_ERRORS
 from operations.process_image import process_single_image
 from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
 
@@ -135,7 +136,7 @@ class RenameWorker(QThread):
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))
 
-            except (OSError, ConnectionError, ValueError, RuntimeError) as e:
+            except LLM_OPERATIONAL_ERRORS as e:
                 stats.errors += 1
                 error_msg = str(e)
                 item.update_status(RenameStatus.ERROR, f"Error: {error_msg}")

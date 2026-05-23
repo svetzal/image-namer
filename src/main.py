@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from constants import SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
+from constants import LLM_OPERATIONAL_ERRORS, SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
 from operations.batch_references import (
@@ -77,7 +77,7 @@ def _build_pipeline_or_exit(provider: str, model: str, cache_root: Path) -> Anal
     except MissingApiKeyError as e:
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(2)
-    except (OSError, ConnectionError, ValueError, RuntimeError) as e:
+    except LLM_OPERATIONAL_ERRORS as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
 

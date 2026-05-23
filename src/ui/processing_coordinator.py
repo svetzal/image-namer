@@ -9,6 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from operations.adapters import FilesystemAnalysisCache
+from constants import LLM_OPERATIONAL_ERRORS
 from operations.gateway_factory import MissingApiKeyError
 from operations.pipeline_factory import build_analysis_pipeline
 from ui.models.ui_models import AnalysisStats, BatchRenameResult, RenameItem, RenameResult, RenameStatus
@@ -122,7 +123,7 @@ class ProcessingCoordinator(QObject):
         except MissingApiKeyError as e:
             self.error_occurred.emit(-1, str(e))
             return
-        except (OSError, ConnectionError, ValueError, RuntimeError) as e:
+        except LLM_OPERATIONAL_ERRORS as e:
             self.error_occurred.emit(-1, str(e))
             return
 

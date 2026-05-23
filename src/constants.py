@@ -21,3 +21,7 @@ SUPPORTED_EXTENSIONS: Final[set[str]] = {
 
 SUPPORTED_PROVIDERS: Final[tuple[str, ...]] = ("ollama", "openai")
 DEFAULT_MODELS: Final[dict[str, str]] = {"ollama": "gemma3:27b", "openai": "gpt-4o"}
+
+LLM_OPERATIONAL_ERRORS: Final[tuple[type[Exception], ...]] = (
+    OSError, ConnectionError, TimeoutError, ValueError, RuntimeError
+)

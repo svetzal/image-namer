@@ -3,7 +3,7 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QToolBar, QWidget
 
-from constants import DEFAULT_MODELS, SUPPORTED_PROVIDERS
+from constants import DEFAULT_MODELS, LLM_OPERATIONAL_ERRORS, SUPPORTED_PROVIDERS
 from operations.gateway_factory import MissingApiKeyError, create_gateway
 from ui.settings import get_setting, set_setting
 
@@ -90,7 +90,7 @@ class ProviderToolbar(QToolBar):
                     return
                 models = gateway.get_available_models()
                 self._model_combo.addItems(models if models else fallback)
-            except (OSError, ConnectionError, ValueError, RuntimeError):
+            except LLM_OPERATIONAL_ERRORS:
                 self._model_combo.addItems(fallback)
         finally:
             self._model_combo.blockSignals(False)
