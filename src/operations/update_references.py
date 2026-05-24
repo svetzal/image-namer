@@ -4,9 +4,9 @@ import re
 from pathlib import Path
 from urllib.parse import quote, unquote
 
-from .models import MarkdownReference, ReferenceUpdate
-from .ports import MarkdownFilePort
-from .text_utils import (
+from operations.models import MarkdownReference, ReferenceUpdate
+from operations.ports import MarkdownFilePort
+from operations.text_utils import (
     normalize_spaces,
     normalized_name_equals,
     REFERENCE_PATTERNS,

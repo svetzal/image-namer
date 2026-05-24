@@ -1,8 +1,8 @@
 """Tests for find_references operation."""
 from pathlib import Path
 
-from .find_references import find_references, ref_matches_filename
-from .models import MarkdownReference
+from operations.find_references import find_references, ref_matches_filename
+from operations.models import MarkdownReference
 
 
 def should_find_standard_image_references(tmp_path, mock_markdown_files):

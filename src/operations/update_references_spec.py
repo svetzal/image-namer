@@ -1,8 +1,8 @@
 """Tests for update_references operation."""
 from pathlib import Path
 
-from .models import MarkdownReference
-from .update_references import (
+from operations.models import MarkdownReference
+from operations.update_references import (
     _find_substring_with_different_spaces,
     _generate_replacement,
     _replace_in_path,
