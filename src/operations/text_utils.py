@@ -1,7 +1,10 @@
 """Shared text normalization utilities for reference operations."""
+import logging
 import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
+
+logger = logging.getLogger(__name__)
 
 STANDARD_IMAGE_PATTERN = r'!\[([^\]]*)\]\(([^)]+)\)'
 STANDARD_LINK_PATTERN = r'\[([^\]]+)\]\(([^)]+)\)'
@@ -58,4 +61,35 @@ def names_match(ref_name: str, target_name: str) -> bool:
         return True
     if normalized_name_equals(Path(ref_name).stem, Path(target_name).stem):
         return True
+    return False
+
+
+def ref_path_matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
+    """Check if a reference path (from a Markdown link) matches a given image file.
+
+    Tries name-based matching first, then falls back to filesystem path resolution
+    (both raw and URL-decoded) to handle encoded or relative paths.
+    """
+    if names_match(str(ref_path.name), image_name):
+        return True
+
+    try:
+        if ref_path.resolve() == image_path.resolve():
+            return True
+    except (OSError, ValueError) as e:
+        logger.debug(
+            "Path resolution failed (ref=%s, image=%s): %s: %s",
+            ref_path, image_path, type(e).__name__, e,
+        )
+
+    try:
+        decoded_path = Path(unquote(str(ref_path)))
+        if decoded_path.resolve() == image_path.resolve():
+            return True
+    except (OSError, ValueError, TypeError) as e:
+        logger.debug(
+            "URL-decoded path resolution failed (ref=%s, image=%s): %s: %s",
+            ref_path, image_path, type(e).__name__, e,
+        )
+
     return False

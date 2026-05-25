@@ -1,5 +1,7 @@
 """Tests for shared text normalization utilities."""
-from operations.text_utils import names_match, normalize_spaces, normalized_name_equals
+from pathlib import Path
+
+from operations.text_utils import names_match, normalize_spaces, normalized_name_equals, ref_path_matches_image
 
 
 def should_normalize_multiple_regular_spaces():
@@ -76,3 +78,18 @@ def should_match_url_encoded_stem():
 
 def should_not_match_different_names_via_names_match():
     assert names_match("other.png", "photo.png") is False
+
+
+def should_log_debug_when_path_resolution_raises(tmp_path, mocker):
+    import operations.text_utils as text_utils_module
+
+    image_path = tmp_path / "photo.png"
+    mock_ref = mocker.MagicMock(spec=Path)
+    mock_ref.name = "other.png"
+    mock_ref.resolve.side_effect = OSError("permission denied")
+    debug_spy = mocker.spy(text_utils_module.logger, "debug")
+
+    result = ref_path_matches_image(mock_ref, image_path, "photo.png")
+
+    assert result is False
+    debug_spy.assert_called()

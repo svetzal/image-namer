@@ -2,12 +2,12 @@
 import logging
 import re
 from pathlib import Path
-from urllib.parse import unquote
 
 from operations.models import MarkdownReference
 from operations.ports import MarkdownFilePort
 from operations.text_utils import (
     names_match,
+    ref_path_matches_image,
     REFERENCE_PATTERNS,
     WIKI_REF_TYPES,
 )
@@ -79,7 +79,7 @@ def _find_references_in_line(
                     ))
             else:
                 ref_path = Path(match.group(2))
-                if _matches_image(ref_path, image_path, image_name):
+                if ref_path_matches_image(ref_path, image_path, image_name):
                     refs.append(MarkdownReference(
                         file_path=md_file,
                         line_number=line_num,
@@ -89,32 +89,6 @@ def _find_references_in_line(
                     ))
 
     return refs
-
-
-def _matches_image(ref_path: Path, image_path: Path, image_name: str) -> bool:
-    if names_match(str(ref_path.name), image_name):
-        return True
-
-    try:
-        if ref_path.resolve() == image_path.resolve():
-            return True
-    except (OSError, ValueError) as e:
-        logger.debug(
-            "Path resolution failed (ref=%s, image=%s): %s: %s",
-            ref_path, image_path, type(e).__name__, e,
-        )
-
-    try:
-        decoded_path = Path(unquote(str(ref_path)))
-        if decoded_path.resolve() == image_path.resolve():
-            return True
-    except (OSError, ValueError, TypeError) as e:
-        logger.debug(
-            "URL-decoded path resolution failed (ref=%s, image=%s): %s: %s",
-            ref_path, image_path, type(e).__name__, e,
-        )
-
-    return False
 
 
 def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
