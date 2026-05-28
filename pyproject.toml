@@ -25,7 +25,7 @@ classifiers = [
 ]
 # Main runtime dependencies. Keep minimal; GUI is optional for headless use.
 dependencies = [
-    "typer>=0.25.1",
+    "typer>=0.26.2",
     "rich>=15.0.0",
     "pydantic>=2.13.4",
     "mojentic>=1.4.0",
