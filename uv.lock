@@ -417,7 +417,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pyside6", marker = "extra == 'gui'", specifier = ">=6.7" },
     { name = "rich", specifier = ">=15.0.0" },
-    { name = "typer", specifier = ">=0.25.1" },
+    { name = "typer", specifier = ">=0.26.2" },
 ]
 provides-extras = ["gui"]
 
