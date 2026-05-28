@@ -41,6 +41,21 @@ def should_return_zero_counts_when_no_renamed_results(tmp_path, mock_markdown_fi
 
     assert result.total_references == 0
     assert result.files_updated == 0
+
+
+def should_not_search_for_markdown_files_when_no_renamed_results(tmp_path, mock_markdown_files):
+    results = [
+        ProcessingResult(
+            source="a.png",
+            proposed="a.png",
+            final="a.png",
+            status=RenameStatus.UNCHANGED,
+            path=tmp_path / "a.png",
+        )
+    ]
+
+    process_batch_references(results, tmp_path, mock_markdown_files, dry_run=False)
+
     mock_markdown_files.find_markdown_files.assert_not_called()
 
 
@@ -55,7 +70,7 @@ def should_return_zero_counts_when_no_refs_found(tmp_path, mock_markdown_files):
     assert result.files_updated == 0
 
 
-def should_update_refs_and_return_counts(tmp_path, mock_markdown_files):
+def should_return_correct_counts_when_refs_found(tmp_path, mock_markdown_files):
     results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
     md_file = tmp_path / "doc.md"
 
@@ -66,6 +81,17 @@ def should_update_refs_and_return_counts(tmp_path, mock_markdown_files):
 
     assert result.total_references == 2
     assert result.files_updated == 1
+
+
+def should_write_updated_content_when_refs_found(tmp_path, mock_markdown_files):
+    results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n![Again](old.png)\n"
+
+    process_batch_references(results, tmp_path, mock_markdown_files, dry_run=False)
+
     written_content = mock_markdown_files.write_markdown_content.call_args[0][1]
     assert "new.png" in written_content
 
@@ -152,7 +178,7 @@ def should_count_single_file_references_returns_zero_when_no_refs(tmp_path, mock
     assert result.files_updated == 0
 
 
-def should_apply_single_file_reference_updates(tmp_path, mock_markdown_files):
+def should_return_correct_counts_when_applying_single_file_updates(tmp_path, mock_markdown_files):
     img = tmp_path / "old.png"
     img.write_bytes(b"fake-image")
     md_file = tmp_path / "doc.md"
@@ -164,6 +190,18 @@ def should_apply_single_file_reference_updates(tmp_path, mock_markdown_files):
 
     assert result.total_references == 1
     assert result.files_updated == 1
+
+
+def should_write_updated_content_when_applying_single_file_updates(tmp_path, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"fake-image")
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
+
+    process_single_file_references(img, "new.png", tmp_path, mock_markdown_files, dry_run=False)
+
     written_content = mock_markdown_files.write_markdown_content.call_args[0][1]
     assert "new.png" in written_content
 

@@ -5,20 +5,48 @@ from operations.find_references import find_references, ref_matches_filename
 from operations.models import MarkdownReference
 
 
-def should_find_standard_image_references(tmp_path, mock_markdown_files):
+def _setup_standard_image_refs(tmp_path, mock_markdown_files):
     image_path = tmp_path / "test.png"
     md_file = tmp_path / "test.md"
-
     mock_markdown_files.find_markdown_files.return_value = [md_file]
     mock_markdown_files.read_markdown_content.return_value = "# Test\n![Alt text](test.png)\n"
-
     refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+    return refs, md_file
+
+
+def should_find_one_standard_image_reference(tmp_path, mock_markdown_files):
+    refs, _ = _setup_standard_image_refs(tmp_path, mock_markdown_files)
 
     assert len(refs) == 1
+
+
+def should_set_correct_file_path_for_standard_image_reference(tmp_path, mock_markdown_files):
+    refs, md_file = _setup_standard_image_refs(tmp_path, mock_markdown_files)
+
     assert refs[0].file_path == md_file
+
+
+def should_set_correct_line_number_for_standard_image_reference(tmp_path, mock_markdown_files):
+    refs, _ = _setup_standard_image_refs(tmp_path, mock_markdown_files)
+
     assert refs[0].line_number == 2
+
+
+def should_set_correct_original_text_for_standard_image_reference(tmp_path, mock_markdown_files):
+    refs, _ = _setup_standard_image_refs(tmp_path, mock_markdown_files)
+
     assert refs[0].original_text == "![Alt text](test.png)"
+
+
+def should_set_image_ref_type_for_standard_image_reference(tmp_path, mock_markdown_files):
+    refs, _ = _setup_standard_image_refs(tmp_path, mock_markdown_files)
+
     assert refs[0].ref_type == "image"
+
+
+def should_call_find_markdown_files_for_standard_image_reference(tmp_path, mock_markdown_files):
+    _setup_standard_image_refs(tmp_path, mock_markdown_files)
+
     mock_markdown_files.find_markdown_files.assert_called_once_with(tmp_path, recursive=False)
 
 
@@ -92,10 +120,9 @@ def should_find_wiki_link_with_alias(tmp_path, mock_markdown_files):
     assert refs[0].original_text == "[[graph.svg|See the graph]]"
 
 
-def should_find_multiple_references_in_same_file(tmp_path, mock_markdown_files):
+def _setup_multi_ref_file(tmp_path, mock_markdown_files):
     image_path = tmp_path / "image.png"
     md_file = tmp_path / "multi.md"
-
     mock_markdown_files.find_markdown_files.return_value = [md_file]
     mock_markdown_files.read_markdown_content.return_value = (
         "![First](image.png)\n"
@@ -103,14 +130,32 @@ def should_find_multiple_references_in_same_file(tmp_path, mock_markdown_files):
         "![[image.png]]\n"
         "[Link](image.png)\n"
     )
+    return find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
 
-    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+def should_find_three_references_in_same_file(tmp_path, mock_markdown_files):
+    refs = _setup_multi_ref_file(tmp_path, mock_markdown_files)
 
     assert len(refs) == 3
+
+
+def should_set_correct_line_and_type_for_first_reference_in_multi_ref_file(tmp_path, mock_markdown_files):
+    refs = _setup_multi_ref_file(tmp_path, mock_markdown_files)
+
     assert refs[0].line_number == 1
     assert refs[0].ref_type == "image"
+
+
+def should_set_correct_line_and_type_for_second_reference_in_multi_ref_file(tmp_path, mock_markdown_files):
+    refs = _setup_multi_ref_file(tmp_path, mock_markdown_files)
+
     assert refs[1].line_number == 3
     assert refs[1].ref_type == "wiki_embed"
+
+
+def should_set_correct_line_and_type_for_third_reference_in_multi_ref_file(tmp_path, mock_markdown_files):
+    refs = _setup_multi_ref_file(tmp_path, mock_markdown_files)
+
     assert refs[2].line_number == 4
     assert refs[2].ref_type == "link"
 

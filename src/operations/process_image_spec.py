@@ -81,14 +81,30 @@ def should_not_call_analyze_when_cached_analysis_is_suitable(tmp_image_path, moc
     mock_analyzer.analyze.assert_not_called()
 
 
-def should_call_analyze_image_and_cache_result_on_cache_miss(tmp_image_path, mock_cache, mock_analyzer):
+def should_call_analyzer_on_cache_miss(tmp_image_path, mock_cache, mock_analyzer):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = make_analysis()
+
+    process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
+
+    mock_analyzer.analyze.assert_called_once()
+
+
+def should_save_analysis_to_cache_on_cache_miss(tmp_image_path, mock_cache, mock_analyzer):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = make_analysis()
+
+    process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
+
+    mock_cache.save.assert_called_once()
+
+
+def should_return_unchanged_status_on_cache_miss_with_suitable_analysis(tmp_image_path, mock_cache, mock_analyzer):
     mock_cache.load.return_value = None
     mock_analyzer.analyze.return_value = make_analysis()
 
     result = process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
 
-    mock_analyzer.analyze.assert_called_once()
-    mock_cache.save.assert_called_once()
     assert result.status == RenameStatus.UNCHANGED
 
 
@@ -102,15 +118,32 @@ def should_return_error_when_analyze_raises(tmp_image_path, mock_cache, mock_ana
     assert result.proposed == "ERROR"
 
 
-def should_log_warning_when_analyze_raises_connection_error(tmp_image_path, mock_cache, mock_analyzer, caplog):
+def should_return_error_status_on_connection_error(tmp_image_path, mock_cache, mock_analyzer):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.side_effect = ConnectionError("Network unavailable")
+
+    result = process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
+
+    assert result.status == RenameStatus.ERROR
+
+
+def should_log_filename_on_connection_error(tmp_image_path, mock_cache, mock_analyzer, caplog):
     mock_cache.load.return_value = None
     mock_analyzer.analyze.side_effect = ConnectionError("Network unavailable")
 
     with caplog.at_level(logging.WARNING, logger="operations.process_image"):
-        result = process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
+        process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
 
-    assert result.status == RenameStatus.ERROR
     assert any(tmp_image_path.name in r.getMessage() for r in caplog.records)
+
+
+def should_log_error_type_on_connection_error(tmp_image_path, mock_cache, mock_analyzer, caplog):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.side_effect = ConnectionError("Network unavailable")
+
+    with caplog.at_level(logging.WARNING, logger="operations.process_image"):
+        process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
+
     assert any("ConnectionError" in r.getMessage() for r in caplog.records)
 
 
@@ -253,7 +286,7 @@ def should_return_false_for_cached_when_analysis_is_not_in_cache(tmp_image_path,
     assert result.cached is False
 
 
-def should_call_on_cache_hit_callback_when_analysis_is_cached(
+def should_call_on_cache_hit_when_analysis_is_cached(
     tmp_image_path, mock_cache, mock_analyzer, mock_progress
 ):
     analysis = make_analysis()
@@ -262,11 +295,67 @@ def should_call_on_cache_hit_callback_when_analysis_is_cached(
     get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
 
     mock_progress.on_cache_hit.assert_called_once_with(tmp_image_path, analysis)
+
+
+def should_not_call_on_cache_miss_when_analysis_is_cached(
+    tmp_image_path, mock_cache, mock_analyzer, mock_progress
+):
+    analysis = make_analysis()
+    mock_cache.load.return_value = analysis
+
+    get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
+
     mock_progress.on_cache_miss.assert_not_called()
+
+
+def should_not_call_on_analysis_complete_when_analysis_is_cached(
+    tmp_image_path, mock_cache, mock_analyzer, mock_progress
+):
+    analysis = make_analysis()
+    mock_cache.load.return_value = analysis
+
+    get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
+
     mock_progress.on_analysis_complete.assert_not_called()
 
 
-def should_call_on_cache_miss_and_on_analysis_complete_callbacks_on_miss(
+def should_call_on_cache_miss_callback_on_miss(
+    tmp_image_path, mock_cache, mock_analyzer, mock_progress
+):
+    analysis = make_analysis(suitable=False, stem="new-name")
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = analysis
+
+    get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
+
+    mock_progress.on_cache_miss.assert_called_once_with(tmp_image_path)
+
+
+def should_call_on_analysis_complete_callback_on_miss(
+    tmp_image_path, mock_cache, mock_analyzer, mock_progress
+):
+    analysis = make_analysis(suitable=False, stem="new-name")
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = analysis
+
+    get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
+
+    mock_progress.on_analysis_complete.assert_called_once_with(tmp_image_path, analysis)
+
+
+def should_not_call_on_cache_hit_callback_on_miss(
+    tmp_image_path, mock_cache, mock_analyzer, mock_progress
+):
+    analysis = make_analysis(suitable=False, stem="new-name")
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = analysis
+
+    get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
+
+    mock_progress.on_cache_hit.assert_not_called()
+
+
+def should_call_on_cache_miss_before_on_analysis_complete(
     tmp_image_path, mock_cache, mock_analyzer, mock_progress
 ):
     analysis = make_analysis(suitable=False, stem="new-name")
@@ -278,9 +367,6 @@ def should_call_on_cache_miss_and_on_analysis_complete_callbacks_on_miss(
 
     get_or_generate_analysis(tmp_image_path, "sample.png", mock_analyzer, mock_cache, mock_progress)
 
-    mock_progress.on_cache_miss.assert_called_once_with(tmp_image_path)
-    mock_progress.on_analysis_complete.assert_called_once_with(tmp_image_path, analysis)
-    mock_progress.on_cache_hit.assert_not_called()
     assert call_order == ["miss", "complete"]
 
 
