@@ -1,7 +1,4 @@
-"""Filesystem utilities for image-namer.
-
-Contains small, focused helpers with low complexity and complete type hints.
-"""
+"""Filesystem utilities for image-namer."""
 
 
 import hashlib
@@ -98,15 +95,7 @@ def next_available_name(
 
 
 def collect_image_files(path: Path, recursive: bool) -> list[Path]:
-    """Collect all image files in path with supported extensions.
-
-    Args:
-        path: Directory to search.
-        recursive: If True, descend into subdirectories.
-
-    Returns:
-        Sorted list of image file paths with supported extensions.
-    """
+    """Collect all image files in path with supported extensions."""
     if recursive:
         files = [p for p in path.rglob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS]
     else:

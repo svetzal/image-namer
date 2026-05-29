@@ -1,8 +1,4 @@
-"""Factory for constructing the LLM analysis pipeline.
-
-Centralizes the gateway -> broker -> cache -> analyzer wiring that
-is shared across CLI commands.
-"""
+"""Factory for the gateway -> broker -> cache -> analyzer pipeline."""
 
 from collections.abc import Callable
 from pathlib import Path

@@ -1,9 +1,4 @@
-"""Single-image processing orchestration.
-
-Contains the pure business logic for assessing, naming, and resolving collisions
-for a single image file. I/O boundaries (cache, LLM analysis) are injected via
-Protocol-based ports — errors are captured in ProcessingResult.
-"""
+"""Single-image processing: assess, name, and resolve collisions via injected ports."""
 
 import logging
 from pathlib import Path

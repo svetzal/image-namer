@@ -1,8 +1,4 @@
-"""Apply rename operations from processing results.
-
-Pure function that determines which renames to apply, delegating
-actual filesystem mutations to an injected FileRenamerPort.
-"""
+"""Apply rename operations from processing results via an injected FileRenamerPort."""
 
 from pathlib import Path
 

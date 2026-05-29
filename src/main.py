@@ -108,19 +108,6 @@ def _apply_single_rename(path: Path, final_name: str) -> None:
 
 
 def _process_single_file(path: Path, provider: str, model: str) -> ProcessingResult:
-    """Validate, build pipeline, and process a single image file.
-
-    Args:
-        path: Path to the image file.
-        provider: LLM provider name.
-        model: Model identifier string.
-
-    Returns:
-        ProcessingResult for the image.
-
-    Raises:
-        typer.Exit: On unsupported file type, invalid provider, pipeline error, or processing error.
-    """
     _validate_file_type(path)
     _validate_provider(provider)
 

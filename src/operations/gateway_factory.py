@@ -17,12 +17,6 @@ class MissingApiKeyError(Exception):
 def create_gateway(provider: str) -> OllamaGateway | OpenAIGateway:
     """Create the appropriate LLM gateway for the given provider.
 
-    Args:
-        provider: Either ``"ollama"`` or ``"openai"``.
-
-    Returns:
-        Gateway instance for the specified provider.
-
     Raises:
         MissingApiKeyError: If the provider requires an API key not found in
             the environment.
