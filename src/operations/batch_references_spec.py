@@ -6,7 +6,7 @@ from operations.batch_references import (
     process_batch_references,
     process_single_file_references,
 )
-from operations.models import ProcessingResult, RenameStatus
+from operations.models import BatchReferenceResult, ProcessingResult, RenameStatus
 
 
 def _make_result(
@@ -271,3 +271,16 @@ def should_process_batch_references_applies_when_not_dry_run(tmp_path, mock_mark
 
     assert result.total_references == 1
     mock_markdown_files.write_markdown_content.assert_called_once()
+
+
+def should_return_batch_result_without_raising_when_write_raises_os_error(tmp_path, mock_markdown_files):
+    results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
+    mock_markdown_files.write_markdown_content.side_effect = OSError("disk full")
+
+    result = process_batch_references(results, tmp_path, mock_markdown_files, dry_run=False)
+
+    assert isinstance(result, BatchReferenceResult)

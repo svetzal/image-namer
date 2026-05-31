@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from urllib.parse import quote, unquote
 
+from constants import FILESYSTEM_IO_ERRORS
 from operations.models import MarkdownReference, ReferenceUpdate
 from operations.ports import MarkdownFilePort
 from operations.text_utils import (
@@ -59,25 +60,29 @@ def _update_file(
     new_name: str,
     markdown_files: MarkdownFilePort,
 ) -> int:
-    content = markdown_files.read_markdown_content(file_path)
-    original_content = content
-    replacement_count = 0
+    try:
+        content = markdown_files.read_markdown_content(file_path)
+        original_content = content
+        replacement_count = 0
 
-    # Sort references by line number to ensure consistent processing
-    sorted_refs = sorted(references, key=lambda r: r.line_number)
+        sorted_refs = sorted(references, key=lambda r: r.line_number)
 
-    for ref in sorted_refs:
-        new_text = _generate_replacement(ref, old_name, new_name)
-        if new_text != ref.original_text:
-            # Use regex to ensure we only replace exact matches
-            pattern = re.escape(ref.original_text)
-            content, count = re.subn(pattern, new_text, content, count=1)
-            replacement_count += count
+        for ref in sorted_refs:
+            new_text = _generate_replacement(ref, old_name, new_name)
+            if new_text != ref.original_text:
+                pattern = re.escape(ref.original_text)
+                content, count = re.subn(pattern, new_text, content, count=1)
+                replacement_count += count
 
-    if content != original_content:
-        markdown_files.write_markdown_content(file_path, content)
+        if content != original_content:
+            markdown_files.write_markdown_content(file_path, content)
 
-    return replacement_count
+        return replacement_count
+    except FILESYSTEM_IO_ERRORS as e:
+        logger.warning(
+            "Failed to update references in %s: %s: %s", file_path, type(e).__name__, e
+        )
+        return 0
 
 
 def _generate_replacement(

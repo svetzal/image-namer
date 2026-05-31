@@ -25,3 +25,5 @@ DEFAULT_MODELS: Final[dict[str, str]] = {"ollama": "gemma3:27b", "openai": "gpt-
 LLM_OPERATIONAL_ERRORS: Final[tuple[type[Exception], ...]] = (
     OSError, ConnectionError, TimeoutError, ValueError, RuntimeError
 )
+
+FILESYSTEM_IO_ERRORS: Final[tuple[type[Exception], ...]] = (OSError, UnicodeError)

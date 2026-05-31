@@ -371,6 +371,30 @@ def should_log_debug_when_url_decode_fails(mocker):
     debug_spy.assert_called_once()
 
 
+def should_return_empty_updates_and_not_raise_when_read_raises_permission_error(tmp_path, mock_markdown_files):
+    md_file = tmp_path / "doc.md"
+    ref = _make_ref(md_file, 1, "![Photo](old.png)", "old.png", "image")
+
+    mock_markdown_files.read_markdown_content.side_effect = PermissionError("denied")
+
+    updates = update_references([ref], "old.png", "new.png", mock_markdown_files)
+
+    assert updates == []
+    mock_markdown_files.write_markdown_content.assert_not_called()
+
+
+def should_return_empty_updates_and_not_raise_when_write_raises_os_error(tmp_path, mock_markdown_files):
+    md_file = tmp_path / "doc.md"
+    ref = _make_ref(md_file, 1, "![Photo](old.png)", "old.png", "image")
+
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
+    mock_markdown_files.write_markdown_content.side_effect = OSError("disk full")
+
+    updates = update_references([ref], "old.png", "new.png", mock_markdown_files)
+
+    assert updates == []
+
+
 def should_handle_url_encoded_path_with_unicode_space(tmp_path, mock_markdown_files):
     md_file = tmp_path / "doc.md"
     # narrow no-break space ( ) encoded as %E2%80%AF

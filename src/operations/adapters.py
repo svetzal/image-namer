@@ -1,3 +1,5 @@
+import os
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -70,5 +72,18 @@ class FilesystemMarkdownFiles:
             return f.read()
 
     def write_markdown_content(self, file_path: Path, content: str) -> None:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+        tmp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode='w', encoding='utf-8', dir=file_path.parent,
+                suffix='.tmp', delete=False
+            ) as tmp:
+                tmp_path = Path(tmp.name)
+                tmp.write(content)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+            os.replace(tmp_path, file_path)
+        except Exception:
+            if tmp_path is not None and tmp_path.exists():
+                tmp_path.unlink()
+            raise

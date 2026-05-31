@@ -225,3 +225,17 @@ class DescribeFilesystemMarkdownFiles:
             markdown_files.write_markdown_content(md_file, "# Updated\n")
 
             assert md_file.read_text(encoding="utf-8") == "# Updated\n"
+
+        def should_preserve_original_and_leave_no_tmp_when_replace_fails(
+            self, tmp_path: Path, markdown_files: FilesystemMarkdownFiles, mocker
+        ):
+            md_file = tmp_path / "notes.md"
+            md_file.write_text("# Original", encoding="utf-8")
+
+            mocker.patch("operations.adapters.os.replace", side_effect=OSError("disk full"))
+
+            with pytest.raises(OSError):
+                markdown_files.write_markdown_content(md_file, "# New content\n")
+
+            assert md_file.read_text(encoding="utf-8") == "# Original"
+            assert list(tmp_path.glob("*.tmp")) == []
