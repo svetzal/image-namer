@@ -14,6 +14,21 @@ from operations.ports import MarkdownFilePort
 from operations.update_references import update_references
 
 
+def _count_only_result(
+    references: list[MarkdownReference],
+    *,
+    dry_run: bool,
+) -> BatchReferenceResult | None:
+    if not references:
+        return BatchReferenceResult(total_references=0, files_updated=0)
+    if dry_run:
+        return BatchReferenceResult(
+            total_references=len(references),
+            files_updated=len({r.file_path for r in references}),
+        )
+    return None
+
+
 def _collect_references(
     results: list[ProcessingResult],
     search_root: Path,
@@ -42,13 +57,9 @@ def _update_single_file_references(
     dry_run: bool,
 ) -> BatchReferenceResult:
     refs = find_references(path, search_root, markdown_files, recursive=True)
-    if not refs:
-        return BatchReferenceResult(total_references=0, files_updated=0)
-    if dry_run:
-        return BatchReferenceResult(
-            total_references=len(refs),
-            files_updated=len({r.file_path for r in refs}),
-        )
+    early = _count_only_result(refs, dry_run=dry_run)
+    if early is not None:
+        return early
     updates = update_references(refs, path.name, final_name, markdown_files)
     return BatchReferenceResult(
         total_references=sum(u.replacement_count for u in updates),
@@ -77,16 +88,9 @@ def process_batch_references(
 ) -> BatchReferenceResult:
     """Count or apply markdown reference updates for a batch of results based on dry_run."""
     collected = _collect_references(results, search_root, markdown_files)
-
-    if not collected.references:
-        return BatchReferenceResult(total_references=0, files_updated=0)
-
-    if dry_run:
-        unique_files = len({r.file_path for r in collected.references})
-        return BatchReferenceResult(
-            total_references=len(collected.references),
-            files_updated=unique_files,
-        )
+    early = _count_only_result(collected.references, dry_run=dry_run)
+    if early is not None:
+        return early
 
     updates_by_file: dict[Path, int] = {}
     for old_name, new_name in collected.rename_map.items():
