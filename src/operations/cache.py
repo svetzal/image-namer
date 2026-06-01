@@ -65,9 +65,8 @@ class CacheStore(Generic[T]):
             entry = self._entry_type.model_validate(data)
             if entry.image_hash != image_hash or entry.rubric_version != RUBRIC_VERSION:
                 return None
-            for field_name in self._key_fields:
-                if getattr(entry, field_name) != key_values[field_name]:
-                    return None
+            if not all(getattr(entry, f) == key_values[f] for f in self._key_fields):
+                return None
             return cast(T, getattr(entry, self._payload_field))
         except (OSError, json.JSONDecodeError, ValueError) as e:
             logger.debug(

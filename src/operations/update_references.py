@@ -1,6 +1,7 @@
 """Update markdown references to renamed images."""
 import logging
 import re
+from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -33,10 +34,8 @@ def update_references(
         return []
 
     # Group references by file
-    refs_by_file: dict[Path, list[MarkdownReference]] = {}
+    refs_by_file: dict[Path, list[MarkdownReference]] = defaultdict(list)
     for ref in references:
-        if ref.file_path not in refs_by_file:
-            refs_by_file[ref.file_path] = []
         refs_by_file[ref.file_path].append(ref)
 
     updates = []
