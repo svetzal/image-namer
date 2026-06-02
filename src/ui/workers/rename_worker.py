@@ -8,11 +8,11 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 
 from operations.models import ImageAnalysis
-from operations.models import RenameStatus as OpsRenameStatus
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from constants import LLM_OPERATIONAL_ERRORS
 from operations.process_image import process_single_image
 from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
+from ui.worker_logic import apply_processing_result, mark_manually_edited
 
 
 class _SignalProgressCallback:
@@ -91,8 +91,7 @@ class RenameWorker(QThread):
                 break
 
             if item.manually_edited:
-                item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
-                stats.renamed += 1
+                mark_manually_edited(item, stats)
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))
                 continue
@@ -109,29 +108,10 @@ class RenameWorker(QThread):
                     progress_cb,
                 )
 
-                item.reasoning = result.reasoning
-                item.cached = result.cached
-                item.proposed_name = result.proposed
-                item.final_name = result.final
+                apply_processing_result(item, result, stats)
 
-                if result.cached:
-                    stats.cached += 1
-
-                if result.status == OpsRenameStatus.ERROR:
-                    stats.errors += 1
-                    item.update_status(RenameStatus.ERROR, "Error during analysis")
+                if item.status == RenameStatus.ERROR:
                     self.error_occurred.emit(i, "Error during analysis")
-                elif result.status == OpsRenameStatus.UNCHANGED:
-                    item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
-                    stats.unchanged += 1
-                elif result.status == OpsRenameStatus.COLLISION:
-                    item.update_status(
-                        RenameStatus.COLLISION, f"Collision resolved: {result.final}"
-                    )
-                    stats.renamed += 1
-                else:
-                    item.update_status(RenameStatus.READY, "Ready to rename")
-                    stats.renamed += 1
 
                 self.item_processed.emit(i, item)
                 self.progress_updated.emit(i + 1, len(self.items))

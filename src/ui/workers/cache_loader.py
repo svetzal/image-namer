@@ -5,10 +5,10 @@ Proactively loads cache to give user early feedback on what's already been proce
 
 from PySide6.QtCore import QThread, Signal
 
-from operations.models import RenameStatus as OpsRenameStatus
 from operations.ports import AnalysisCachePort
 from operations.process_image import build_processing_result
-from ui.models.ui_models import RenameItem, RenameStatus
+from ui.models.ui_models import RenameItem
+from ui.worker_logic import apply_cached_result
 
 
 class CacheLoaderWorker(QThread):
@@ -56,25 +56,7 @@ class CacheLoaderWorker(QThread):
 
             if analysis:
                 result = build_processing_result(item.path, analysis, True, planned_names)
-                item.reasoning = result.reasoning
-                item.proposed_name = result.proposed
-                item.cached = True
-
-                if result.status == OpsRenameStatus.UNCHANGED:
-                    if not item.manually_edited:
-                        item.final_name = result.final
-                        item.update_status(RenameStatus.UNCHANGED, "Already suitable (cached)")
-                    else:
-                        item.update_status(
-                            RenameStatus.UNCHANGED, "Already suitable (filename locked by user)"
-                        )
-                else:
-                    if not item.manually_edited:
-                        item.final_name = result.final
-                        item.update_status(RenameStatus.READY, "Ready (from cache)")
-                    else:
-                        item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
-
+                apply_cached_result(item, result)
                 cached_count += 1
                 self.item_cache_loaded.emit(i, item)
 
