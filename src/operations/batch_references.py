@@ -36,16 +36,18 @@ def _collect_references(
     markdown_files: MarkdownFilePort,
 ) -> CollectedReferences:
     """Collect markdown references and rename map for RENAMED/COLLISION results where name differs."""
-    all_refs: list[MarkdownReference] = []
-    rename_map: dict[str, str] = {}
-
-    for result in results:
-        if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION) and result.path:
-            if result.final != result.path.name:
-                refs = find_references(result.path, search_root, markdown_files, recursive=True)
-                all_refs.extend(refs)
-                rename_map[result.path.name] = result.final
-
+    renamed = [
+        (r.path, r.final) for r in results
+        if r.status in (RenameStatus.RENAMED, RenameStatus.COLLISION)
+        and r.path is not None
+        and r.final != r.path.name
+    ]
+    rename_map = {path.name: final for path, final in renamed}
+    all_refs = [
+        ref
+        for path, _final in renamed
+        for ref in find_references(path, search_root, markdown_files, recursive=True)
+    ]
     return CollectedReferences(references=all_refs, rename_map=rename_map)
 
 
@@ -93,12 +95,20 @@ def process_batch_references(
     if early is not None:
         return early
 
-    updates_by_file: Counter[Path] = Counter()
-    for old_name, new_name in collected.rename_map.items():
-        file_refs = [r for r in collected.references if ref_matches_filename(r, old_name)]
-        file_updates = update_references(file_refs, old_name, new_name, markdown_files)
-        updates_by_file.update({u.file_path: u.replacement_count for u in file_updates})
-
+    all_updates = [
+        u
+        for old_name, new_name in collected.rename_map.items()
+        for u in update_references(
+            [r for r in collected.references if ref_matches_filename(r, old_name)],
+            old_name,
+            new_name,
+            markdown_files,
+        )
+    ]
+    updates_by_file: Counter[Path] = sum(
+        (Counter({u.file_path: u.replacement_count}) for u in all_updates),
+        Counter(),
+    )
     return BatchReferenceResult(
         total_references=sum(updates_by_file.values()),
         files_updated=len(updates_by_file),

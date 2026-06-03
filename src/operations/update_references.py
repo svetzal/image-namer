@@ -1,7 +1,6 @@
 """Update markdown references to renamed images."""
 import logging
 import re
-from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -33,23 +32,16 @@ def update_references(
     if not references:
         return []
 
-    # Group references by file
-    refs_by_file: dict[Path, list[MarkdownReference]] = defaultdict(list)
-    for ref in references:
-        refs_by_file[ref.file_path].append(ref)
+    refs_by_file: dict[Path, list[MarkdownReference]] = {
+        fp: [r for r in references if r.file_path == fp]
+        for fp in dict.fromkeys(r.file_path for r in references)
+    }
 
-    updates = []
-
-    # Update each file
-    for file_path, file_refs in refs_by_file.items():
-        replacement_count = _update_file(file_path, file_refs, old_name, new_name, markdown_files)
-        if replacement_count > 0:
-            updates.append(ReferenceUpdate(
-                file_path=file_path,
-                replacement_count=replacement_count
-            ))
-
-    return updates
+    return [
+        ReferenceUpdate(file_path=fp, replacement_count=count)
+        for fp, file_refs in refs_by_file.items()
+        if (count := _update_file(fp, file_refs, old_name, new_name, markdown_files)) > 0
+    ]
 
 
 def _update_file(
@@ -137,13 +129,11 @@ def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
     # Normalize the needle for comparison
     normalized_needle = normalize_spaces(needle)
 
-    # Slide through haystack to find a match
-    for i in range(len(haystack) - len(needle) + 1):
-        substring = haystack[i:i+len(needle)]
-        if normalize_spaces(substring) == normalized_needle:
-            return substring
-
-    return needle
+    return next(
+        (haystack[i:i+len(needle)] for i in range(len(haystack) - len(needle) + 1)
+         if normalize_spaces(haystack[i:i+len(needle)]) == normalized_needle),
+        needle,
+    )
 
 
 def _replace_standard_ref(pattern: str, prefix: str, original_text: str, old_name: str, new_name: str) -> str | None:

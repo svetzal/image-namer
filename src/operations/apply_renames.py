@@ -18,18 +18,16 @@ def apply_renames(
     - A path is present
     - The final name differs from the current name
     """
-    count = 0
-    for result in results:
-        if (
-            result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION)
-            and result.path
-        ):
-            img_path = result.path
-            final_path = img_path.with_name(result.final)
-            if final_path != img_path:
-                renamer.rename(img_path, final_path)
-                count += 1
-    return count
+    rename_pairs = [
+        (result.path, result.path.with_name(result.final))
+        for result in results
+        if result.status in (RenameStatus.RENAMED, RenameStatus.COLLISION)
+        and result.path
+        and result.path.with_name(result.final) != result.path
+    ]
+    for src, dst in rename_pairs:
+        renamer.rename(src, dst)
+    return len(rename_pairs)
 
 
 def apply_rename_with_references(
