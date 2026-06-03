@@ -5,12 +5,12 @@ QThread workers so they can be tested without any Qt dependency.
 """
 
 from operations.models import ProcessingResult
-from operations.models import RenameStatus as OpsRenameStatus
-from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
+from operations.models import RenameStatus
+from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
 
 
-def map_ops_status_to_ui(status: OpsRenameStatus) -> RenameStatus:
-    """Translate an operations-layer RenameStatus to the UI RenameStatus.
+def map_ops_status_to_ui(status: RenameStatus) -> ItemStatus:
+    """Translate an operations-layer RenameStatus to the UI ItemStatus.
 
     Args:
         status: The operations-layer status value.
@@ -18,11 +18,11 @@ def map_ops_status_to_ui(status: OpsRenameStatus) -> RenameStatus:
     Returns:
         The corresponding UI status value.
     """
-    mapping: dict[OpsRenameStatus, RenameStatus] = {
-        OpsRenameStatus.RENAMED: RenameStatus.READY,
-        OpsRenameStatus.UNCHANGED: RenameStatus.UNCHANGED,
-        OpsRenameStatus.COLLISION: RenameStatus.COLLISION,
-        OpsRenameStatus.ERROR: RenameStatus.ERROR,
+    mapping: dict[RenameStatus, ItemStatus] = {
+        RenameStatus.RENAMED: ItemStatus.READY,
+        RenameStatus.UNCHANGED: ItemStatus.UNCHANGED,
+        RenameStatus.COLLISION: ItemStatus.COLLISION,
+        RenameStatus.ERROR: ItemStatus.ERROR,
     }
     return mapping[status]
 
@@ -36,7 +36,7 @@ def mark_manually_edited(item: RenameItem, stats: AnalysisStats) -> None:
         item: The item to update in-place.
         stats: Cumulative stats to increment.
     """
-    item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
+    item.update_status(ItemStatus.READY, "Ready (filename locked by user)")
     stats.renamed += 1
 
 
@@ -63,17 +63,17 @@ def apply_processing_result(
     if result.cached:
         stats.cached += 1
 
-    if result.status == OpsRenameStatus.ERROR:
+    if result.status == RenameStatus.ERROR:
         stats.errors += 1
-        item.update_status(RenameStatus.ERROR, "Error during analysis")
-    elif result.status == OpsRenameStatus.UNCHANGED:
-        item.update_status(RenameStatus.UNCHANGED, "Current name is already suitable")
+        item.update_status(ItemStatus.ERROR, "Error during analysis")
+    elif result.status == RenameStatus.UNCHANGED:
+        item.update_status(ItemStatus.UNCHANGED, "Current name is already suitable")
         stats.unchanged += 1
-    elif result.status == OpsRenameStatus.COLLISION:
-        item.update_status(RenameStatus.COLLISION, f"Collision resolved: {result.final}")
+    elif result.status == RenameStatus.COLLISION:
+        item.update_status(ItemStatus.COLLISION, f"Collision resolved: {result.final}")
         stats.renamed += 1
     else:
-        item.update_status(RenameStatus.READY, "Ready to rename")
+        item.update_status(ItemStatus.READY, "Ready to rename")
         stats.renamed += 1
 
 
@@ -91,15 +91,15 @@ def apply_cached_result(item: RenameItem, result: ProcessingResult) -> None:
     item.proposed_name = result.proposed
     item.cached = True
 
-    if result.status == OpsRenameStatus.UNCHANGED:
+    if result.status == RenameStatus.UNCHANGED:
         if not item.manually_edited:
             item.final_name = result.final
-            item.update_status(RenameStatus.UNCHANGED, "Already suitable (cached)")
+            item.update_status(ItemStatus.UNCHANGED, "Already suitable (cached)")
         else:
-            item.update_status(RenameStatus.UNCHANGED, "Already suitable (filename locked by user)")
+            item.update_status(ItemStatus.UNCHANGED, "Already suitable (filename locked by user)")
     else:
         if not item.manually_edited:
             item.final_name = result.final
-            item.update_status(RenameStatus.READY, "Ready (from cache)")
+            item.update_status(ItemStatus.READY, "Ready (from cache)")
         else:
-            item.update_status(RenameStatus.READY, "Ready (filename locked by user)")
+            item.update_status(ItemStatus.READY, "Ready (filename locked by user)")

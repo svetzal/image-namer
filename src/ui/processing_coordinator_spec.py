@@ -7,14 +7,14 @@ pytest.importorskip("PySide6")
 from pathlib import Path  # noqa: E402
 from unittest.mock import MagicMock  # noqa: E402
 
-from ui.models.ui_models import BatchRenameResult, RenameItem, RenameStatus  # noqa: E402
+from ui.models.ui_models import BatchRenameResult, ItemStatus, RenameItem  # noqa: E402
 from ui.processing_coordinator import ProcessingCoordinator  # noqa: E402
 
 
 def _make_item(tmp_path: Path, name: str = "img.png") -> RenameItem:
     p = tmp_path / name
     p.touch()
-    return RenameItem(path=p, source_name=name, final_name=name, status=RenameStatus.QUEUED)
+    return RenameItem(path=p, source_name=name, final_name=name, status=ItemStatus.QUEUED)
 
 
 # ------------------------------------------------------------------
@@ -161,13 +161,13 @@ def should_get_items_to_rename_returns_ready_items(tmp_path, qapp):
             path=tmp_path / "a.png",
             source_name="a.png",
             final_name="a-new.png",
-            status=RenameStatus.READY,
+            status=ItemStatus.READY,
         ),
         RenameItem(
             path=tmp_path / "b.png",
             source_name="b.png",
             final_name="b.png",
-            status=RenameStatus.UNCHANGED,
+            status=ItemStatus.UNCHANGED,
         ),
     ]
 
@@ -191,7 +191,7 @@ def should_rename_single_returns_success(tmp_path, qapp, mocker):
             path=tmp_path / "old.png",
             source_name="old.png",
             final_name="new.png",
-            status=RenameStatus.READY,
+            status=ItemStatus.READY,
         )
     ]
 
@@ -201,7 +201,7 @@ def should_rename_single_returns_success(tmp_path, qapp, mocker):
     assert result.error_message == ""
     assert result.references_updated == 2
     assert coord.rename_items[0].source_name == "new.png"
-    assert coord.rename_items[0].status == RenameStatus.COMPLETED
+    assert coord.rename_items[0].status == ItemStatus.COMPLETED
 
 
 def should_rename_single_returns_no_change_when_names_match(tmp_path, qapp):
@@ -212,7 +212,7 @@ def should_rename_single_returns_no_change_when_names_match(tmp_path, qapp):
             path=tmp_path / "same.png",
             source_name="same.png",
             final_name="same.png",
-            status=RenameStatus.READY,
+            status=ItemStatus.READY,
         )
     ]
 
@@ -235,7 +235,7 @@ def should_rename_single_returns_error_on_os_error(tmp_path, qapp, mocker):
             path=tmp_path / "old.png",
             source_name="old.png",
             final_name="new.png",
-            status=RenameStatus.READY,
+            status=ItemStatus.READY,
         )
     ]
 
@@ -243,7 +243,7 @@ def should_rename_single_returns_error_on_os_error(tmp_path, qapp, mocker):
 
     assert result.success is False
     assert "permission denied" in result.error_message
-    assert coord.rename_items[0].status == RenameStatus.ERROR
+    assert coord.rename_items[0].status == ItemStatus.ERROR
 
 
 # ------------------------------------------------------------------
@@ -263,7 +263,7 @@ def should_rename_batch_delegates_to_perform_batch_rename(tmp_path, qapp, mocker
             path=tmp_path / "a.png",
             source_name="a.png",
             final_name="a-new.png",
-            status=RenameStatus.READY,
+            status=ItemStatus.READY,
         )
     ]
 

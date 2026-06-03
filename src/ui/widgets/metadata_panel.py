@@ -3,7 +3,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QLabel, QWidget
 
-from ui.models.ui_models import RenameItem, RenameStatus
+from ui.models.ui_models import ItemStatus, RenameItem
 
 
 class MetadataPanel(QWidget):
@@ -69,9 +69,9 @@ class MetadataPanel(QWidget):
         """
         self._meta_source.setText(item.source_name)
 
-        if item.status == RenameStatus.UNCHANGED:
+        if item.status == ItemStatus.UNCHANGED:
             self._meta_suitable.setText("Yes ✓")
-        elif item.status in (RenameStatus.READY, RenameStatus.COLLISION):
+        elif item.status in (ItemStatus.READY, ItemStatus.COLLISION):
             self._meta_suitable.setText("No")
         else:
             self._meta_suitable.setText("(pending)")

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_rename_with_references
-from ui.models.ui_models import BatchRenameResult, RenameItem, RenameResult, RenameStatus
+from ui.models.ui_models import BatchRenameResult, ItemStatus, RenameItem, RenameResult
 
 
 def perform_rename_with_refs(
@@ -61,13 +61,13 @@ def rename_single_item(
     new_name = item.final_name
     try:
         refs_updated = perform_rename_with_refs(old_path, new_name, search_root, update_refs, recursive)
-        item.status = RenameStatus.COMPLETED
+        item.status = ItemStatus.COMPLETED
         item.status_message = "Successfully renamed"
         item.source_name = new_name
         item.path = old_path.parent / new_name
         return RenameResult(success=True, references_updated=refs_updated)
     except (OSError, PermissionError) as e:
-        item.status = RenameStatus.ERROR
+        item.status = ItemStatus.ERROR
         item.status_message = f"Rename failed: {e}"
         item.error_message = str(e)
         return RenameResult(success=False, error_message=str(e))

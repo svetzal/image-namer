@@ -4,7 +4,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from ui.models.ui_models import RenameItem, RenameStatus  # noqa: E402
+from ui.models.ui_models import ItemStatus, RenameItem  # noqa: E402
 from ui.widgets.metadata_panel import MetadataPanel  # noqa: E402
 
 
@@ -13,7 +13,7 @@ def _make_item(**kwargs) -> RenameItem:
         path=Path("/some/file.png"),
         source_name="file.png",
         final_name="file.png",
-        status=RenameStatus.QUEUED,
+        status=ItemStatus.QUEUED,
     )
     defaults.update(kwargs)
     return RenameItem(**defaults)
@@ -28,14 +28,14 @@ def should_update_populates_source_label(qapp):
 
 def should_update_shows_suitable_yes_when_unchanged(qapp):
     panel = MetadataPanel()
-    item = _make_item(status=RenameStatus.UNCHANGED)
+    item = _make_item(status=ItemStatus.UNCHANGED)
     panel.update(item)
     assert "Yes" in panel._meta_suitable.text()
 
 
 def should_update_shows_suitable_no_when_ready(qapp):
     panel = MetadataPanel()
-    item = _make_item(status=RenameStatus.READY)
+    item = _make_item(status=ItemStatus.READY)
     panel.update(item)
     assert panel._meta_suitable.text() == "No"
 

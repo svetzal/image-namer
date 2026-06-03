@@ -17,14 +17,14 @@ def should_set_folder_loaded_state_when_coordinator_scans_successfully(qapp, moc
 
     # Emit folder_scanned with items to simulate a successful scan
     from pathlib import Path
-    from ui.models.ui_models import RenameItem, RenameStatus
+    from ui.models.ui_models import ItemStatus, RenameItem
 
     items = [
         RenameItem(
             path=Path("/tmp/img.png"),
             source_name="img.png",
             final_name="img.png",
-            status=RenameStatus.QUEUED,
+            status=ItemStatus.QUEUED,
         )
     ]
     # Stub out start_cache_loader so it doesn't try to touch the filesystem

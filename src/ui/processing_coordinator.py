@@ -12,7 +12,7 @@ from operations.adapters import FilesystemAnalysisCache
 from constants import LLM_OPERATIONAL_ERRORS
 from operations.gateway_factory import MissingApiKeyError
 from operations.pipeline_factory import build_analysis_pipeline
-from ui.models.ui_models import AnalysisStats, BatchRenameResult, RenameItem, RenameResult, RenameStatus
+from ui.models.ui_models import AnalysisStats, BatchRenameResult, ItemStatus, RenameItem, RenameResult
 from ui.rename_actions import perform_batch_rename, rename_single_item
 from ui.workers.cache_loader import CacheLoaderWorker
 from ui.workers.rename_worker import RenameWorker
@@ -64,7 +64,7 @@ class ProcessingCoordinator(QObject):
                 path=img_path,
                 source_name=img_path.name,
                 final_name=img_path.name,
-                status=RenameStatus.QUEUED,
+                status=ItemStatus.QUEUED,
                 status_message="Waiting in queue...",
             )
             for img_path in image_files
@@ -171,7 +171,7 @@ class ProcessingCoordinator(QObject):
         """Return items whose final_name differs from source_name and are ready/collision."""
         return [
             item for item in self.rename_items
-            if item.status in (RenameStatus.READY, RenameStatus.COLLISION)
+            if item.status in (ItemStatus.READY, ItemStatus.COLLISION)
             and item.final_name != item.source_name
         ]
 

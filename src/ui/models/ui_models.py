@@ -11,7 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 
-class RenameStatus(Enum):
+class ItemStatus(Enum):
     """Processing status for individual items in the UI queue."""
 
     QUEUED = "queued"  # Waiting to be processed
@@ -45,7 +45,7 @@ class RenameItem(BaseModel):
     source_name: str
     proposed_name: str | None = None
     final_name: str
-    status: RenameStatus = RenameStatus.QUEUED
+    status: ItemStatus = ItemStatus.QUEUED
     status_message: str = "Waiting in queue..."
     error_message: str | None = None
     last_updated: datetime = Field(default_factory=datetime.now)
@@ -53,7 +53,7 @@ class RenameItem(BaseModel):
     manually_edited: bool = False
     reasoning: str = ""  # LLM's reasoning for assessment and naming decision
 
-    def update_status(self, status: RenameStatus, message: str) -> None:
+    def update_status(self, status: ItemStatus, message: str) -> None:
         """Update status with timestamp.
 
         Args:
@@ -72,15 +72,15 @@ class RenameItem(BaseModel):
             Emoji string representing the status.
         """
         icons = {
-            RenameStatus.QUEUED: "⏳",
-            RenameStatus.ASSESSING: "🔍",
-            RenameStatus.GENERATING: "📝",
-            RenameStatus.CACHE_HIT: "💾",
-            RenameStatus.READY: "✓",
-            RenameStatus.UNCHANGED: "✓",
-            RenameStatus.COLLISION: "⚠️",
-            RenameStatus.ERROR: "✗",
-            RenameStatus.COMPLETED: "✓",
+            ItemStatus.QUEUED: "⏳",
+            ItemStatus.ASSESSING: "🔍",
+            ItemStatus.GENERATING: "📝",
+            ItemStatus.CACHE_HIT: "💾",
+            ItemStatus.READY: "✓",
+            ItemStatus.UNCHANGED: "✓",
+            ItemStatus.COLLISION: "⚠️",
+            ItemStatus.ERROR: "✗",
+            ItemStatus.COMPLETED: "✓",
         }
         return icons.get(self.status, "?")
 

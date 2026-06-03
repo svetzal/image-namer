@@ -11,7 +11,7 @@ from operations.models import ImageAnalysis
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort
 from constants import LLM_OPERATIONAL_ERRORS
 from operations.process_image import process_single_image
-from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
+from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
 from ui.worker_logic import apply_processing_result, mark_manually_edited
 
 
@@ -110,7 +110,7 @@ class RenameWorker(QThread):
 
                 apply_processing_result(item, result, stats)
 
-                if item.status == RenameStatus.ERROR:
+                if item.status == ItemStatus.ERROR:
                     self.error_occurred.emit(i, "Error during analysis")
 
                 self.item_processed.emit(i, item)
@@ -119,7 +119,7 @@ class RenameWorker(QThread):
             except LLM_OPERATIONAL_ERRORS as e:
                 stats.errors += 1
                 error_msg = str(e)
-                item.update_status(RenameStatus.ERROR, f"Error: {error_msg}")
+                item.update_status(ItemStatus.ERROR, f"Error: {error_msg}")
                 item.error_message = error_msg
                 self.error_occurred.emit(i, error_msg)
                 self.item_processed.emit(i, item)

@@ -3,8 +3,8 @@
 from pathlib import Path
 
 from operations.models import ProcessingResult
-from operations.models import RenameStatus as OpsRenameStatus
-from ui.models.ui_models import AnalysisStats, RenameItem, RenameStatus
+from operations.models import RenameStatus
+from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
 from ui.worker_logic import (
     apply_cached_result,
     apply_processing_result,
@@ -22,7 +22,7 @@ def _make_item(source: str = "img.png", final: str = "img.png") -> RenameItem:
 
 
 def _make_result(
-    status: OpsRenameStatus,
+    status: RenameStatus,
     *,
     proposed: str = "new-name.png",
     final: str = "new-name.png",
@@ -44,23 +44,23 @@ def _make_result(
 # ---------------------------------------------------------------------------
 
 def should_map_renamed_to_ready():
-    assert map_ops_status_to_ui(OpsRenameStatus.RENAMED) == RenameStatus.READY
+    assert map_ops_status_to_ui(RenameStatus.RENAMED) == ItemStatus.READY
 
 
 def should_map_unchanged_to_unchanged():
-    assert map_ops_status_to_ui(OpsRenameStatus.UNCHANGED) == RenameStatus.UNCHANGED
+    assert map_ops_status_to_ui(RenameStatus.UNCHANGED) == ItemStatus.UNCHANGED
 
 
 def should_map_collision_to_collision():
-    assert map_ops_status_to_ui(OpsRenameStatus.COLLISION) == RenameStatus.COLLISION
+    assert map_ops_status_to_ui(RenameStatus.COLLISION) == ItemStatus.COLLISION
 
 
 def should_map_error_to_error():
-    assert map_ops_status_to_ui(OpsRenameStatus.ERROR) == RenameStatus.ERROR
+    assert map_ops_status_to_ui(RenameStatus.ERROR) == ItemStatus.ERROR
 
 
 def should_distinguish_unchanged_from_ready():
-    assert map_ops_status_to_ui(OpsRenameStatus.UNCHANGED) != RenameStatus.READY
+    assert map_ops_status_to_ui(RenameStatus.UNCHANGED) != ItemStatus.READY
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ def should_set_ready_status_for_manually_edited_item():
 
     mark_manually_edited(item, stats)
 
-    assert item.status == RenameStatus.READY
+    assert item.status == ItemStatus.READY
     assert item.status_message == "Ready (filename locked by user)"
 
 
@@ -93,7 +93,7 @@ def should_increment_renamed_for_manually_edited_item():
 def should_copy_result_fields_onto_item():
     item = _make_item()
     stats = AnalysisStats()
-    result = _make_result(OpsRenameStatus.RENAMED, proposed="best.png", final="best.png", reasoning="good")
+    result = _make_result(RenameStatus.RENAMED, proposed="best.png", final="best.png", reasoning="good")
 
     apply_processing_result(item, result, stats)
 
@@ -105,7 +105,7 @@ def should_copy_result_fields_onto_item():
 def should_increment_cached_when_result_is_from_cache():
     item = _make_item()
     stats = AnalysisStats()
-    result = _make_result(OpsRenameStatus.RENAMED, cached=True)
+    result = _make_result(RenameStatus.RENAMED, cached=True)
 
     apply_processing_result(item, result, stats)
 
@@ -116,22 +116,22 @@ def should_increment_cached_when_result_is_from_cache():
 def should_set_ready_and_increment_renamed_for_renamed_status():
     item = _make_item()
     stats = AnalysisStats()
-    result = _make_result(OpsRenameStatus.RENAMED)
+    result = _make_result(RenameStatus.RENAMED)
 
     apply_processing_result(item, result, stats)
 
-    assert item.status == RenameStatus.READY
+    assert item.status == ItemStatus.READY
     assert stats.renamed == 1
 
 
 def should_set_collision_and_increment_renamed_for_collision_status():
     item = _make_item()
     stats = AnalysisStats()
-    result = _make_result(OpsRenameStatus.COLLISION, final="new-name-2.png")
+    result = _make_result(RenameStatus.COLLISION, final="new-name-2.png")
 
     apply_processing_result(item, result, stats)
 
-    assert item.status == RenameStatus.COLLISION
+    assert item.status == ItemStatus.COLLISION
     assert "new-name-2.png" in item.status_message
     assert stats.renamed == 1
 
@@ -139,22 +139,22 @@ def should_set_collision_and_increment_renamed_for_collision_status():
 def should_set_unchanged_and_increment_unchanged_for_unchanged_status():
     item = _make_item()
     stats = AnalysisStats()
-    result = _make_result(OpsRenameStatus.UNCHANGED)
+    result = _make_result(RenameStatus.UNCHANGED)
 
     apply_processing_result(item, result, stats)
 
-    assert item.status == RenameStatus.UNCHANGED
+    assert item.status == ItemStatus.UNCHANGED
     assert stats.unchanged == 1
 
 
 def should_set_error_and_increment_errors_for_error_status():
     item = _make_item()
     stats = AnalysisStats()
-    result = _make_result(OpsRenameStatus.ERROR)
+    result = _make_result(RenameStatus.ERROR)
 
     apply_processing_result(item, result, stats)
 
-    assert item.status == RenameStatus.ERROR
+    assert item.status == ItemStatus.ERROR
     assert stats.errors == 1
 
 
@@ -164,11 +164,11 @@ def should_set_error_and_increment_errors_for_error_status():
 
 def should_set_unchanged_cached_for_unchanged_status_not_manually_edited():
     item = _make_item()
-    result = _make_result(OpsRenameStatus.UNCHANGED, final="img.png", reasoning="already good")
+    result = _make_result(RenameStatus.UNCHANGED, final="img.png", reasoning="already good")
 
     apply_cached_result(item, result)
 
-    assert item.status == RenameStatus.UNCHANGED
+    assert item.status == ItemStatus.UNCHANGED
     assert item.status_message == "Already suitable (cached)"
     assert item.final_name == "img.png"
     assert item.cached is True
@@ -179,22 +179,22 @@ def should_set_unchanged_locked_for_unchanged_status_manually_edited():
     item = _make_item()
     item.manually_edited = True
     original_final = item.final_name
-    result = _make_result(OpsRenameStatus.UNCHANGED, final="img.png")
+    result = _make_result(RenameStatus.UNCHANGED, final="img.png")
 
     apply_cached_result(item, result)
 
-    assert item.status == RenameStatus.UNCHANGED
+    assert item.status == ItemStatus.UNCHANGED
     assert item.status_message == "Already suitable (filename locked by user)"
     assert item.final_name == original_final
 
 
 def should_set_ready_from_cache_for_non_unchanged_not_manually_edited():
     item = _make_item()
-    result = _make_result(OpsRenameStatus.RENAMED, final="new-name.png")
+    result = _make_result(RenameStatus.RENAMED, final="new-name.png")
 
     apply_cached_result(item, result)
 
-    assert item.status == RenameStatus.READY
+    assert item.status == ItemStatus.READY
     assert item.status_message == "Ready (from cache)"
     assert item.final_name == "new-name.png"
 
@@ -203,10 +203,10 @@ def should_set_ready_locked_for_non_unchanged_manually_edited():
     item = _make_item()
     item.manually_edited = True
     original_final = item.final_name
-    result = _make_result(OpsRenameStatus.RENAMED, final="new-name.png")
+    result = _make_result(RenameStatus.RENAMED, final="new-name.png")
 
     apply_cached_result(item, result)
 
-    assert item.status == RenameStatus.READY
+    assert item.status == ItemStatus.READY
     assert item.status_message == "Ready (filename locked by user)"
     assert item.final_name == original_final

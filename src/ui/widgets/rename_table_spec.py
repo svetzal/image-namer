@@ -4,11 +4,11 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from ui.models.ui_models import RenameItem, RenameStatus  # noqa: E402
+from ui.models.ui_models import ItemStatus, RenameItem  # noqa: E402
 from ui.widgets.rename_table import RenameTableManager  # noqa: E402
 
 
-def _item(source: str = "file.png", final: str = "file.png", status: RenameStatus = RenameStatus.QUEUED) -> RenameItem:
+def _item(source: str = "file.png", final: str = "file.png", status: ItemStatus = ItemStatus.QUEUED) -> RenameItem:
     return RenameItem(
         path=Path(f"/tmp/{source}"),
         source_name=source,
@@ -33,7 +33,7 @@ def should_populate_sets_final_name_in_column_zero(qapp):
 def should_update_row_changes_both_columns(qapp):
     mgr = RenameTableManager()
     mgr.populate([_item("a.png", "old.png")])
-    updated = _item("a.png", "new.png", RenameStatus.READY)
+    updated = _item("a.png", "new.png", ItemStatus.READY)
     updated.status_message = "Ready to rename"
     mgr.update_row(0, updated)
     assert mgr._table.item(0, 0).text() == "new.png"

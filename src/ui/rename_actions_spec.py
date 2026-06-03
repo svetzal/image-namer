@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ui.models.ui_models import RenameItem, RenameStatus
+from ui.models.ui_models import ItemStatus, RenameItem
 from ui.rename_actions import perform_batch_rename
 
 
@@ -13,7 +13,7 @@ def _make_item(tmp_path: Path, source: str = "old.png", final: str = "new.png") 
         path=path,
         source_name=source,
         final_name=final,
-        status=RenameStatus.READY,
+        status=ItemStatus.READY,
         status_message="Ready",
     )
 
@@ -34,7 +34,7 @@ def should_rename_item_and_update_status(tmp_path, mocker):
 
     assert result.renamed_count == 1
     assert result.error_count == 0
-    assert item.status == RenameStatus.COMPLETED
+    assert item.status == ItemStatus.COMPLETED
     assert item.source_name == "new.png"
 
 
@@ -55,7 +55,7 @@ def should_record_error_on_rename_failure(tmp_path, mocker):
 
     assert result.renamed_count == 0
     assert result.error_count == 1
-    assert item.status == RenameStatus.ERROR
+    assert item.status == ItemStatus.ERROR
     assert "disk full" in (item.error_message or "")
 
 
