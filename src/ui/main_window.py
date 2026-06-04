@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ui import status_messages as msg
 from ui.models.ui_models import AnalysisStats, RenameItem
 from ui.processing_coordinator import ProcessingCoordinator
 from ui.widgets.bottom_control_panel import BottomControlPanel
@@ -136,7 +137,7 @@ class MainWindow(QMainWindow):
 
         self.table_manager.populate(items)
         self.bottom_panel.set_progress(0, len(items))
-        self.bottom_panel.set_status_text(f"Ready to process {len(items)} images")
+        self.bottom_panel.set_status_text(msg.ready_to_process(len(items)))
         self.bottom_panel.update_rename_button(None, None)
         self.bottom_panel.set_folder_loaded(True)
 
@@ -146,7 +147,7 @@ class MainWindow(QMainWindow):
         )
 
         self.coordinator.start_cache_loader(self.toolbar.provider, self.toolbar.model)
-        self.bottom_panel.set_status_text("Loading cached data...")
+        self.bottom_panel.set_status_text(msg.LOADING_CACHED_DATA)
 
     def _on_cache_item_loaded(self, row: int, item: RenameItem) -> None:
         if row < self.table_manager.rowCount():
@@ -161,7 +162,7 @@ class MainWindow(QMainWindow):
                 f"{cached_count} of {total_count} already in cache", 3000
             )
         else:
-            self.bottom_panel.set_status_text(f"Ready to process {total_count} images")
+            self.bottom_panel.set_status_text(msg.ready_to_process(total_count))
 
     def _on_analysis_progress(self, current: int, total: int) -> None:
         self.bottom_panel.set_progress(current, total)

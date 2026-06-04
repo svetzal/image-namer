@@ -6,6 +6,7 @@ QThread workers so they can be tested without any Qt dependency.
 
 from operations.models import ProcessingResult
 from operations.models import RenameStatus
+from ui import status_messages as msg
 from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
 
 
@@ -36,7 +37,7 @@ def mark_manually_edited(item: RenameItem, stats: AnalysisStats) -> None:
         item: The item to update in-place.
         stats: Cumulative stats to increment.
     """
-    item.update_status(ItemStatus.READY, "Ready (filename locked by user)")
+    item.update_status(ItemStatus.READY, msg.READY_LOCKED)
     stats.renamed += 1
 
 
@@ -65,15 +66,15 @@ def apply_processing_result(
 
     if result.status == RenameStatus.ERROR:
         stats.errors += 1
-        item.update_status(ItemStatus.ERROR, "Error during analysis")
+        item.update_status(ItemStatus.ERROR, msg.ERROR_DURING_ANALYSIS)
     elif result.status == RenameStatus.UNCHANGED:
-        item.update_status(ItemStatus.UNCHANGED, "Current name is already suitable")
+        item.update_status(ItemStatus.UNCHANGED, msg.ALREADY_SUITABLE)
         stats.unchanged += 1
     elif result.status == RenameStatus.COLLISION:
-        item.update_status(ItemStatus.COLLISION, f"Collision resolved: {result.final}")
+        item.update_status(ItemStatus.COLLISION, msg.collision_resolved(result.final))
         stats.renamed += 1
     else:
-        item.update_status(ItemStatus.READY, "Ready to rename")
+        item.update_status(ItemStatus.READY, msg.READY_TO_RENAME)
         stats.renamed += 1
 
 
@@ -94,12 +95,12 @@ def apply_cached_result(item: RenameItem, result: ProcessingResult) -> None:
     if result.status == RenameStatus.UNCHANGED:
         if not item.manually_edited:
             item.final_name = result.final
-            item.update_status(ItemStatus.UNCHANGED, "Already suitable (cached)")
+            item.update_status(ItemStatus.UNCHANGED, msg.ALREADY_SUITABLE_CACHED)
         else:
-            item.update_status(ItemStatus.UNCHANGED, "Already suitable (filename locked by user)")
+            item.update_status(ItemStatus.UNCHANGED, msg.ALREADY_SUITABLE_LOCKED)
     else:
         if not item.manually_edited:
             item.final_name = result.final
-            item.update_status(ItemStatus.READY, "Ready (from cache)")
+            item.update_status(ItemStatus.READY, msg.READY_FROM_CACHE)
         else:
-            item.update_status(ItemStatus.READY, "Ready (filename locked by user)")
+            item.update_status(ItemStatus.READY, msg.READY_LOCKED)

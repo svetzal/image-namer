@@ -4,6 +4,7 @@ from pathlib import Path
 
 from operations.models import ProcessingResult
 from operations.models import RenameStatus
+from ui import status_messages as msg
 from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
 from ui.worker_logic import (
     apply_cached_result,
@@ -74,7 +75,7 @@ def should_set_ready_status_for_manually_edited_item():
     mark_manually_edited(item, stats)
 
     assert item.status == ItemStatus.READY
-    assert item.status_message == "Ready (filename locked by user)"
+    assert item.status_message == msg.READY_LOCKED
 
 
 def should_increment_renamed_for_manually_edited_item():
@@ -169,7 +170,7 @@ def should_set_unchanged_cached_for_unchanged_status_not_manually_edited():
     apply_cached_result(item, result)
 
     assert item.status == ItemStatus.UNCHANGED
-    assert item.status_message == "Already suitable (cached)"
+    assert item.status_message == msg.ALREADY_SUITABLE_CACHED
     assert item.final_name == "img.png"
     assert item.cached is True
     assert item.reasoning == "already good"
@@ -184,7 +185,7 @@ def should_set_unchanged_locked_for_unchanged_status_manually_edited():
     apply_cached_result(item, result)
 
     assert item.status == ItemStatus.UNCHANGED
-    assert item.status_message == "Already suitable (filename locked by user)"
+    assert item.status_message == msg.ALREADY_SUITABLE_LOCKED
     assert item.final_name == original_final
 
 
@@ -195,7 +196,7 @@ def should_set_ready_from_cache_for_non_unchanged_not_manually_edited():
     apply_cached_result(item, result)
 
     assert item.status == ItemStatus.READY
-    assert item.status_message == "Ready (from cache)"
+    assert item.status_message == msg.READY_FROM_CACHE
     assert item.final_name == "new-name.png"
 
 
@@ -208,5 +209,5 @@ def should_set_ready_locked_for_non_unchanged_manually_edited():
     apply_cached_result(item, result)
 
     assert item.status == ItemStatus.READY
-    assert item.status_message == "Ready (filename locked by user)"
+    assert item.status_message == msg.READY_LOCKED
     assert item.final_name == original_final
