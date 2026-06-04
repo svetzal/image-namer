@@ -23,6 +23,7 @@ class FilesystemAnalysisCache:
         image_path: Path,
         filename: str,
     ) -> ImageAnalysis | None:
+        """Delegate to the cache module using the bound provider and model."""
         return load_analysis_from_cache(
             self._cache_dir, image_path, filename, self._provider, self._model
         )
@@ -33,6 +34,7 @@ class FilesystemAnalysisCache:
         filename: str,
         analysis: ImageAnalysis,
     ) -> None:
+        """Delegate to the cache module using the bound provider and model."""
         save_analysis_to_cache(
             self._cache_dir, image_path, filename, self._provider, self._model, analysis
         )
@@ -50,12 +52,15 @@ class MojenticImageAnalyzer:
         path: Path,
         current_name: str,
     ) -> ImageAnalysis:
+        """Invoke the bound analyze function with the bound LLMBroker."""
         return self._analyze_fn(path, current_name, llm=self._llm)
 
 
 class FilesystemRenamer:
+    """Filesystem-backed FileRenamerPort implementation."""
 
     def rename(self, source: Path, destination: Path) -> None:
+        """Rename source to destination using the filesystem."""
         source.rename(destination)
 
 
@@ -63,6 +68,7 @@ class FilesystemMarkdownFiles:
     """Thin I/O wrapper with no business logic."""
 
     def find_markdown_files(self, root: Path, *, recursive: bool) -> list[Path]:
+        """Glob for .md files under root; searches all subdirectories when recursive is True."""
         pattern = "**/*.md" if recursive else "*.md"
         return [p for p in root.glob(pattern) if p.is_file()]
 
@@ -72,6 +78,7 @@ class FilesystemMarkdownFiles:
             return f.read()
 
     def write_markdown_content(self, file_path: Path, content: str) -> None:
+        """Write content atomically via a temp file and os.replace; cleans up the temp file on failure."""
         tmp_path: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(

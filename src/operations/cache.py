@@ -76,6 +76,7 @@ class CacheStore(Generic[T]):
             return None
 
     def save(self, cache_dir: Path, image_path: Path, payload: T, **key_values: str) -> None:
+        """Persist payload to a JSON cache file keyed by image hash and key_values."""
         image_hash = self._hash_fn(image_path)
         key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
         cache_file = cache_dir / f"{key}.json"
@@ -106,6 +107,7 @@ def load_analysis_from_cache(
     provider: str,
     model: str,
 ) -> ImageAnalysis | None:
+    """Return the cached ImageAnalysis for the given image and parameters, or None on miss."""
     return _analysis_store.load(
         cache_dir, image_path, filename=filename, provider=provider, model=model
     )
@@ -119,6 +121,7 @@ def save_analysis_to_cache(
     model: str,
     analysis: ImageAnalysis,
 ) -> None:
+    """Persist an ImageAnalysis to the cache keyed by image, filename, provider, and model."""
     _analysis_store.save(
         cache_dir, image_path, analysis, filename=filename, provider=provider, model=model
     )
