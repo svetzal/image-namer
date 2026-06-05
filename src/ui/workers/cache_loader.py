@@ -25,22 +25,16 @@ class CacheLoaderWorker(QThread):
         self,
         items: list[RenameItem],
         cache: AnalysisCachePort,
-        provider: str,
-        model: str,
     ):
         """Initialize cache loader worker.
 
         Args:
             items: List of RenameItem objects to check cache for.
             cache: Analysis cache port for loading cached results.
-            provider: LLM provider name (for cache keys).
-            model: Model name (for cache keys).
         """
         super().__init__()
         self.items = items
         self._cache = cache
-        self.provider = provider
-        self.model = model
         self._stop_requested = False
 
     def run(self) -> None:

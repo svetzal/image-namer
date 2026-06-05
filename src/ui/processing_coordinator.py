@@ -87,8 +87,6 @@ class ProcessingCoordinator(QObject):
         self._cache_loader = CacheLoaderWorker(
             items=self.rename_items,
             cache=cache,
-            provider=provider,
-            model=model,
         )
         self._cache_loader.item_cache_loaded.connect(self._on_cache_item_loaded)
         self._cache_loader.finished.connect(self._on_cache_loading_finished)
@@ -131,8 +129,6 @@ class ProcessingCoordinator(QObject):
             items=self.rename_items,
             analyzer=pipeline.analyzer,
             cache=pipeline.cache,
-            provider=provider,
-            model=model,
         )
         self._worker.progress_updated.connect(self._on_worker_progress)
         self._worker.item_status_changed.connect(self._on_worker_status_changed)

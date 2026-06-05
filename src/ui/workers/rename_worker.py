@@ -61,8 +61,6 @@ class RenameWorker(QThread):
         items: list[RenameItem],
         analyzer: ImageAnalyzerPort,
         cache: AnalysisCachePort,
-        provider: str,
-        model: str,
     ):
         """Initialize worker.
 
@@ -70,15 +68,11 @@ class RenameWorker(QThread):
             items: List of RenameItem objects to process.
             analyzer: Image analyzer port for LLM-based analysis.
             cache: Analysis cache port for loading/saving results.
-            provider: LLM provider name (for cache keys).
-            model: Model name (for cache keys).
         """
         super().__init__()
         self.items = items
         self._analyzer = analyzer
         self._cache = cache
-        self.provider = provider
-        self.model = model
         self._stop_requested = False
 
     def run(self) -> None:
