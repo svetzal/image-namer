@@ -31,19 +31,17 @@ def find_references(
     - Wiki link: [[image.png]], [[image.png|alias]]
     - Wiki embed: ![[image.png]], ![[image.png|alias]]
     """
-    references = []
     image_name = image_path.name
     patterns = _get_reference_patterns()
 
-    for md_file in markdown_files.find_markdown_files(refs_root, recursive=recursive):
-        content = markdown_files.read_markdown_content(md_file)
-        lines = content.splitlines(keepends=True)
-
-        for line_num, line in enumerate(lines, start=1):
-            refs = _find_references_in_line(line, line_num, md_file, image_path, image_name, patterns)
-            references.extend(refs)
-
-    return references
+    return [
+        ref
+        for md_file in markdown_files.find_markdown_files(refs_root, recursive=recursive)
+        for line_num, line in enumerate(
+            markdown_files.read_markdown_content(md_file).splitlines(keepends=True), start=1
+        )
+        for ref in _find_references_in_line(line, line_num, md_file, image_path, image_name, patterns)
+    ]
 
 
 def _get_reference_patterns() -> dict[str, re.Pattern[str]]:
@@ -55,6 +53,37 @@ def _get_reference_patterns() -> dict[str, re.Pattern[str]]:
     }
 
 
+def _match_to_reference(
+    ref_type: str,
+    match: re.Match[str],
+    md_file: Path,
+    line_num: int,
+    image_path: Path,
+    image_name: str,
+) -> MarkdownReference | None:
+    if ref_type in WIKI_REF_TYPES:
+        ref_name = match.group(1)
+        if names_match(ref_name, image_name):
+            return MarkdownReference(
+                file_path=md_file,
+                line_number=line_num,
+                original_text=match.group(0),
+                image_path=Path(ref_name),
+                ref_type=ref_type,
+            )
+    else:
+        ref_path = Path(match.group(2))
+        if ref_path_matches_image(ref_path, image_path, image_name):
+            return MarkdownReference(
+                file_path=md_file,
+                line_number=line_num,
+                original_text=match.group(0),
+                image_path=ref_path,
+                ref_type=ref_type,
+            )
+    return None
+
+
 def _find_references_in_line(
     line: str,
     line_num: int,
@@ -63,32 +92,12 @@ def _find_references_in_line(
     image_name: str,
     patterns: dict[str, re.Pattern[str]]
 ) -> list[MarkdownReference]:
-    refs = []
-
-    for ref_type, pattern_re in patterns.items():
-        for match in pattern_re.finditer(line):
-            if ref_type in WIKI_REF_TYPES:
-                ref_name = match.group(1)
-                if names_match(ref_name, image_name):
-                    refs.append(MarkdownReference(
-                        file_path=md_file,
-                        line_number=line_num,
-                        original_text=match.group(0),
-                        image_path=Path(ref_name),
-                        ref_type=ref_type
-                    ))
-            else:
-                ref_path = Path(match.group(2))
-                if ref_path_matches_image(ref_path, image_path, image_name):
-                    refs.append(MarkdownReference(
-                        file_path=md_file,
-                        line_number=line_num,
-                        original_text=match.group(0),
-                        image_path=ref_path,
-                        ref_type=ref_type
-                    ))
-
-    return refs
+    candidates = (
+        _match_to_reference(ref_type, match, md_file, line_num, image_path, image_name)
+        for ref_type, pattern_re in patterns.items()
+        for match in pattern_re.finditer(line)
+    )
+    return [ref for ref in candidates if ref is not None]
 
 
 def ref_matches_filename(ref: MarkdownReference, filename: str) -> bool:
