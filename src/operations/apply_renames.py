@@ -1,16 +1,20 @@
 """Apply rename operations from processing results via an injected FileRenamerPort."""
 
+import logging
 from pathlib import Path
 
+from constants import FILESYSTEM_IO_ERRORS
 from operations.batch_references import process_single_file_references
-from operations.models import ProcessingResult, RenameOutcome, RenameStatus
+from operations.models import ProcessingResult, RenameApplicationResult, RenameFailure, RenameOutcome, RenameStatus
 from operations.ports import FileRenamerPort, MarkdownFilePort
+
+logger = logging.getLogger(__name__)
 
 
 def apply_renames(
     results: list[ProcessingResult],
     renamer: FileRenamerPort,
-) -> int:
+) -> RenameApplicationResult:
     """Apply renames for results with RENAMED or COLLISION status.
 
     Only renames files where:
@@ -25,9 +29,16 @@ def apply_renames(
         and result.path
         and result.path.with_name(result.final) != result.path
     ]
+    applied = 0
+    failures: list[RenameFailure] = []
     for src, dst in rename_pairs:
-        renamer.rename(src, dst)
-    return len(rename_pairs)
+        try:
+            renamer.rename(src, dst)
+            applied += 1
+        except FILESYSTEM_IO_ERRORS as e:
+            logger.warning("Failed to rename %s -> %s: %s: %s", src, dst, type(e).__name__, e)
+            failures.append(RenameFailure(source=str(src), destination=str(dst), error=str(e)))
+    return RenameApplicationResult(applied=applied, failures=failures)
 
 
 def apply_rename_with_references(
@@ -48,7 +59,11 @@ def apply_rename_with_references(
         return RenameOutcome(renamed=False, new_path=old_path, references_updated=0)
 
     new_path = old_path.parent / new_name
-    renamer.rename(old_path, new_path)
+    try:
+        renamer.rename(old_path, new_path)
+    except FILESYSTEM_IO_ERRORS as e:
+        logger.warning("Failed to rename %s -> %s: %s: %s", old_path, new_path, type(e).__name__, e)
+        return RenameOutcome(renamed=False, new_path=old_path, references_updated=0)
 
     references_updated = 0
     if markdown_files is not None and search_root is not None:

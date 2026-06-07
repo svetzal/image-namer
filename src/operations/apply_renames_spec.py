@@ -15,9 +15,10 @@ def should_rename_files_with_renamed_status(tmp_path, mock_renamer):
         )
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 1
+    assert result.applied == 1
+    assert result.failures == []
     mock_renamer.rename.assert_called_once_with(img, img.with_name("new.png"))
 
 
@@ -32,9 +33,10 @@ def should_rename_files_with_collision_status(tmp_path, mock_renamer):
         )
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 1
+    assert result.applied == 1
+    assert result.failures == []
     mock_renamer.rename.assert_called_once_with(img, img.with_name("new-2.png"))
 
 
@@ -46,9 +48,10 @@ def should_skip_unchanged_results(mock_renamer):
         )
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 0
+    assert result.applied == 0
+    assert result.failures == []
     mock_renamer.rename.assert_not_called()
 
 
@@ -60,9 +63,10 @@ def should_skip_error_results(mock_renamer):
         )
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 0
+    assert result.applied == 0
+    assert result.failures == []
     mock_renamer.rename.assert_not_called()
 
 
@@ -75,9 +79,10 @@ def should_skip_results_without_path(mock_renamer):
         )
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 0
+    assert result.applied == 0
+    assert result.failures == []
     mock_renamer.rename.assert_not_called()
 
 
@@ -92,9 +97,10 @@ def should_skip_when_final_equals_current_name(tmp_path, mock_renamer):
         )
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 0
+    assert result.applied == 0
+    assert result.failures == []
     mock_renamer.rename.assert_not_called()
 
 
@@ -158,6 +164,65 @@ def should_return_total_renamed_count(tmp_path, mock_renamer):
         ),
     ]
 
-    count = apply_renames(results, mock_renamer)
+    result = apply_renames(results, mock_renamer)
 
-    assert count == 2
+    assert result.applied == 2
+    assert result.failures == []
+
+
+def should_continue_batch_when_one_rename_fails(tmp_path, mock_renamer):
+    img1 = tmp_path / "a.png"
+    img1.write_bytes(b"x")
+    img2 = tmp_path / "b.jpg"
+    img2.write_bytes(b"y")
+
+    results = [
+        ProcessingResult(
+            source="a.png", proposed="first.png", final="first.png",
+            status=RenameStatus.RENAMED, path=img1,
+        ),
+        ProcessingResult(
+            source="b.jpg", proposed="second.jpg", final="second.jpg",
+            status=RenameStatus.RENAMED, path=img2,
+        ),
+    ]
+    mock_renamer.rename.side_effect = [OSError("disk full"), None]
+
+    result = apply_renames(results, mock_renamer)
+
+    assert result.applied == 1
+    assert len(result.failures) == 1
+    assert mock_renamer.rename.call_count == 2
+
+
+def should_record_failure_details(tmp_path, mock_renamer):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"x")
+
+    results = [
+        ProcessingResult(
+            source="a.png", proposed="new.png", final="new.png",
+            status=RenameStatus.RENAMED, path=img,
+        ),
+    ]
+    mock_renamer.rename.side_effect = PermissionError("denied")
+
+    result = apply_renames(results, mock_renamer)
+
+    assert result.applied == 0
+    assert len(result.failures) == 1
+    assert result.failures[0].source == str(img)
+    assert result.failures[0].destination == str(img.with_name("new.png"))
+    assert "denied" in result.failures[0].error
+
+
+def should_return_outcome_not_renamed_when_single_rename_fails(tmp_path, mock_renamer):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    mock_renamer.rename.side_effect = OSError("permission denied")
+
+    outcome = apply_rename_with_references(img, "new.png", None, mock_renamer, None, False)
+
+    assert outcome.renamed is False
+    assert outcome.new_path == img
+    assert outcome.references_updated == 0

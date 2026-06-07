@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Batch rename no longer aborts mid-run on a per-file I/O error (permission denied, locked file, disk full); failures are reported individually while successful renames continue. Single-file rename also reports errors gracefully instead of propagating uncaught exceptions.
+
 ## [2.2.0] - 2026-04-11
 
 ### Added

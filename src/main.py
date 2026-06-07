@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from constants import LLM_OPERATIONAL_ERRORS, SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
+from constants import FILESYSTEM_IO_ERRORS, LLM_OPERATIONAL_ERRORS, SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_renames
 from operations.batch_references import (
@@ -98,13 +98,20 @@ def _handle_reference_updates(
 
 
 def _apply_renames(results: list[ProcessingResult]) -> None:
-    apply_renames(results, FilesystemRenamer())
-    console.print("[green]✓ All renames applied.[/green]")
+    rename_result = apply_renames(results, FilesystemRenamer())
+    if rename_result.failures:
+        for f in rename_result.failures:
+            console.print(f"[red]✗ Failed to rename {f.source}: {f.error}[/red]")
+    if rename_result.applied:
+        console.print(f"[green]✓ {rename_result.applied} rename(s) applied.[/green]")
 
 
 def _apply_single_rename(path: Path, final_name: str) -> None:
     if final_name != path.name:
-        FilesystemRenamer().rename(path, path.with_name(final_name))
+        try:
+            FilesystemRenamer().rename(path, path.with_name(final_name))
+        except FILESYSTEM_IO_ERRORS as e:
+            console.print(f"[red]✗ Failed to rename {path.name}: {e}[/red]")
 
 
 def _process_single_file(path: Path, provider: str, model: str) -> ProcessingResult:

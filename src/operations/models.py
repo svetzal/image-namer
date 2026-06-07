@@ -125,3 +125,20 @@ class CollectedReferences(BaseModel):
 
     references: list[MarkdownReference] = Field(..., description="List of found markdown references")
     rename_map: dict[str, str] = Field(..., description="Mapping of old filenames to new filenames")
+
+
+class RenameFailure(BaseModel):
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str = Field(..., description="Source path of the failed rename")
+    destination: str = Field(..., description="Destination path of the failed rename")
+    error: str = Field(..., description="Error message describing the failure")
+
+
+class RenameApplicationResult(BaseModel):
+
+    model_config = ConfigDict(frozen=True)
+
+    applied: int = Field(..., description="Number of successful renames")
+    failures: list[RenameFailure] = Field(default_factory=list, description="List of failed renames")
