@@ -5,6 +5,7 @@ from pathlib import Path
 
 from mojentic.llm import LLMBroker
 
+from constants import FILESYSTEM_IO_ERRORS
 from operations.analyze_image import analyze_image
 from operations.cache import load_analysis_from_cache, save_analysis_to_cache
 from operations.models import ImageAnalysis
@@ -90,7 +91,7 @@ class FilesystemMarkdownFiles:
                 tmp.flush()
                 os.fsync(tmp.fileno())
             os.replace(tmp_path, file_path)
-        except Exception:
+        except FILESYSTEM_IO_ERRORS:
             if tmp_path is not None and tmp_path.exists():
                 tmp_path.unlink()
             raise
