@@ -1,0 +1,1 @@
+Done. The only available update was a patch bump for `anthropic` (`0.107.0` → `0.107.1`, a transitive dependency pulled in via `mojentic`). All three quality gates — tests, lint, and typecheck — remain clean. The lockfile update has been committed and pushed to `main`.
