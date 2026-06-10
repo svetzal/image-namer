@@ -444,3 +444,46 @@ def should_find_wiki_link_with_unicode_normalized_name(tmp_path, mock_markdown_f
 
     assert len(refs) == 1
     assert refs[0].ref_type == "wiki_link"
+
+
+def should_skip_file_that_raises_oserror_on_read(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "photo.png"
+    md_file = tmp_path / "unreadable.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.side_effect = OSError("boom")
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert refs == []
+
+
+def should_skip_file_with_non_utf8_content(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "photo.png"
+    md_file = tmp_path / "bad_encoding.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.side_effect = UnicodeDecodeError(
+        "utf-8", b"\xff", 0, 1, "invalid start byte"
+    )
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert refs == []
+
+
+def should_scan_remaining_files_when_one_is_unreadable(tmp_path, mock_markdown_files):
+    image_path = tmp_path / "test.png"
+    bad_md = tmp_path / "bad.md"
+    good_md = tmp_path / "good.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [bad_md, good_md]
+    mock_markdown_files.read_markdown_content.side_effect = [
+        OSError("boom"),
+        "![Alt](test.png)\n",
+    ]
+
+    refs = find_references(image_path, tmp_path, mock_markdown_files, recursive=False)
+
+    assert len(refs) == 1
+    assert refs[0].file_path == good_md

@@ -3,6 +3,7 @@ import logging
 import re
 from pathlib import Path
 
+from constants import FILESYSTEM_IO_ERRORS
 from operations.models import MarkdownReference
 from operations.ports import MarkdownFilePort
 from operations.text_utils import (
@@ -37,9 +38,25 @@ def find_references(
     return [
         ref
         for md_file in markdown_files.find_markdown_files(refs_root, recursive=recursive)
-        for line_num, line in enumerate(
-            markdown_files.read_markdown_content(md_file).splitlines(keepends=True), start=1
-        )
+        for ref in _references_in_file(md_file, image_path, image_name, patterns, markdown_files)
+    ]
+
+
+def _references_in_file(
+    md_file: Path,
+    image_path: Path,
+    image_name: str,
+    patterns: dict[str, re.Pattern[str]],
+    markdown_files: MarkdownFilePort,
+) -> list[MarkdownReference]:
+    try:
+        content = markdown_files.read_markdown_content(md_file)
+    except FILESYSTEM_IO_ERRORS as exc:
+        logger.warning("Skipping unreadable markdown file %s: %s", md_file, exc)
+        return []
+    return [
+        ref
+        for line_num, line in enumerate(content.splitlines(keepends=True), start=1)
         for ref in _find_references_in_line(line, line_num, md_file, image_path, image_name, patterns)
     ]
 
