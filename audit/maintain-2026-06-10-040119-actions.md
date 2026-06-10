@@ -1,0 +1,1 @@
+Committed and pushed. The dependency update is complete — `uv.lock` bumped `anthropic` to 0.109.1 and `tqdm` to 4.68.2, with all quality gates green.
