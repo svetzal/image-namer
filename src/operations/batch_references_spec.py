@@ -273,6 +273,22 @@ def should_process_batch_references_applies_when_not_dry_run(tmp_path, mock_mark
     mock_markdown_files.write_markdown_content.assert_called_once()
 
 
+def should_count_distinct_files_when_one_markdown_file_references_two_renamed_images(tmp_path, mock_markdown_files):
+    results = [
+        _make_result(tmp_path, "img1.png", "new1.png", RenameStatus.RENAMED),
+        _make_result(tmp_path, "img2.png", "new2.png", RenameStatus.RENAMED),
+    ]
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![A](img1.png)\n![B](img2.png)\n"
+
+    result = process_batch_references(results, tmp_path, mock_markdown_files, dry_run=False)
+
+    assert result.files_updated == 1
+    assert result.total_references == 2
+
+
 def should_return_batch_result_without_raising_when_write_raises_os_error(tmp_path, mock_markdown_files):
     results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
     md_file = tmp_path / "doc.md"

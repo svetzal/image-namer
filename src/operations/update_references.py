@@ -37,10 +37,14 @@ def update_references(
         for fp in dict.fromkeys(r.file_path for r in references)
     }
 
+    updated = [
+        (fp, _update_file(fp, file_refs, old_name, new_name, markdown_files))
+        for fp, file_refs in refs_by_file.items()
+    ]
     return [
         ReferenceUpdate(file_path=fp, replacement_count=count)
-        for fp, file_refs in refs_by_file.items()
-        if (count := _update_file(fp, file_refs, old_name, new_name, markdown_files)) > 0
+        for fp, count in updated
+        if count > 0
     ]
 
 
@@ -126,14 +130,13 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
 
 def _find_substring_with_different_spaces(haystack: str, needle: str) -> str:
     """Find a substring that matches after Unicode space normalization."""
-    # Normalize the needle for comparison
+    window = len(needle)
     normalized_needle = normalize_spaces(needle)
-
-    return next(
-        (haystack[i:i+len(needle)] for i in range(len(haystack) - len(needle) + 1)
-         if normalize_spaces(haystack[i:i+len(needle)]) == normalized_needle),
-        needle,
-    )
+    for i in range(len(haystack) - window + 1):
+        candidate = haystack[i:i + window]
+        if normalize_spaces(candidate) == normalized_needle:
+            return candidate
+    return needle
 
 
 def _replace_standard_ref(pattern: str, prefix: str, original_text: str, old_name: str, new_name: str) -> str | None:

@@ -1,6 +1,5 @@
 """Batch and single-file markdown reference update orchestration."""
 
-from collections import Counter
 from pathlib import Path
 
 from operations.find_references import find_references, ref_matches_filename
@@ -95,21 +94,11 @@ def process_batch_references(
     if early is not None:
         return early
 
-    all_updates = [
-        u
-        for old_name, new_name in collected.rename_map.items()
-        for u in update_references(
-            [r for r in collected.references if ref_matches_filename(r, old_name)],
-            old_name,
-            new_name,
-            markdown_files,
-        )
-    ]
-    updates_by_file: Counter[Path] = sum(
-        (Counter({u.file_path: u.replacement_count}) for u in all_updates),
-        Counter(),
-    )
+    all_updates = []
+    for old_name, new_name in collected.rename_map.items():
+        matching_refs = [r for r in collected.references if ref_matches_filename(r, old_name)]
+        all_updates.extend(update_references(matching_refs, old_name, new_name, markdown_files))
     return BatchReferenceResult(
-        total_references=sum(updates_by_file.values()),
-        files_updated=len(updates_by_file),
+        total_references=sum(u.replacement_count for u in all_updates),
+        files_updated=len({u.file_path for u in all_updates}),
     )
