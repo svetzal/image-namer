@@ -8,6 +8,7 @@ from operations.models import (
     CollectedReferences,
     MarkdownReference,
     ProcessingResult,
+    ReferenceUpdateFailure,
     RenameStatus,
 )
 from operations.ports import MarkdownFilePort
@@ -62,10 +63,11 @@ def _update_single_file_references(
     early = _count_only_result(refs, dry_run=dry_run)
     if early is not None:
         return early
-    updates = update_references(refs, path.name, final_name, markdown_files)
+    result = update_references(refs, path.name, final_name, markdown_files)
     return BatchReferenceResult(
-        total_references=sum(u.replacement_count for u in updates),
-        files_updated=len(updates),
+        total_references=sum(u.replacement_count for u in result.updates),
+        files_updated=len(result.updates),
+        failures=result.failures,
     )
 
 
@@ -95,10 +97,14 @@ def process_batch_references(
         return early
 
     all_updates = []
+    all_failures: list[ReferenceUpdateFailure] = []
     for old_name, new_name in collected.rename_map.items():
         matching_refs = [r for r in collected.references if ref_matches_filename(r, old_name)]
-        all_updates.extend(update_references(matching_refs, old_name, new_name, markdown_files))
+        result = update_references(matching_refs, old_name, new_name, markdown_files)
+        all_updates.extend(result.updates)
+        all_failures.extend(result.failures)
     return BatchReferenceResult(
         total_references=sum(u.replacement_count for u in all_updates),
         files_updated=len({u.file_path for u in all_updates}),
+        failures=all_failures,
     )

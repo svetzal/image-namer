@@ -1,9 +1,12 @@
 """Tests for display formatting utilities."""
+import io
+
 from rich.console import Console
 from rich.table import Table
 
 from operations.display import display_results_table, print_reference_result, print_statistics
-from operations.models import BatchReferenceResult, ProcessingResult, RenameStatus
+from operations.models import BatchReferenceResult, ProcessingResult, ReferenceUpdateFailure, RenameStatus
+from pathlib import Path
 
 
 def _make_result(
@@ -157,3 +160,22 @@ def should_print_updated_when_not_dry_run(mocker):
     assert "Updated" in output
     assert "5" in output
     assert "3" in output
+
+
+def should_print_failures_when_references_could_not_be_updated():
+    output = io.StringIO()
+    console = Console(file=output, highlight=False)
+    failure = ReferenceUpdateFailure(
+        file_path=Path("/vault/notes.md"),
+        line_number=7,
+        original_text="![Photo](old.png)",
+        reason="reference matched but filename could not be rewritten",
+    )
+    ref_result = BatchReferenceResult(total_references=1, files_updated=1, failures=[failure])
+
+    print_reference_result(console, ref_result, dry_run=False)
+
+    printed = output.getvalue()
+    assert "notes.md" in printed
+    assert "7" in printed
+    assert "could not be updated" in printed

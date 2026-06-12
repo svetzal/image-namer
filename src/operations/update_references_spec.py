@@ -32,11 +32,11 @@ def should_update_standard_image_reference(tmp_path, mock_markdown_files):
     mock_markdown_files.read_markdown_content.return_value = "![Alt text](old.png)\n"
     refs = [_make_ref(md_file, 1, "![Alt text](old.png)", "old.png", "image")]
 
-    updates = update_references(refs, "old.png", "new.png", mock_markdown_files)
+    result = update_references(refs, "old.png", "new.png", mock_markdown_files)
 
-    assert len(updates) == 1
-    assert updates[0].file_path == md_file
-    assert updates[0].replacement_count == 1
+    assert len(result.updates) == 1
+    assert result.updates[0].file_path == md_file
+    assert result.updates[0].replacement_count == 1
     mock_markdown_files.write_markdown_content.assert_called_once_with(md_file, "![Alt text](new.png)\n")
 
 
@@ -139,10 +139,10 @@ def should_update_multiple_references_in_same_file(tmp_path, mock_markdown_files
         _make_ref(md_file, 4, "[Link](old.png)", "old.png", "link"),
     ]
 
-    updates = update_references(refs, "old.png", "new.png", mock_markdown_files)
+    result = update_references(refs, "old.png", "new.png", mock_markdown_files)
 
-    assert len(updates) == 1
-    assert updates[0].replacement_count == 3
+    assert len(result.updates) == 1
+    assert result.updates[0].replacement_count == 3
 
     written_content = mock_markdown_files.write_markdown_content.call_args[0][1]
     assert "![First](new.png)" in written_content
@@ -163,9 +163,9 @@ def should_update_references_in_multiple_files(tmp_path, mock_markdown_files):
         _make_ref(file2, 1, "![[shared.png]]", "shared.png", "wiki_embed"),
     ]
 
-    updates = update_references(refs, "shared.png", "common.png", mock_markdown_files)
+    result = update_references(refs, "shared.png", "common.png", mock_markdown_files)
 
-    assert len(updates) == 2
+    assert len(result.updates) == 2
     mock_markdown_files.write_markdown_content.assert_any_call(file1, "![Image](common.png)\n")
     mock_markdown_files.write_markdown_content.assert_any_call(file2, "![[common.png]]\n")
 
@@ -182,9 +182,9 @@ def should_handle_relative_paths_in_updates(tmp_path, mock_markdown_files):
 
 
 def should_return_empty_list_when_no_references(mock_markdown_files):
-    updates = update_references([], "old.png", "new.png", mock_markdown_files)
+    result = update_references([], "old.png", "new.png", mock_markdown_files)
 
-    assert len(updates) == 0
+    assert len(result.updates) == 0
     mock_markdown_files.read_markdown_content.assert_not_called()
 
 
@@ -245,11 +245,11 @@ def should_report_correct_replacement_counts(tmp_path, mock_markdown_files):
         _make_ref(file2, 1, "![[old.png]]", "old.png", "wiki_embed"),
     ]
 
-    updates = update_references(refs, "old.png", "new.png", mock_markdown_files)
+    result = update_references(refs, "old.png", "new.png", mock_markdown_files)
 
-    assert len(updates) == 2
-    file1_update = next(u for u in updates if u.file_path == file1)
-    file2_update = next(u for u in updates if u.file_path == file2)
+    assert len(result.updates) == 2
+    file1_update = next(u for u in result.updates if u.file_path == file1)
+    file2_update = next(u for u in result.updates if u.file_path == file2)
     assert file1_update.replacement_count == 2
     assert file2_update.replacement_count == 1
 
@@ -266,11 +266,11 @@ def should_update_url_encoded_references(tmp_path, mock_markdown_files):
         "image",
     )]
 
-    updates = update_references(
+    result = update_references(
         refs, "Screenshot 2025-11-02 at 1.00.29 PM.png", "new-name.png", mock_markdown_files
     )
 
-    assert len(updates) == 1
+    assert len(result.updates) == 1
     written_content = mock_markdown_files.write_markdown_content.call_args[0][1]
     assert "new-name.png" in written_content
     assert "Screenshot" not in written_content
@@ -282,9 +282,9 @@ def should_preserve_url_encoding_in_updates(tmp_path, mock_markdown_files):
     mock_markdown_files.read_markdown_content.return_value = "![Image](my%20photo.jpg)\n"
     refs = [_make_ref(md_file, 1, "![Image](my%20photo.jpg)", "my%20photo.jpg", "image")]
 
-    updates = update_references(refs, "my photo.jpg", "renamed-photo.jpg", mock_markdown_files)
+    result = update_references(refs, "my photo.jpg", "renamed-photo.jpg", mock_markdown_files)
 
-    assert len(updates) == 1
+    assert len(result.updates) == 1
     written_content = mock_markdown_files.write_markdown_content.call_args[0][1]
     assert "renamed-photo.jpg" in written_content or "renamed%2Dphoto.jpg" in written_content
 
@@ -352,11 +352,11 @@ def should_return_unchanged_wiki_name_when_no_match():
     assert result == "unrelated.png"
 
 
-def should_log_debug_when_url_decode_fails(mocker):
+def should_log_warning_when_url_decode_fails(mocker):
     from urllib.parse import unquote as real_unquote
 
     actual_logger = _replace_in_path.__globals__["logger"]
-    debug_spy = mocker.spy(actual_logger, "debug")
+    warning_spy = mocker.spy(actual_logger, "warning")
 
     def raising_unquote(s, *a, **kw):
         raise ValueError("decode error")
@@ -368,7 +368,7 @@ def should_log_debug_when_url_decode_fails(mocker):
         _replace_in_path.__globals__["unquote"] = real_unquote
 
     assert "new-name" in result
-    debug_spy.assert_called_once()
+    warning_spy.assert_called_once()
 
 
 def should_return_empty_updates_and_not_raise_when_read_raises_permission_error(tmp_path, mock_markdown_files):
@@ -377,9 +377,9 @@ def should_return_empty_updates_and_not_raise_when_read_raises_permission_error(
 
     mock_markdown_files.read_markdown_content.side_effect = PermissionError("denied")
 
-    updates = update_references([ref], "old.png", "new.png", mock_markdown_files)
+    result = update_references([ref], "old.png", "new.png", mock_markdown_files)
 
-    assert updates == []
+    assert result.updates == []
     mock_markdown_files.write_markdown_content.assert_not_called()
 
 
@@ -390,9 +390,9 @@ def should_return_empty_updates_and_not_raise_when_write_raises_os_error(tmp_pat
     mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
     mock_markdown_files.write_markdown_content.side_effect = OSError("disk full")
 
-    updates = update_references([ref], "old.png", "new.png", mock_markdown_files)
+    result = update_references([ref], "old.png", "new.png", mock_markdown_files)
 
-    assert updates == []
+    assert result.updates == []
 
 
 def should_handle_url_encoded_path_with_unicode_space(tmp_path, mock_markdown_files):
@@ -403,8 +403,39 @@ def should_handle_url_encoded_path_with_unicode_space(tmp_path, mock_markdown_fi
     mock_markdown_files.read_markdown_content.return_value = original
     refs = [_make_ref(md_file, 1, "![One](my%E2%80%AFphoto.png)", "my%E2%80%AFphoto.png", "image")]
 
-    updates = update_references(refs, "my photo.png", "renamed.png", mock_markdown_files)
+    result = update_references(refs, "my photo.png", "renamed.png", mock_markdown_files)
 
-    assert len(updates) == 1
+    assert len(result.updates) == 1
     written = mock_markdown_files.write_markdown_content.call_args[0][1]
     assert "renamed.png" in written
+
+
+def should_report_failure_when_matched_reference_cannot_be_rewritten(tmp_path, mock_markdown_files):
+    md_file = tmp_path / "doc.md"
+    ref = _make_ref(md_file, 5, "![Photo](unrelated-path.png)", "unrelated-path.png", "image")
+
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](unrelated-path.png)\n"
+
+    result = update_references([ref], "old.png", "new.png", mock_markdown_files)
+
+    assert result.updates == []
+    assert len(result.failures) == 1
+    assert result.failures[0].file_path == md_file
+    assert result.failures[0].line_number == 5
+    assert result.failures[0].original_text == "![Photo](unrelated-path.png)"
+
+
+def should_report_failure_for_each_ref_when_io_error_on_write(tmp_path, mock_markdown_files):
+    md_file = tmp_path / "doc.md"
+    ref1 = _make_ref(md_file, 1, "![A](old.png)", "old.png", "image")
+    ref2 = _make_ref(md_file, 2, "![B](old.png)", "old.png", "image")
+
+    mock_markdown_files.read_markdown_content.return_value = "![A](old.png)\n![B](old.png)\n"
+    mock_markdown_files.write_markdown_content.side_effect = OSError("disk full")
+
+    result = update_references([ref1, ref2], "old.png", "new.png", mock_markdown_files)
+
+    assert result.updates == []
+    assert len(result.failures) == 2
+    assert all(f.file_path == md_file for f in result.failures)
+    assert all("OSError" in f.reason for f in result.failures)

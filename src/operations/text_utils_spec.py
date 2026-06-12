@@ -80,16 +80,16 @@ def should_not_match_different_names_via_names_match():
     assert names_match("other.png", "photo.png") is False
 
 
-def should_log_debug_when_path_resolution_raises(tmp_path, mocker):
+def should_log_warning_when_path_resolution_raises(tmp_path, mocker):
     import operations.text_utils as text_utils_module
 
     image_path = tmp_path / "photo.png"
     mock_ref = mocker.MagicMock(spec=Path)
     mock_ref.name = "other.png"
     mock_ref.resolve.side_effect = OSError("permission denied")
-    debug_spy = mocker.spy(text_utils_module.logger, "debug")
+    warning_spy = mocker.spy(text_utils_module.logger, "warning")
 
     result = ref_path_matches_image(mock_ref, image_path, "photo.png")
 
     assert result is False
-    debug_spy.assert_called()
+    warning_spy.assert_called()

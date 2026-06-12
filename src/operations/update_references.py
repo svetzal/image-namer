@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import quote, unquote
 
 from constants import FILESYSTEM_IO_ERRORS
-from operations.models import MarkdownReference, ReferenceUpdate
+from operations.models import MarkdownReference, ReferenceUpdate, ReferenceUpdateFailure, ReferenceUpdateResult
 from operations.ports import MarkdownFilePort
 from operations.text_utils import (
     normalize_spaces,
@@ -23,29 +23,28 @@ def update_references(
     old_name: str,
     new_name: str,
     markdown_files: MarkdownFilePort,
-) -> list[ReferenceUpdate]:
+) -> ReferenceUpdateResult:
     """Update markdown references to reflect a renamed image.
 
     Groups references by file and updates all references in each file.
     Preserves alt text, link text, and Obsidian aliases.
     """
     if not references:
-        return []
+        return ReferenceUpdateResult()
 
     refs_by_file: dict[Path, list[MarkdownReference]] = {
         fp: [r for r in references if r.file_path == fp]
         for fp in dict.fromkeys(r.file_path for r in references)
     }
 
-    updated = [
-        (fp, _update_file(fp, file_refs, old_name, new_name, markdown_files))
-        for fp, file_refs in refs_by_file.items()
-    ]
-    return [
-        ReferenceUpdate(file_path=fp, replacement_count=count)
-        for fp, count in updated
-        if count > 0
-    ]
+    all_updates: list[ReferenceUpdate] = []
+    all_failures: list[ReferenceUpdateFailure] = []
+    for fp, file_refs in refs_by_file.items():
+        count, failures = _update_file(fp, file_refs, old_name, new_name, markdown_files)
+        if count > 0:
+            all_updates.append(ReferenceUpdate(file_path=fp, replacement_count=count))
+        all_failures.extend(failures)
+    return ReferenceUpdateResult(updates=all_updates, failures=all_failures)
 
 
 def _update_file(
@@ -54,11 +53,12 @@ def _update_file(
     old_name: str,
     new_name: str,
     markdown_files: MarkdownFilePort,
-) -> int:
+) -> tuple[int, list[ReferenceUpdateFailure]]:
     try:
         content = markdown_files.read_markdown_content(file_path)
         original_content = content
         replacement_count = 0
+        failures: list[ReferenceUpdateFailure] = []
 
         sorted_refs = sorted(references, key=lambda r: r.line_number)
 
@@ -68,16 +68,38 @@ def _update_file(
                 pattern = re.escape(ref.original_text)
                 content, count = re.subn(pattern, new_text, content, count=1)
                 replacement_count += count
+                if count == 0:
+                    failures.append(ReferenceUpdateFailure(
+                        file_path=file_path,
+                        line_number=ref.line_number,
+                        original_text=ref.original_text,
+                        reason="reference matched but filename could not be rewritten",
+                    ))
+            else:
+                failures.append(ReferenceUpdateFailure(
+                    file_path=file_path,
+                    line_number=ref.line_number,
+                    original_text=ref.original_text,
+                    reason="reference matched but filename could not be rewritten",
+                ))
 
         if content != original_content:
             markdown_files.write_markdown_content(file_path, content)
 
-        return replacement_count
+        return replacement_count, failures
     except FILESYSTEM_IO_ERRORS as e:
         logger.warning(
             "Failed to update references in %s: %s: %s", file_path, type(e).__name__, e
         )
-        return 0
+        return 0, [
+            ReferenceUpdateFailure(
+                file_path=file_path,
+                line_number=ref.line_number,
+                original_text=ref.original_text,
+                reason=f"{type(e).__name__}: {e}",
+            )
+            for ref in references
+        ]
 
 
 def _generate_replacement(
@@ -120,7 +142,7 @@ def _replace_in_path(path_str: str, old_name: str, new_name: str) -> str:
                 )
                 return quote(new_decoded, safe='/')
     except (ValueError, TypeError) as e:
-        logger.debug(
+        logger.warning(
             "URL decoding failed for path %r: %s: %s", path_str, type(e).__name__, e
         )
 

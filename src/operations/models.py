@@ -57,6 +57,22 @@ class ReferenceUpdate(BaseModel):
     replacement_count: int = Field(..., description="Number of replacements made")
 
 
+class ReferenceUpdateFailure(BaseModel):
+
+    model_config = ConfigDict(frozen=True)
+
+    file_path: Path = Field(..., description="Path to the markdown file containing the failed reference")
+    line_number: int = Field(..., description="Line number of the failed reference (1-indexed)")
+    original_text: str = Field(..., description="Original reference text that could not be updated")
+    reason: str = Field(..., description="Reason the reference could not be updated")
+
+
+class ReferenceUpdateResult(BaseModel):
+
+    updates: list[ReferenceUpdate] = Field(default_factory=list, description="Successful reference updates")
+    failures: list[ReferenceUpdateFailure] = Field(default_factory=list, description="Failed reference updates")
+
+
 class RenameStatus(StrEnum):
     """Status of a single image processing operation."""
 
@@ -85,6 +101,9 @@ class BatchReferenceResult(BaseModel):
 
     total_references: int = Field(..., description="Total reference replacements")
     files_updated: int = Field(..., description="Number of markdown files updated")
+    failures: list[ReferenceUpdateFailure] = Field(
+        default_factory=list, description="References that could not be updated"
+    )
 
 
 class RenameOutcome(BaseModel):

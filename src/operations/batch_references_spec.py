@@ -300,3 +300,18 @@ def should_return_batch_result_without_raising_when_write_raises_os_error(tmp_pa
     result = process_batch_references(results, tmp_path, mock_markdown_files, dry_run=False)
 
     assert isinstance(result, BatchReferenceResult)
+
+
+def should_propagate_reference_update_failures(tmp_path, mock_markdown_files):
+    results = [_make_result(tmp_path, "old.png", "new.png", RenameStatus.RENAMED)]
+    md_file = tmp_path / "doc.md"
+
+    mock_markdown_files.find_markdown_files.return_value = [md_file]
+    mock_markdown_files.read_markdown_content.return_value = "![Photo](old.png)\n"
+    mock_markdown_files.write_markdown_content.side_effect = OSError("disk full")
+
+    result = process_batch_references(results, tmp_path, mock_markdown_files, dry_run=False)
+
+    assert len(result.failures) == 1
+    assert result.failures[0].file_path == md_file
+    assert "OSError" in result.failures[0].reason

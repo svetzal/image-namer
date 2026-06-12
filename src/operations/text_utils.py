@@ -77,7 +77,7 @@ def ref_path_matches_image(ref_path: Path, image_path: Path, image_name: str) ->
         if ref_path.resolve() == image_path.resolve():
             return True
     except (OSError, ValueError) as e:
-        logger.debug(
+        logger.warning(
             "Path resolution failed (ref=%s, image=%s): %s: %s",
             ref_path, image_path, type(e).__name__, e,
         )
@@ -87,7 +87,7 @@ def ref_path_matches_image(ref_path: Path, image_path: Path, image_name: str) ->
         if decoded_path.resolve() == image_path.resolve():
             return True
     except (OSError, ValueError, TypeError) as e:
-        logger.debug(
+        logger.warning(
             "URL-decoded path resolution failed (ref=%s, image=%s): %s: %s",
             ref_path, image_path, type(e).__name__, e,
         )

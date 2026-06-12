@@ -53,3 +53,7 @@ def print_reference_result(console: Console, ref_result: BatchReferenceResult, d
             f"[green]Updated {ref_result.total_references} reference(s) "
             f"across {ref_result.files_updated} file(s)[/green]"
         )
+    if ref_result.failures:
+        console.print(f"[red]⚠ {len(ref_result.failures)} reference(s) could not be updated:[/red]")
+        for failure in ref_result.failures:
+            console.print(f"[red]  {failure.file_path}:{failure.line_number} — {failure.reason}[/red]")
