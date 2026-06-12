@@ -1,0 +1,1 @@
+Committed and pushed. The lockfile is updated with the two patch-level bumps (`filelock`, `openai`), all gates are green, and the changes are on `origin/main`.
