@@ -113,6 +113,9 @@ class RenameOutcome(BaseModel):
     renamed: bool = Field(..., description="Whether the file was renamed")
     new_path: Path = Field(..., description="Final path of the file (unchanged if not renamed)")
     references_updated: int = Field(..., description="Number of markdown references updated")
+    reference_result: BatchReferenceResult | None = Field(
+        default=None, description="Detailed reference update result, if references were processed"
+    )
 
 
 class AnalysisResult(BaseModel):

@@ -65,6 +65,7 @@ def apply_rename_with_references(
         logger.warning("Failed to rename %s -> %s: %s: %s", old_path, new_path, type(e).__name__, e)
         return RenameOutcome(renamed=False, new_path=old_path, references_updated=0)
 
+    ref_result = None
     references_updated = 0
     if markdown_files is not None and search_root is not None:
         ref_result = process_single_file_references(
@@ -72,4 +73,6 @@ def apply_rename_with_references(
         )
         references_updated = ref_result.total_references
 
-    return RenameOutcome(renamed=True, new_path=new_path, references_updated=references_updated)
+    return RenameOutcome(
+        renamed=True, new_path=new_path, references_updated=references_updated, reference_result=ref_result
+    )

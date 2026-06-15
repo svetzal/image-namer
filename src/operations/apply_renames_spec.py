@@ -133,6 +133,7 @@ def should_return_zero_references_when_markdown_port_is_none(tmp_path, mock_rena
     outcome = apply_rename_with_references(img, "new.png", None, mock_renamer, None, False)
 
     assert outcome.references_updated == 0
+    assert outcome.reference_result is None
 
 
 def should_find_and_update_references_when_markdown_port_provided(tmp_path, mock_renamer, mock_markdown_files):
@@ -145,6 +146,8 @@ def should_find_and_update_references_when_markdown_port_provided(tmp_path, mock
     outcome = apply_rename_with_references(img, "new.png", tmp_path, mock_renamer, mock_markdown_files, True)
 
     assert outcome.references_updated == 1
+    assert outcome.reference_result is not None
+    assert outcome.reference_result.total_references == 1
 
 
 def should_return_total_renamed_count(tmp_path, mock_renamer):

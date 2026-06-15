@@ -15,7 +15,7 @@ from rich.panel import Panel
 
 from constants import FILESYSTEM_IO_ERRORS, LLM_OPERATIONAL_ERRORS, SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
-from operations.apply_renames import apply_renames
+from operations.apply_renames import apply_rename_with_references, apply_renames
 from operations.batch_references import (
     process_batch_references,
     process_single_file_references,
@@ -169,10 +169,18 @@ def file(
         )
     )
 
-    _handle_reference_updates(path, result.final, update_refs, refs_root, dry_run)
-
-    if not dry_run:
-        _apply_single_rename(path, result.final)
+    if dry_run:
+        _handle_reference_updates(path, result.final, update_refs, refs_root, dry_run=True)
+    else:
+        search_root = (refs_root or path.parent) if update_refs else None
+        markdown_files = FilesystemMarkdownFiles() if update_refs else None
+        outcome = apply_rename_with_references(
+            path, result.final, search_root, FilesystemRenamer(), markdown_files, recursive=False
+        )
+        if result.final != path.name and not outcome.renamed:
+            console.print(f"[red]✗ Failed to rename {path.name}[/red]")
+        if outcome.reference_result is not None:
+            print_reference_result(console, outcome.reference_result, dry_run=False)
 
 
 @app.command()
