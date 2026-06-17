@@ -15,11 +15,8 @@ from rich.panel import Panel
 
 from constants import FILESYSTEM_IO_ERRORS, LLM_OPERATIONAL_ERRORS, SUPPORTED_EXTENSIONS, SUPPORTED_PROVIDERS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
-from operations.apply_renames import apply_rename_with_references, apply_renames
-from operations.batch_references import (
-    process_batch_references,
-    process_single_file_references,
-)
+from operations.apply_renames import apply_renames, apply_single_file_command
+from operations.batch_references import process_batch_references
 from operations.display import display_results_table, print_reference_result, print_statistics
 from operations.gateway_factory import MissingApiKeyError
 from operations.models import (
@@ -80,21 +77,6 @@ def _build_pipeline_or_exit(provider: str, model: str, cache_root: Path) -> Anal
     except LLM_OPERATIONAL_ERRORS as e:
         console.print(f"[red]Error setting up LLM: {e}[/red]")
         raise typer.Exit(1)
-
-
-def _handle_reference_updates(
-    path: Path,
-    final_name: str,
-    update_refs: bool,
-    refs_root: Path | None,
-    dry_run: bool
-) -> None:
-    if not update_refs or final_name == path.name:
-        return
-    search_root = refs_root if refs_root else path.parent
-    markdown_files = FilesystemMarkdownFiles()
-    ref_result = process_single_file_references(path, final_name, search_root, markdown_files, dry_run=dry_run)
-    print_reference_result(console, ref_result, dry_run)
 
 
 def _apply_renames(results: list[ProcessingResult]) -> None:
@@ -169,18 +151,14 @@ def file(
         )
     )
 
-    if dry_run:
-        _handle_reference_updates(path, result.final, update_refs, refs_root, dry_run=True)
-    else:
-        search_root = (refs_root or path.parent) if update_refs else None
-        markdown_files = FilesystemMarkdownFiles() if update_refs else None
-        outcome = apply_rename_with_references(
-            path, result.final, search_root, FilesystemRenamer(), markdown_files, recursive=False
-        )
-        if result.final != path.name and not outcome.renamed:
-            console.print(f"[red]✗ Failed to rename {path.name}[/red]")
-        if outcome.reference_result is not None:
-            print_reference_result(console, outcome.reference_result, dry_run=False)
+    outcome = apply_single_file_command(
+        path, result.final, update_refs, refs_root, dry_run,
+        FilesystemRenamer(), FilesystemMarkdownFiles()
+    )
+    if outcome.rename_failed:
+        console.print(f"[red]✗ Failed to rename {path.name}[/red]")
+    if outcome.reference_result is not None:
+        print_reference_result(console, outcome.reference_result, dry_run=dry_run)
 
 
 @app.command()

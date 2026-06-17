@@ -164,3 +164,14 @@ class RenameApplicationResult(BaseModel):
 
     applied: int = Field(..., description="Number of successful renames")
     failures: list[RenameFailure] = Field(default_factory=list, description="List of failed renames")
+
+
+class FileCommandOutcome(BaseModel):
+
+    model_config = ConfigDict(frozen=True)
+
+    renamed: bool = Field(default=False, description="Whether the file was renamed")
+    rename_failed: bool = Field(default=False, description="Whether the rename was attempted but failed")
+    reference_result: BatchReferenceResult | None = Field(
+        default=None, description="Detailed reference update result, if references were processed"
+    )

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from operations.apply_renames import apply_rename_with_references, apply_renames
+from operations.apply_renames import apply_rename_with_references, apply_renames, apply_single_file_command
 from operations.models import ProcessingResult, RenameStatus
 
 
@@ -229,3 +229,91 @@ def should_return_outcome_not_renamed_when_single_rename_fails(tmp_path, mock_re
     assert outcome.renamed is False
     assert outcome.new_path == img
     assert outcome.references_updated == 0
+
+
+# apply_single_file_command tests
+
+def should_perform_dry_run_reference_preview_when_name_changes(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    md = tmp_path / "notes.md"
+    mock_markdown_files.find_markdown_files.return_value = [md]
+    mock_markdown_files.read_markdown_content.return_value = "![alt](old.png)"
+
+    result = apply_single_file_command(img, "new.png", True, None, True, mock_renamer, mock_markdown_files)
+
+    assert result.renamed is False
+    assert result.rename_failed is False
+    assert result.reference_result is not None
+    mock_renamer.rename.assert_not_called()
+
+
+def should_return_default_outcome_when_dry_run_and_no_update_refs(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+
+    result = apply_single_file_command(img, "new.png", False, None, True, mock_renamer, mock_markdown_files)
+
+    assert result.renamed is False
+    assert result.rename_failed is False
+    assert result.reference_result is None
+    mock_renamer.rename.assert_not_called()
+    mock_markdown_files.find_markdown_files.assert_not_called()
+
+
+def should_return_default_outcome_when_dry_run_and_name_unchanged(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "same.png"
+    img.write_bytes(b"x")
+
+    result = apply_single_file_command(img, "same.png", True, None, True, mock_renamer, mock_markdown_files)
+
+    assert result.renamed is False
+    assert result.rename_failed is False
+    assert result.reference_result is None
+    mock_renamer.rename.assert_not_called()
+    mock_markdown_files.find_markdown_files.assert_not_called()
+
+
+def should_rename_and_return_renamed_true_on_apply(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+
+    result = apply_single_file_command(img, "new.png", False, None, False, mock_renamer, mock_markdown_files)
+
+    assert result.renamed is True
+    assert result.rename_failed is False
+    mock_renamer.rename.assert_called_once()
+
+
+def should_set_rename_failed_when_renamer_raises(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    mock_renamer.rename.side_effect = OSError("disk full")
+
+    result = apply_single_file_command(img, "new.png", False, None, False, mock_renamer, mock_markdown_files)
+
+    assert result.renamed is False
+    assert result.rename_failed is True
+
+
+def should_not_set_rename_failed_when_name_already_matches(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "same.png"
+    img.write_bytes(b"x")
+
+    result = apply_single_file_command(img, "same.png", False, None, False, mock_renamer, mock_markdown_files)
+
+    assert result.rename_failed is False
+    mock_renamer.rename.assert_not_called()
+
+
+def should_propagate_reference_result_on_apply_with_update_refs(tmp_path, mock_renamer, mock_markdown_files):
+    img = tmp_path / "old.png"
+    img.write_bytes(b"x")
+    md = tmp_path / "notes.md"
+    mock_markdown_files.find_markdown_files.return_value = [md]
+    mock_markdown_files.read_markdown_content.return_value = "![alt](old.png)"
+
+    result = apply_single_file_command(img, "new.png", True, None, False, mock_renamer, mock_markdown_files)
+
+    assert result.renamed is True
+    assert result.reference_result is not None
