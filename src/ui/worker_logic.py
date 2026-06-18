@@ -64,17 +64,19 @@ def apply_processing_result(
     if result.cached:
         stats.cached += 1
 
+    ui_status = map_ops_status_to_ui(result.status)
+
     if result.status == RenameStatus.ERROR:
         stats.errors += 1
-        item.update_status(ItemStatus.ERROR, msg.ERROR_DURING_ANALYSIS)
+        item.update_status(ui_status, msg.ERROR_DURING_ANALYSIS)
     elif result.status == RenameStatus.UNCHANGED:
-        item.update_status(ItemStatus.UNCHANGED, msg.ALREADY_SUITABLE)
+        item.update_status(ui_status, msg.ALREADY_SUITABLE)
         stats.unchanged += 1
     elif result.status == RenameStatus.COLLISION:
-        item.update_status(ItemStatus.COLLISION, msg.collision_resolved(result.final))
+        item.update_status(ui_status, msg.collision_resolved(result.final))
         stats.renamed += 1
     else:
-        item.update_status(ItemStatus.READY, msg.READY_TO_RENAME)
+        item.update_status(ui_status, msg.READY_TO_RENAME)
         stats.renamed += 1
 
 

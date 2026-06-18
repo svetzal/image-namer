@@ -23,6 +23,7 @@ from operations.models import (
     ProcessingResult,
     RenameStatus,
 )
+from operations.rename_status_display import RENAME_STATUS_PRESENTATION
 from operations.pipeline_factory import AnalysisPipeline, build_analysis_pipeline
 from operations.process_folder import process_folder
 from operations.process_image import process_single_image
@@ -131,13 +132,7 @@ def file(
     """Rename a single file based on its visual contents."""
     result = _process_single_file(path, provider, model)
 
-    status_labels = {
-        RenameStatus.UNCHANGED: "unchanged",
-        RenameStatus.RENAMED: "proposed",
-        RenameStatus.COLLISION: "collision-resolved",
-        RenameStatus.ERROR: "error",
-    }
-    mode_label = status_labels[result.status]
+    mode_label = RENAME_STATUS_PRESENTATION[result.status].cli_label
 
     console.print(
         Panel.fit(

@@ -3,8 +3,9 @@
 from rich.console import Console
 from rich.table import Table
 
-from operations.models import BatchReferenceResult, ProcessingResult, RenameStatus
+from operations.models import BatchReferenceResult, ProcessingResult
 from operations.process_folder import compute_statistics
+from operations.rename_status_display import RENAME_STATUS_PRESENTATION
 
 
 def display_results_table(console: Console, results: list[ProcessingResult], dry_run: bool) -> None:
@@ -15,15 +16,8 @@ def display_results_table(console: Console, results: list[ProcessingResult], dry
     table.add_column("Final", style="green")
     table.add_column("Status", style="cyan")
 
-    status_display_map = {
-        RenameStatus.RENAMED: "✓ rename",
-        RenameStatus.UNCHANGED: "= unchanged",
-        RenameStatus.COLLISION: "⚠ collision",
-        RenameStatus.ERROR: "✗ error",
-    }
-
     for result in results:
-        status_display = status_display_map.get(result.status, result.status.value)
+        status_display = RENAME_STATUS_PRESENTATION[result.status].table_label
         table.add_row(result.source, result.proposed, result.final, status_display)
 
     console.print(table)

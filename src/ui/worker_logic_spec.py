@@ -44,6 +44,11 @@ def _make_result(
 # map_ops_status_to_ui
 # ---------------------------------------------------------------------------
 
+def should_map_every_rename_status_to_ui():
+    for status in RenameStatus:
+        map_ops_status_to_ui(status)
+
+
 def should_map_renamed_to_ready():
     assert map_ops_status_to_ui(RenameStatus.RENAMED) == ItemStatus.READY
 
