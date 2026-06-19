@@ -108,14 +108,22 @@ def should_return_unchanged_status_on_cache_miss_with_suitable_analysis(tmp_imag
     assert result.status == RenameStatus.UNCHANGED
 
 
-def should_return_error_when_analyze_raises(tmp_image_path, mock_cache, mock_analyzer):
+def should_return_error_when_analyze_raises_operational_error(tmp_image_path, mock_cache, mock_analyzer):
     mock_cache.load.return_value = None
-    mock_analyzer.analyze.side_effect = RuntimeError("LLM failed")
+    mock_analyzer.analyze.side_effect = ConnectionError("LLM unavailable")
 
     result = process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
 
     assert result.status == RenameStatus.ERROR
     assert result.proposed == "ERROR"
+
+
+def should_propagate_unexpected_programmer_error(tmp_image_path, mock_cache, mock_analyzer):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.side_effect = ValueError("bug")
+
+    with pytest.raises(ValueError):
+        process_single_image(tmp_image_path, mock_analyzer, mock_cache, set())
 
 
 def should_return_error_status_on_connection_error(tmp_image_path, mock_cache, mock_analyzer):

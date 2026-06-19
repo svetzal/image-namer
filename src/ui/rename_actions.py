@@ -66,7 +66,7 @@ def rename_single_item(
         item.source_name = new_name
         item.path = old_path.parent / new_name
         return RenameResult(success=True, references_updated=refs_updated)
-    except (OSError, PermissionError) as e:
+    except OSError as e:
         item.status = ItemStatus.ERROR
         item.status_message = f"Rename failed: {e}"
         item.error_message = str(e)

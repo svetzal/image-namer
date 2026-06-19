@@ -384,7 +384,7 @@ class MainWindow(QMainWindow):
                 self.status_bar.showMessage("Cache cleared", 3000)
                 if self.coordinator.current_folder:
                     self._on_refresh_clicked()
-            except (OSError, PermissionError) as e:
+            except OSError as e:
                 QMessageBox.critical(self, "Error", f"Failed to clear cache: {e}")
 
     def _confirm_batch_rename(self, count: int, update_refs: bool) -> bool:
