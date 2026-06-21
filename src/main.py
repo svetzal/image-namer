@@ -68,6 +68,24 @@ def _validate_provider(provider: str) -> None:
         raise typer.Exit(2)
 
 
+def _prepare_cache_root_or_exit(root: Path) -> Path:
+    """Ensure cache layout exists, exiting cleanly on filesystem failure."""
+    try:
+        return ensure_cache_layout(root)
+    except FILESYSTEM_IO_ERRORS as e:
+        console.print(f"[red]Failed to prepare cache directory: {e}[/red]")
+        raise typer.Exit(1)
+
+
+def _collect_images_or_exit(path: Path, recursive: bool) -> list[Path]:
+    """Collect image files, exiting cleanly on filesystem failure."""
+    try:
+        return collect_image_files(path, recursive)
+    except FILESYSTEM_IO_ERRORS as e:
+        console.print(f"[red]Failed to scan directory {path}: {e}[/red]")
+        raise typer.Exit(1)
+
+
 def _build_pipeline_or_exit(provider: str, model: str, cache_root: Path) -> AnalysisPipeline:
     """Build analysis pipeline, exiting with an error message on failure."""
     try:
@@ -101,7 +119,7 @@ def _process_single_file(path: Path, provider: str, model: str) -> ProcessingRes
     _validate_file_type(path)
     _validate_provider(provider)
 
-    cache_root = ensure_cache_layout(Path.cwd())
+    cache_root = _prepare_cache_root_or_exit(Path.cwd())
     pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
     result = process_single_image(path, pipeline.analyzer, pipeline.cache, set())
@@ -178,14 +196,14 @@ def folder(
     """Rename all images in a directory based on their visual contents."""
     _validate_provider(provider)
 
-    image_files = collect_image_files(path, recursive)
+    image_files = _collect_images_or_exit(path, recursive)
     if not image_files:
         console.print(f"[yellow]No supported image files found in {path}[/yellow]")
         raise typer.Exit(0)
 
     console.print(f"[dim]Found {len(image_files)} image(s) to process...[/dim]")
 
-    cache_root = ensure_cache_layout(Path.cwd())
+    cache_root = _prepare_cache_root_or_exit(Path.cwd())
     pipeline = _build_pipeline_or_exit(provider, model, cache_root)
 
     results = process_folder(image_files, pipeline.analyzer, pipeline.cache)

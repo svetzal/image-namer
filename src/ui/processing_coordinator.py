@@ -9,7 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from operations.adapters import FilesystemAnalysisCache
-from constants import LLM_OPERATIONAL_ERRORS
+from constants import FILESYSTEM_IO_ERRORS, LLM_OPERATIONAL_ERRORS
 from operations.gateway_factory import MissingApiKeyError
 from operations.pipeline_factory import build_analysis_pipeline
 from ui.models.ui_models import AnalysisStats, BatchRenameResult, ItemStatus, RenameItem, RenameResult
@@ -52,7 +52,11 @@ class ProcessingCoordinator(QObject):
 
         Emits folder_scanned with an empty list when no images are found.
         """
-        image_files = collect_image_files(folder, recursive)
+        try:
+            image_files = collect_image_files(folder, recursive)
+        except FILESYSTEM_IO_ERRORS as e:
+            self.error_occurred.emit(-1, str(e))
+            return
 
         if not image_files:
             self.folder_scanned.emit([])
@@ -80,7 +84,11 @@ class ProcessingCoordinator(QObject):
         if not self.rename_items or not self.current_folder:
             return
 
-        cache_root = ensure_cache_layout(self.current_folder)
+        try:
+            cache_root = ensure_cache_layout(self.current_folder)
+        except FILESYSTEM_IO_ERRORS as e:
+            self.error_occurred.emit(-1, str(e))
+            return
         cache = FilesystemAnalysisCache(
             cache_root / "cache" / "unified", provider=provider, model=model
         )
@@ -112,9 +120,13 @@ class ProcessingCoordinator(QObject):
         if not self.rename_items:
             return
 
-        cache_root = ensure_cache_layout(
-            self.current_folder if self.current_folder else Path.cwd()
-        )
+        try:
+            cache_root = ensure_cache_layout(
+                self.current_folder if self.current_folder else Path.cwd()
+            )
+        except FILESYSTEM_IO_ERRORS as e:
+            self.error_occurred.emit(-1, str(e))
+            return
 
         try:
             pipeline = build_analysis_pipeline(provider, model, cache_root)

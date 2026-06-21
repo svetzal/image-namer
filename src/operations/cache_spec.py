@@ -219,6 +219,27 @@ def should_log_debug_when_cache_file_is_corrupted(store, cache_dir, image_path, 
     assert any("test-image.png" in r.getMessage() for r in caplog.records)
 
 
+def should_warn_and_not_raise_when_hash_raises_oserror(cache_dir, image_path, caplog):
+    def failing_hash(_: object) -> str:
+        raise OSError("disk error")
+
+    failing_store = CacheStore(
+        entry_type=AnalysisCacheEntry,
+        payload_field="analysis",
+        key_fields=("filename", "provider", "model"),
+        hash_fn=failing_hash,
+    )
+    analysis = make_analysis(stem="test-name")
+
+    with caplog.at_level(logging.WARNING, logger="operations.cache"):
+        failing_store.save(
+            cache_dir, image_path, analysis,
+            filename="test-image.png", provider="ollama", model="gemma3:27b",
+        )
+
+    assert any("Cache save failed" in r.getMessage() for r in caplog.records)
+
+
 def should_round_trip_analysis_cache(tmp_path):
     cache_dir = tmp_path / "cache" / "unified"
     image_path = tmp_path / "test.png"

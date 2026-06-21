@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from constants import LLM_OPERATIONAL_ERRORS
+from constants import FILESYSTEM_IO_ERRORS, LLM_OPERATIONAL_ERRORS
 from operations.models import AnalysisResult, ImageAnalysis, ProcessingResult, ProposedName, RenameStatus, ResolvedName
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort, ProgressCallback
 from utils.fs import next_available_name
@@ -32,7 +32,10 @@ def get_or_generate_analysis(
     if progress is not None:
         progress.on_cache_miss(img_path)
     analysis = analyzer.analyze(img_path, current_name)
-    cache.save(img_path, current_name, analysis)
+    try:
+        cache.save(img_path, current_name, analysis)
+    except FILESYSTEM_IO_ERRORS as e:
+        logger.warning("Cache save failed (image=%s): %s: %s", img_path.name, type(e).__name__, e)
     if progress is not None:
         progress.on_analysis_complete(img_path, analysis)
     return AnalysisResult(analysis=analysis, cached=False)

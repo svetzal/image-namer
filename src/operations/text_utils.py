@@ -48,8 +48,10 @@ def normalized_name_equals(a: str, b: str) -> bool:
             return True
         if normalize_spaces(decoded_a) == normalize_spaces(b):
             return True
-    except (ValueError, TypeError):
-        pass
+    except (ValueError, TypeError) as e:
+        logger.debug(
+            "Name normalization failed (a=%r, b=%r): %s: %s", a, b, type(e).__name__, e
+        )
     return False
 
 

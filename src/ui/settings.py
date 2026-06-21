@@ -1,8 +1,11 @@
 """User settings persistence for Image Namer UI."""
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 
 def get_settings_path() -> Path:
@@ -28,8 +31,8 @@ def load_settings() -> dict[str, Any]:
     try:
         with open(settings_path, 'r', encoding='utf-8') as f:
             return cast(dict[str, Any], json.load(f))
-    except (json.JSONDecodeError, OSError):
-        # If settings file is corrupted, return empty dict
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to load settings from %s: %s: %s", settings_path, type(e).__name__, e)
         return {}
 
 
@@ -44,9 +47,8 @@ def save_settings(settings: dict[str, Any]) -> None:
     try:
         with open(settings_path, 'w', encoding='utf-8') as f:
             json.dump(settings, f, indent=2)
-    except OSError:
-        # Silently fail if we can't write settings
-        pass
+    except OSError as e:
+        logger.warning("Failed to save settings to %s: %s: %s", settings_path, type(e).__name__, e)
 
 
 def get_setting(key: str, default: Any = None) -> Any:

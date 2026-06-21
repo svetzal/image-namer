@@ -46,6 +46,22 @@ def should_scan_folder_emits_folder_scanned_signal(tmp_path, qapp, mocker):
     assert len(received[0]) == 1
 
 
+def should_scan_folder_emits_error_when_collect_raises_oserror(tmp_path, qapp, mocker):
+    mocker.patch(
+        "ui.processing_coordinator.collect_image_files",
+        side_effect=OSError("permission denied"),
+    )
+
+    coord = ProcessingCoordinator()
+    errors: list[tuple[int, str]] = []
+    coord.error_occurred.connect(lambda row, msg: errors.append((row, msg)))
+
+    coord.scan_folder(tmp_path, recursive=False)
+
+    assert len(errors) == 1
+    assert errors[0][0] == -1
+
+
 def should_scan_folder_emits_empty_list_when_no_images(tmp_path, qapp, mocker):
     mocker.patch("ui.processing_coordinator.collect_image_files", return_value=[])
 
@@ -60,8 +76,48 @@ def should_scan_folder_emits_empty_list_when_no_images(tmp_path, qapp, mocker):
 
 
 # ------------------------------------------------------------------
+# start_cache_loader
+# ------------------------------------------------------------------
+
+def should_start_cache_loader_emits_error_when_ensure_cache_raises_oserror(tmp_path, qapp, mocker):
+    mocker.patch(
+        "ui.processing_coordinator.ensure_cache_layout",
+        side_effect=OSError("read-only filesystem"),
+    )
+
+    coord = ProcessingCoordinator()
+    coord.rename_items = [_make_item(tmp_path)]
+    coord.current_folder = tmp_path
+    errors: list[tuple[int, str]] = []
+    coord.error_occurred.connect(lambda row, msg: errors.append((row, msg)))
+
+    coord.start_cache_loader("ollama", "gemma3:27b")
+
+    assert len(errors) == 1
+    assert errors[0][0] == -1
+
+
+# ------------------------------------------------------------------
 # start_analysis
 # ------------------------------------------------------------------
+
+def should_start_analysis_emits_error_when_ensure_cache_raises_oserror(tmp_path, qapp, mocker):
+    mocker.patch(
+        "ui.processing_coordinator.ensure_cache_layout",
+        side_effect=OSError("read-only filesystem"),
+    )
+
+    coord = ProcessingCoordinator()
+    coord.rename_items = [_make_item(tmp_path)]
+    coord.current_folder = tmp_path
+    errors: list[tuple[int, str]] = []
+    coord.error_occurred.connect(lambda row, msg: errors.append((row, msg)))
+
+    coord.start_analysis("ollama", "gemma3:27b")
+
+    assert len(errors) == 1
+    assert errors[0][0] == -1
+
 
 def should_start_analysis_emits_error_when_api_key_missing(tmp_path, qapp, mocker):
     from operations.gateway_factory import MissingApiKeyError

@@ -7,7 +7,7 @@ from typing import Callable, Generic, TypeVar, cast
 
 from pydantic import BaseModel, Field
 
-from constants import RUBRIC_VERSION
+from constants import FILESYSTEM_IO_ERRORS, RUBRIC_VERSION
 from operations.models import ImageAnalysis
 from utils.fs import sha256_file
 
@@ -77,20 +77,26 @@ class CacheStore(Generic[T]):
 
     def save(self, cache_dir: Path, image_path: Path, payload: T, **key_values: str) -> None:
         """Persist payload to a JSON cache file keyed by image hash and key_values."""
-        image_hash = self._hash_fn(image_path)
-        key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
-        cache_file = cache_dir / f"{key}.json"
-        entry = self._entry_type(
-            image_hash=image_hash,
-            rubric_version=RUBRIC_VERSION,
-            **{self._payload_field: payload},
-            **key_values,
-        )
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text(
-            entry.model_dump_json(indent=2) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            image_hash = self._hash_fn(image_path)
+            key = build_cache_key(image_hash, *(key_values[f] for f in self._key_fields))
+            cache_file = cache_dir / f"{key}.json"
+            entry = self._entry_type(
+                image_hash=image_hash,
+                rubric_version=RUBRIC_VERSION,
+                **{self._payload_field: payload},
+                **key_values,
+            )
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(
+                entry.model_dump_json(indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except FILESYSTEM_IO_ERRORS as e:
+            logger.warning(
+                "Cache save failed (image=%s): %s: %s",
+                image_path, type(e).__name__, e,
+            )
 
 
 _analysis_store: CacheStore[ImageAnalysis] = CacheStore(

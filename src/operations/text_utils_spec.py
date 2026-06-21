@@ -80,6 +80,17 @@ def should_not_match_different_names_via_names_match():
     assert names_match("other.png", "photo.png") is False
 
 
+def should_log_debug_when_unquote_raises_and_return_false(mocker, caplog):
+    import logging
+    mocker.patch("operations.text_utils.unquote", side_effect=ValueError("bad encoding"))
+
+    with caplog.at_level(logging.DEBUG, logger="operations.text_utils"):
+        result = normalized_name_equals("foo%ZZbar.png", "foo bar.png")
+
+    assert result is False
+    assert any("Name normalization failed" in r.getMessage() for r in caplog.records)
+
+
 def should_log_warning_when_path_resolution_raises(tmp_path, mocker):
     import operations.text_utils as text_utils_module
 
