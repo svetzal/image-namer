@@ -3,6 +3,8 @@ from pathlib import Path
 
 from operations.models import MarkdownReference
 from operations.update_references import (
+    REASON_NO_REWRITE,
+    REASON_TEXT_NOT_FOUND,
     _find_substring_with_different_spaces,
     _generate_replacement,
     _replace_in_path,
@@ -423,6 +425,20 @@ def should_report_failure_when_matched_reference_cannot_be_rewritten(tmp_path, m
     assert result.failures[0].file_path == md_file
     assert result.failures[0].line_number == 5
     assert result.failures[0].original_text == "![Photo](unrelated-path.png)"
+    assert result.failures[0].reason == REASON_NO_REWRITE
+
+
+def should_report_text_not_found_failure_when_original_text_absent_from_content(tmp_path, mock_markdown_files):
+    md_file = tmp_path / "doc.md"
+    ref = _make_ref(md_file, 1, "![Photo](old.png)", "old.png", "image")
+
+    mock_markdown_files.read_markdown_content.return_value = "content that does not contain the reference\n"
+
+    result = update_references([ref], "old.png", "new.png", mock_markdown_files)
+
+    assert result.updates == []
+    assert len(result.failures) == 1
+    assert result.failures[0].reason == REASON_TEXT_NOT_FOUND
 
 
 def should_report_failure_for_each_ref_when_io_error_on_write(tmp_path, mock_markdown_files):

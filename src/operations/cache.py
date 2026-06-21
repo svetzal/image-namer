@@ -69,7 +69,7 @@ class CacheStore(Generic[T]):
                 return None
             return cast(T, getattr(entry, self._payload_field))
         except (OSError, json.JSONDecodeError, ValueError) as e:
-            logger.debug(
+            logger.warning(
                 "Cache load failed (image=%s, cache_file=%s): %s: %s",
                 image_path, cache_file, type(e).__name__, e,
             )

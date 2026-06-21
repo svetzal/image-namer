@@ -17,6 +17,9 @@ from operations.text_utils import (
 
 logger = logging.getLogger(__name__)
 
+REASON_NO_REWRITE = "no rewrite produced for reference (unknown ref type or filename not found in path)"
+REASON_TEXT_NOT_FOUND = "reference text not found in file content (already updated or stale)"
+
 
 def update_references(
     references: list[MarkdownReference],
@@ -73,14 +76,14 @@ def _update_file(
                         file_path=file_path,
                         line_number=ref.line_number,
                         original_text=ref.original_text,
-                        reason="reference matched but filename could not be rewritten",
+                        reason=REASON_TEXT_NOT_FOUND,
                     ))
             else:
                 failures.append(ReferenceUpdateFailure(
                     file_path=file_path,
                     line_number=ref.line_number,
                     original_text=ref.original_text,
-                    reason="reference matched but filename could not be rewritten",
+                    reason=REASON_NO_REWRITE,
                 ))
 
         if content != original_content:

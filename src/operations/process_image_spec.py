@@ -129,6 +129,17 @@ def should_not_return_error_when_cache_save_raises_oserror(tmp_image_path, mock_
     assert result.proposed == "new-name.png"
 
 
+def should_signal_persisted_false_when_cache_save_raises_oserror(tmp_image_path, mock_cache, mock_analyzer):
+    mock_cache.load.return_value = None
+    mock_analyzer.analyze.return_value = make_analysis(suitable=False, stem="new-name")
+    mock_cache.save.side_effect = OSError("disk full")
+
+    result = get_or_generate_analysis(tmp_image_path, tmp_image_path.name, mock_analyzer, mock_cache)
+
+    assert result.persisted is False
+    assert result.cached is False
+
+
 def should_propagate_unexpected_programmer_error(tmp_image_path, mock_cache, mock_analyzer):
     mock_cache.load.return_value = None
     mock_analyzer.analyze.side_effect = ValueError("bug")

@@ -32,13 +32,15 @@ def get_or_generate_analysis(
     if progress is not None:
         progress.on_cache_miss(img_path)
     analysis = analyzer.analyze(img_path, current_name)
+    persisted = True
     try:
         cache.save(img_path, current_name, analysis)
     except FILESYSTEM_IO_ERRORS as e:
         logger.warning("Cache save failed (image=%s): %s: %s", img_path.name, type(e).__name__, e)
+        persisted = False
     if progress is not None:
         progress.on_analysis_complete(img_path, analysis)
-    return AnalysisResult(analysis=analysis, cached=False)
+    return AnalysisResult(analysis=analysis, cached=False, persisted=persisted)
 
 
 def resolve_final_name(

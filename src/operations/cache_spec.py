@@ -203,12 +203,12 @@ def should_overwrite_existing_cache_entry(store, cache_dir, image_path):
     assert loaded.proposed_name.stem == "second-name"
 
 
-def should_log_debug_when_cache_file_is_corrupted(store, cache_dir, image_path, caplog):
+def should_log_warning_when_cache_file_is_corrupted(store, cache_dir, image_path, caplog):
     cache_dir.mkdir(parents=True)
     key = build_cache_key("abc123", "test-image.png", "ollama", "gemma3:27b")
     (cache_dir / f"{key}.json").write_text("invalid json {{{", encoding="utf-8")
 
-    with caplog.at_level(logging.DEBUG, logger="operations.cache"):
+    with caplog.at_level(logging.WARNING, logger="operations.cache"):
         result = store.load(
             cache_dir, image_path,
             filename="test-image.png", provider="ollama", model="gemma3:27b",
@@ -217,6 +217,26 @@ def should_log_debug_when_cache_file_is_corrupted(store, cache_dir, image_path, 
     assert result is None
     assert any("JSONDecodeError" in r.getMessage() for r in caplog.records)
     assert any("test-image.png" in r.getMessage() for r in caplog.records)
+
+
+def should_log_warning_when_cache_file_read_raises_oserror(store, cache_dir, image_path, caplog):
+    cache_dir.mkdir(parents=True)
+    key = build_cache_key("abc123", "test-image.png", "ollama", "gemma3:27b")
+    cache_file = cache_dir / f"{key}.json"
+    cache_file.write_text("{}", encoding="utf-8")
+    cache_file.chmod(0o000)
+
+    try:
+        with caplog.at_level(logging.WARNING, logger="operations.cache"):
+            result = store.load(
+                cache_dir, image_path,
+                filename="test-image.png", provider="ollama", model="gemma3:27b",
+            )
+
+        assert result is None
+        assert any("Cache load failed" in r.getMessage() for r in caplog.records)
+    finally:
+        cache_file.chmod(0o644)
 
 
 def should_warn_and_not_raise_when_hash_raises_oserror(cache_dir, image_path, caplog):

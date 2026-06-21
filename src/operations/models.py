@@ -123,6 +123,7 @@ class AnalysisResult(BaseModel):
 
     analysis: ImageAnalysis = Field(..., description="The image analysis result")
     cached: bool = Field(..., description="Whether the result came from cache")
+    persisted: bool = Field(default=True, description="Whether the analysis was successfully written to cache")
 
 
 class ResolvedName(BaseModel):

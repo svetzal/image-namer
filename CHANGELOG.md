@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Batch rename no longer aborts mid-run on a per-file I/O error (permission denied, locked file, disk full); failures are reported individually while successful renames continue. Single-file rename also reports errors gracefully instead of propagating uncaught exceptions.
+- Distinct markdown-reference update failure modes now report distinct reasons: `REASON_NO_REWRITE` when no replacement text could be generated (unknown ref type or filename not found in path), and `REASON_TEXT_NOT_FOUND` when the original reference text was absent from the file content (already updated or stale).
+- Cache-save failures are now signaled to callers via `AnalysisResult.persisted` (`False` when the write failed) instead of being silently swallowed after a log warning.
+- Cache-load I/O failures (`OSError`, `JSONDecodeError`, `ValueError`) are now logged at `WARNING` level, consistent with cache-save, find-references, and update-references failures.
 
 ## [2.2.0] - 2026-04-11
 
