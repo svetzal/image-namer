@@ -61,7 +61,7 @@ class MetadataPanel(QWidget):
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(3, 1)
 
-    def update(self, item: RenameItem) -> None:
+    def update_item(self, item: RenameItem) -> None:
         """Populate all fields from a RenameItem.
 
         Args:

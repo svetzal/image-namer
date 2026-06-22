@@ -25,7 +25,7 @@ This file provides unified guidance for all AI coding assistants working with th
   - Typer: CLI argument processing
   - Rich: Terminal UI
   - Pydantic: Data models and validation
-  - PySide6: GUI framework (optional)
+  - PySide6: GUI framework (included in dev dependencies; runtime installs use `--extra gui`)
   - pytest, pytest-cov, pytest-mock: Testing
   - flake8, flake8-pyproject: Linting
   - uv: Dependency management
@@ -130,10 +130,11 @@ Recommended: use **uv** (fast Python package manager). CI uses uv as well.
 # Install uv: https://docs.astral.sh/uv/
 
 # Install all dependencies (creates .venv automatically, uses lockfile)
+# PySide6 is included in the dev group so GUI tests run automatically.
 uv sync
 
-# Include optional GUI extras
-uv sync --extra gui
+# Runtime installs (no dev dependencies) with GUI support
+uv sync --extra gui --no-dev
 ```
 
 ## Branching & Workflow

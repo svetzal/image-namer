@@ -34,6 +34,12 @@ def should_expose_update_refs_property_matching_checkbox(qapp):
 
 def should_emit_provider_changed_signal(qapp):
     toolbar = ProviderToolbar()
+    # Reset to a known starting provider (without emitting signals) so the
+    # subsequent change to "openai" always triggers currentTextChanged.
+    toolbar._provider_combo.blockSignals(True)
+    toolbar._provider_combo.setCurrentText("ollama")
+    toolbar._provider_combo.blockSignals(False)
+
     received: list[str] = []
     toolbar.provider_changed.connect(received.append)
 

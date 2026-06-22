@@ -9,6 +9,7 @@ import pytest
 pytest.importorskip("PySide6")
 
 from ui.main_window import MainWindow  # noqa: E402
+from ui.models.ui_models import AnalysisStats  # noqa: E402
 
 
 def should_set_folder_loaded_state_when_coordinator_scans_successfully(qapp, mocker):
@@ -46,8 +47,8 @@ def should_enter_processing_state_on_preview_clicked(qapp, mocker):
 
     window.bottom_panel.preview_clicked.emit()
 
-    assert not window.bottom_panel._preview_btn.isVisible()
-    assert window.bottom_panel._stop_btn.isVisible()
+    assert window.bottom_panel._preview_btn.isHidden()
+    assert not window.bottom_panel._stop_btn.isHidden()
     assert window.bottom_panel._stop_btn.isEnabled()
 
 
@@ -57,14 +58,14 @@ def should_restore_idle_state_when_analysis_finishes(qapp, mocker):
 
     # Put window into processing mode first
     window.bottom_panel.preview_clicked.emit()
-    assert not window.bottom_panel._preview_btn.isVisible()
+    assert window.bottom_panel._preview_btn.isHidden()
 
     # Simulate analysis completion with renamed items
-    window.coordinator.analysis_finished.emit({"renamed": 2, "unchanged": 0, "cached": 0, "errors": 0})
+    window.coordinator.analysis_finished.emit(AnalysisStats(renamed=2, unchanged=0, cached=0, errors=0))
 
-    assert window.bottom_panel._preview_btn.isVisible()
+    assert not window.bottom_panel._preview_btn.isHidden()
     assert window.bottom_panel._preview_btn.isEnabled()
-    assert not window.bottom_panel._stop_btn.isVisible()
+    assert window.bottom_panel._stop_btn.isHidden()
     assert window.bottom_panel._apply_btn.isEnabled()
 
 
@@ -78,5 +79,5 @@ def should_restore_idle_state_on_coordinator_setup_error(qapp, mocker):
     # Simulate a setup error (row == -1)
     window.coordinator.error_occurred.emit(-1, "missing API key")
 
-    assert window.bottom_panel._preview_btn.isVisible()
-    assert not window.bottom_panel._stop_btn.isVisible()
+    assert not window.bottom_panel._preview_btn.isHidden()
+    assert window.bottom_panel._stop_btn.isHidden()

@@ -22,35 +22,35 @@ def _make_item(**kwargs) -> RenameItem:
 def should_update_populates_source_label(qapp):
     panel = MetadataPanel()
     item = _make_item(source_name="my-photo.jpg", final_name="my-photo.jpg")
-    panel.update(item)
+    panel.update_item(item)
     assert panel._meta_source.text() == "my-photo.jpg"
 
 
 def should_update_shows_suitable_yes_when_unchanged(qapp):
     panel = MetadataPanel()
     item = _make_item(status=ItemStatus.UNCHANGED)
-    panel.update(item)
+    panel.update_item(item)
     assert "Yes" in panel._meta_suitable.text()
 
 
 def should_update_shows_suitable_no_when_ready(qapp):
     panel = MetadataPanel()
     item = _make_item(status=ItemStatus.READY)
-    panel.update(item)
+    panel.update_item(item)
     assert panel._meta_suitable.text() == "No"
 
 
 def should_update_shows_cached_indicator(qapp):
     panel = MetadataPanel()
     item = _make_item(cached=True)
-    panel.update(item)
+    panel.update_item(item)
     assert "Yes" in panel._meta_cached.text()
 
 
 def should_clear_resets_all_labels_to_none(qapp):
     panel = MetadataPanel()
     item = _make_item(source_name="foo.jpg", final_name="foo.jpg")
-    panel.update(item)
+    panel.update_item(item)
     panel.clear()
     for label in (
         panel._meta_source,

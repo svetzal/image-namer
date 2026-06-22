@@ -238,7 +238,7 @@ class MainWindow(QMainWindow):
 
         item = self.coordinator.rename_items[row]
         self.preview_panel.set_filename_label(f"Selected: {item.source_name}")
-        self.metadata_panel.update(item)
+        self.metadata_panel.update_item(item)
         self.preview_panel.show_image(item.path)
         self.bottom_panel.update_rename_button(item.source_name, item.final_name)
 
@@ -338,7 +338,7 @@ class MainWindow(QMainWindow):
 
         if result.success:
             self.preview_panel.set_filename_label(f"Selected: {item.source_name}")
-            self.metadata_panel.update(item)
+            self.metadata_panel.update_item(item)
             self.preview_panel.show_image(item.path)
             refs_updated = result.references_updated
             msg = "Renamed 1 file"
