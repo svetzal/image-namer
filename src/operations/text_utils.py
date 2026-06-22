@@ -4,7 +4,12 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
+from constants import FILESYSTEM_IO_ERRORS
+
 logger = logging.getLogger(__name__)
+
+_PATH_RESOLVE_ERRORS: tuple[type[Exception], ...] = (*FILESYSTEM_IO_ERRORS, ValueError)
+_URL_RESOLVE_ERRORS: tuple[type[Exception], ...] = (*FILESYSTEM_IO_ERRORS, ValueError, TypeError)
 
 STANDARD_IMAGE_PATTERN = r'!\[([^\]]*)\]\(([^)]+)\)'
 STANDARD_LINK_PATTERN = r'\[([^\]]+)\]\(([^)]+)\)'
@@ -78,7 +83,7 @@ def ref_path_matches_image(ref_path: Path, image_path: Path, image_name: str) ->
     try:
         if ref_path.resolve() == image_path.resolve():
             return True
-    except (OSError, ValueError) as e:
+    except _PATH_RESOLVE_ERRORS as e:
         logger.warning(
             "Path resolution failed (ref=%s, image=%s): %s: %s",
             ref_path, image_path, type(e).__name__, e,
@@ -88,7 +93,7 @@ def ref_path_matches_image(ref_path: Path, image_path: Path, image_name: str) ->
         decoded_path = Path(unquote(str(ref_path)))
         if decoded_path.resolve() == image_path.resolve():
             return True
-    except (OSError, ValueError, TypeError) as e:
+    except _URL_RESOLVE_ERRORS as e:
         logger.warning(
             "URL-decoded path resolution failed (ref=%s, image=%s): %s: %s",
             ref_path, image_path, type(e).__name__, e,

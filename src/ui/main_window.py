@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from constants import FILESYSTEM_IO_ERRORS
 from ui import status_messages as msg
 from ui.models.ui_models import AnalysisStats, RenameItem
 from ui.processing_coordinator import ProcessingCoordinator
@@ -384,7 +385,7 @@ class MainWindow(QMainWindow):
                 self.status_bar.showMessage("Cache cleared", 3000)
                 if self.coordinator.current_folder:
                     self._on_refresh_clicked()
-            except OSError as e:
+            except FILESYSTEM_IO_ERRORS as e:
                 QMessageBox.critical(self, "Error", f"Failed to clear cache: {e}")
 
     def _confirm_batch_rename(self, count: int, update_refs: bool) -> bool:

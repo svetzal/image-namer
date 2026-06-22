@@ -6,6 +6,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QResizeEvent
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
+from constants import FILESYSTEM_IO_ERRORS
+
+_PREVIEW_ERRORS: tuple[type[Exception], ...] = (*FILESYSTEM_IO_ERRORS, ValueError)
+
 
 class ResizableImageLabel(QLabel):
     """QLabel subclass that rescales its owning panel on resize."""
@@ -68,7 +72,7 @@ class ImagePreviewPanel(QWidget):
                 return
             self.current_pixmap = pixmap
             self._rescale_current_image()
-        except (OSError, ValueError) as e:
+        except _PREVIEW_ERRORS as e:
             self._image_label.setText(f"Error loading image:\n{e}")
             self.current_pixmap = None
 

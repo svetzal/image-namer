@@ -5,7 +5,11 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
+from constants import FILESYSTEM_IO_ERRORS
+
 logger = logging.getLogger(__name__)
+
+_SETTINGS_LOAD_ERRORS: tuple[type[Exception], ...] = (*FILESYSTEM_IO_ERRORS, json.JSONDecodeError)
 
 
 def get_settings_path() -> Path:
@@ -31,7 +35,7 @@ def load_settings() -> dict[str, Any]:
     try:
         with open(settings_path, 'r', encoding='utf-8') as f:
             return cast(dict[str, Any], json.load(f))
-    except (json.JSONDecodeError, OSError) as e:
+    except _SETTINGS_LOAD_ERRORS as e:
         logger.warning("Failed to load settings from %s: %s: %s", settings_path, type(e).__name__, e)
         return {}
 
@@ -47,7 +51,7 @@ def save_settings(settings: dict[str, Any]) -> None:
     try:
         with open(settings_path, 'w', encoding='utf-8') as f:
             json.dump(settings, f, indent=2)
-    except OSError as e:
+    except FILESYSTEM_IO_ERRORS as e:
         logger.warning("Failed to save settings to %s: %s: %s", settings_path, type(e).__name__, e)
 
 

@@ -6,6 +6,7 @@ operations-layer calls, making the delegation testable without Qt.
 
 from pathlib import Path
 
+from constants import FILESYSTEM_IO_ERRORS
 from operations.adapters import FilesystemMarkdownFiles, FilesystemRenamer
 from operations.apply_renames import apply_rename_with_references
 from ui.models.ui_models import BatchRenameResult, ItemStatus, RenameItem, RenameResult
@@ -66,7 +67,7 @@ def rename_single_item(
         item.source_name = new_name
         item.path = old_path.parent / new_name
         return RenameResult(success=True, references_updated=refs_updated)
-    except OSError as e:
+    except FILESYSTEM_IO_ERRORS as e:
         item.status = ItemStatus.ERROR
         item.status_message = f"Rename failed: {e}"
         item.error_message = str(e)

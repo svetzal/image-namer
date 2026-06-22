@@ -13,6 +13,8 @@ from utils.fs import sha256_file
 
 logger = logging.getLogger(__name__)
 
+_CACHE_LOAD_ERRORS: tuple[type[Exception], ...] = (*FILESYSTEM_IO_ERRORS, json.JSONDecodeError, ValueError)
+
 
 class BaseCacheEntry(BaseModel):
 
@@ -68,7 +70,7 @@ class CacheStore(Generic[T]):
             if not all(getattr(entry, f) == key_values[f] for f in self._key_fields):
                 return None
             return cast(T, getattr(entry, self._payload_field))
-        except (OSError, json.JSONDecodeError, ValueError) as e:
+        except _CACHE_LOAD_ERRORS as e:
             logger.warning(
                 "Cache load failed (image=%s, cache_file=%s): %s: %s",
                 image_path, cache_file, type(e).__name__, e,
