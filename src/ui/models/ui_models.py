@@ -114,3 +114,17 @@ class RenameResult(BaseModel):
     success: bool = Field(..., description="Whether the rename succeeded")
     error_message: str = Field(default="", description="Error or sentinel ('no_change') when not successful")
     references_updated: int = Field(default=0, description="Number of markdown references updated")
+
+
+class CacheClearTarget(BaseModel):
+    """Resolved cache directory and presence flag."""
+
+    cache_dir: Path
+    exists: bool
+
+
+class CacheClearResult(BaseModel):
+    """Outcome of a cache-clear operation."""
+
+    success: bool
+    error_message: str | None = None

@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -9,6 +10,7 @@ from constants import FILESYSTEM_IO_ERRORS
 from operations.analyze_image import analyze_image
 from operations.cache import load_analysis_from_cache, save_analysis_to_cache
 from operations.models import ImageAnalysis
+from utils.fs import ensure_cache_layout
 
 
 class FilesystemAnalysisCache:
@@ -63,6 +65,26 @@ class FilesystemRenamer:
     def rename(self, source: Path, destination: Path) -> None:
         """Rename source to destination using the filesystem."""
         source.rename(destination)
+
+
+class FilesystemCacheClearer:
+    """Filesystem-backed CacheClearerPort implementation."""
+
+    def ensure_layout(self, root: Path) -> Path:
+        """Delegate to ensure_cache_layout and return the cache root."""
+        return ensure_cache_layout(root)
+
+    def cache_exists(self, cache_dir: Path) -> bool:
+        """Return True if the cache directory exists on disk."""
+        return cache_dir.exists()
+
+    def clear(self, cache_dir: Path) -> None:
+        """Delete the cache tree and recreate an empty directory."""
+        try:
+            shutil.rmtree(cache_dir)
+            cache_dir.mkdir(parents=True)
+        except FILESYSTEM_IO_ERRORS:
+            raise
 
 
 class FilesystemMarkdownFiles:

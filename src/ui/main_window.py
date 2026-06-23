@@ -1,7 +1,5 @@
 """Main window for Image Namer UI."""
 
-import os
-import shutil
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
@@ -16,8 +14,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from constants import FILESYSTEM_IO_ERRORS
+from operations.adapters import FilesystemCacheClearer
 from ui import status_messages as msg
+from ui.cache_actions import clear_cache, resolve_cache_target
 from ui.models.ui_models import AnalysisStats, RenameItem
 from ui.processing_coordinator import ProcessingCoordinator
 from ui.widgets.bottom_control_panel import BottomControlPanel
@@ -25,7 +24,6 @@ from ui.widgets.image_preview_panel import ImagePreviewPanel
 from ui.widgets.metadata_panel import MetadataPanel
 from ui.widgets.provider_toolbar import ProviderToolbar
 from ui.widgets.rename_table import RenameTableManager
-from utils.fs import ensure_cache_layout
 
 
 class MainWindow(QMainWindow):
@@ -352,14 +350,10 @@ class MainWindow(QMainWindow):
             self.bottom_panel.update_rename_button(item.source_name, item.final_name)
 
     def _on_clear_cache(self) -> None:
-        cache_root = ensure_cache_layout(
-            self.coordinator.current_folder
-            if self.coordinator.current_folder
-            else Path.cwd()
-        )
-        cache_dir = cache_root / "cache"
+        clearer = FilesystemCacheClearer()
+        target = resolve_cache_target(self.coordinator.current_folder, clearer)
 
-        if not cache_dir.exists():
+        if not target.exists:
             QMessageBox.information(
                 self, "No Cache Found", "No cache directory found for this location."
             )
@@ -368,7 +362,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self,
             "Clear Cache",
-            f"This will delete all cached LLM results in:\n{cache_dir}\n\n"
+            f"This will delete all cached LLM results in:\n{target.cache_dir}\n\n"
             "This includes:\n"
             "- Unified analysis cache (current format)\n"
             "- Legacy assessment and naming caches (old format)\n\n"
@@ -378,15 +372,14 @@ class MainWindow(QMainWindow):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            try:
-                shutil.rmtree(cache_dir)
-                cache_dir.mkdir(parents=True)
+            result = clear_cache(target.cache_dir, clearer)
+            if result.success:
                 QMessageBox.information(self, "Cache Cleared", "Cache cleared successfully!")
                 self.status_bar.showMessage("Cache cleared", 3000)
                 if self.coordinator.current_folder:
                     self._on_refresh_clicked()
-            except FILESYSTEM_IO_ERRORS as e:
-                QMessageBox.critical(self, "Error", f"Failed to clear cache: {e}")
+            else:
+                QMessageBox.critical(self, "Error", f"Failed to clear cache: {result.error_message}")
 
     def _confirm_batch_rename(self, count: int, update_refs: bool) -> bool:
         """Returns True if the user confirms the batch rename."""

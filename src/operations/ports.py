@@ -56,6 +56,21 @@ class MarkdownFilePort(Protocol):
         ...
 
 
+class CacheClearerPort(Protocol):
+
+    def ensure_layout(self, root: Path) -> Path:
+        """Ensure cache directory structure exists and return the cache root."""
+        ...
+
+    def cache_exists(self, cache_dir: Path) -> bool:
+        """Return True if the cache directory exists."""
+        ...
+
+    def clear(self, cache_dir: Path) -> None:
+        """Delete and recreate the cache directory."""
+        ...
+
+
 class ProgressCallback(Protocol):
 
     def on_cache_hit(self, path: Path, analysis: ImageAnalysis) -> None:
