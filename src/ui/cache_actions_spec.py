@@ -1,6 +1,5 @@
 """Tests for cache_actions orchestration functions."""
 
-from pathlib import Path
 from unittest.mock import Mock
 
 from operations.ports import CacheClearerPort

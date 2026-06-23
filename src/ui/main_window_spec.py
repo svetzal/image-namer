@@ -30,8 +30,6 @@ def should_set_folder_loaded_state_when_coordinator_scans_successfully(qapp, moc
     ]
     # Stub out start_cache_loader so it doesn't try to touch the filesystem
     mocker.patch.object(window.coordinator, "start_cache_loader")
-    # Patch ensure_cache_layout to avoid filesystem side-effects
-    mocker.patch("ui.main_window.ensure_cache_layout")
 
     window.coordinator.current_folder = Path("/tmp")
     window.coordinator.folder_scanned.emit(items)

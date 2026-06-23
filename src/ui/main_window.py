@@ -1,5 +1,6 @@
 """Main window for Image Namer UI."""
 
+import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
