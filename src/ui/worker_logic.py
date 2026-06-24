@@ -8,6 +8,7 @@ from operations.models import ProcessingResult
 from operations.models import RenameStatus
 from ui import status_messages as msg
 from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
+from ui.rename_status_ui import RENAME_STATUS_UI
 
 
 def map_ops_status_to_ui(status: RenameStatus) -> ItemStatus:
@@ -19,13 +20,7 @@ def map_ops_status_to_ui(status: RenameStatus) -> ItemStatus:
     Returns:
         The corresponding UI status value.
     """
-    mapping: dict[RenameStatus, ItemStatus] = {
-        RenameStatus.RENAMED: ItemStatus.READY,
-        RenameStatus.UNCHANGED: ItemStatus.UNCHANGED,
-        RenameStatus.COLLISION: ItemStatus.COLLISION,
-        RenameStatus.ERROR: ItemStatus.ERROR,
-    }
-    return mapping[status]
+    return RENAME_STATUS_UI[status].ui_status
 
 
 def mark_manually_edited(item: RenameItem, stats: AnalysisStats) -> None:
@@ -64,20 +59,9 @@ def apply_processing_result(
     if result.cached:
         stats.cached += 1
 
-    ui_status = map_ops_status_to_ui(result.status)
-
-    if result.status == RenameStatus.ERROR:
-        stats.errors += 1
-        item.update_status(ui_status, msg.ERROR_DURING_ANALYSIS)
-    elif result.status == RenameStatus.UNCHANGED:
-        item.update_status(ui_status, msg.ALREADY_SUITABLE)
-        stats.unchanged += 1
-    elif result.status == RenameStatus.COLLISION:
-        item.update_status(ui_status, msg.collision_resolved(result.final))
-        stats.renamed += 1
-    else:
-        item.update_status(ui_status, msg.READY_TO_RENAME)
-        stats.renamed += 1
+    info = RENAME_STATUS_UI[result.status]
+    item.update_status(info.ui_status, info.fresh_message(result.final))
+    setattr(stats, info.stat_field, getattr(stats, info.stat_field) + 1)
 
 
 def apply_cached_result(item: RenameItem, result: ProcessingResult) -> None:
@@ -94,15 +78,17 @@ def apply_cached_result(item: RenameItem, result: ProcessingResult) -> None:
     item.proposed_name = result.proposed
     item.cached = True
 
+    info = RENAME_STATUS_UI[result.status]
+
     if result.status == RenameStatus.UNCHANGED:
         if not item.manually_edited:
             item.final_name = result.final
-            item.update_status(ItemStatus.UNCHANGED, msg.ALREADY_SUITABLE_CACHED)
+            item.update_status(info.ui_status, info.cached_message)
         else:
-            item.update_status(ItemStatus.UNCHANGED, msg.ALREADY_SUITABLE_LOCKED)
+            item.update_status(info.ui_status, info.locked_message)
     else:
         if not item.manually_edited:
             item.final_name = result.final
-            item.update_status(ItemStatus.READY, msg.READY_FROM_CACHE)
+            item.update_status(info.ui_status, info.cached_message)
         else:
-            item.update_status(ItemStatus.READY, msg.READY_LOCKED)
+            item.update_status(info.ui_status, info.locked_message)
