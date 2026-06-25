@@ -16,9 +16,10 @@ from PySide6.QtWidgets import (
 )
 
 from operations.adapters import FilesystemCacheClearer
+from operations.models import FolderStatistics
 from ui import status_messages as msg
 from ui.cache_actions import clear_cache, resolve_cache_target
-from ui.models.ui_models import AnalysisStats, RenameItem
+from ui.models.ui_models import RenameItem
 from ui.processing_coordinator import ProcessingCoordinator
 from ui.widgets.bottom_control_panel import BottomControlPanel
 from ui.widgets.image_preview_panel import ImagePreviewPanel
@@ -181,11 +182,11 @@ class MainWindow(QMainWindow):
         if row < self.table_manager.rowCount():
             self.table_manager.update_row(row, item)
 
-    def _on_analysis_finished(self, stats: AnalysisStats) -> None:
-        renamed = stats.renamed
+    def _on_analysis_finished(self, stats: FolderStatistics) -> None:
+        renamed = stats.renamed + stats.collision
         unchanged = stats.unchanged
         cached = stats.cached
-        errors = stats.errors
+        errors = stats.error
 
         summary = f"Complete: {renamed} renamed, {unchanged} unchanged"
         if cached > 0:

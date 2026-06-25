@@ -8,8 +8,8 @@ import pytest
 
 pytest.importorskip("PySide6")
 
+from operations.models import FolderStatistics  # noqa: E402
 from ui.main_window import MainWindow  # noqa: E402
-from ui.models.ui_models import AnalysisStats  # noqa: E402
 
 
 def should_set_folder_loaded_state_when_coordinator_scans_successfully(qapp, mocker):
@@ -59,7 +59,7 @@ def should_restore_idle_state_when_analysis_finishes(qapp, mocker):
     assert window.bottom_panel._preview_btn.isHidden()
 
     # Simulate analysis completion with renamed items
-    window.coordinator.analysis_finished.emit(AnalysisStats(renamed=2, unchanged=0, cached=0, errors=0))
+    window.coordinator.analysis_finished.emit(FolderStatistics(renamed=2, unchanged=0, cached=0, error=0))
 
     assert not window.bottom_panel._preview_btn.isHidden()
     assert window.bottom_panel._preview_btn.isEnabled()

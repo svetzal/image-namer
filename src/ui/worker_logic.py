@@ -1,13 +1,13 @@
 """Pure, Qt-agnostic business logic for background worker operations.
 
-Extracts status mapping, stats accumulation, and item mutation out of the
-QThread workers so they can be tested without any Qt dependency.
+Extracts status mapping and item mutation out of the QThread workers so they
+can be tested without any Qt dependency.
 """
 
 from operations.models import ProcessingResult
 from operations.models import RenameStatus
 from ui import status_messages as msg
-from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
+from ui.models.ui_models import ItemStatus, RenameItem
 from ui.rename_status_ui import RENAME_STATUS_UI
 
 
@@ -23,45 +23,37 @@ def map_ops_status_to_ui(status: RenameStatus) -> ItemStatus:
     return RENAME_STATUS_UI[status].ui_status
 
 
-def mark_manually_edited(item: RenameItem, stats: AnalysisStats) -> None:
+def mark_manually_edited(item: RenameItem) -> None:
     """Handle an item whose filename was manually locked by the user.
 
-    Marks the item ready without LLM processing and counts it as a rename.
+    Marks the item ready without LLM processing.
 
     Args:
         item: The item to update in-place.
-        stats: Cumulative stats to increment.
     """
     item.update_status(ItemStatus.READY, msg.READY_LOCKED)
-    stats.renamed += 1
 
 
 def apply_processing_result(
     item: RenameItem,
     result: ProcessingResult,
-    stats: AnalysisStats,
 ) -> None:
-    """Copy LLM processing result fields onto item and update stats.
+    """Copy LLM processing result fields onto item.
 
-    Mutates both item and stats in-place.  The caller is responsible for
-    emitting any Qt signals (e.g. error_occurred) after this call.
+    Mutates item in-place.  The caller is responsible for emitting any Qt
+    signals (e.g. error_occurred) after this call.
 
     Args:
         item: The item to update in-place.
         result: The ProcessingResult returned by process_single_image.
-        stats: Cumulative stats to increment.
     """
     item.reasoning = result.reasoning
     item.cached = result.cached
     item.proposed_name = result.proposed
     item.final_name = result.final
 
-    if result.cached:
-        stats.cached += 1
-
     info = RENAME_STATUS_UI[result.status]
     item.update_status(info.ui_status, info.fresh_message(result.final))
-    setattr(stats, info.stat_field, getattr(stats, info.stat_field) + 1)
 
 
 def apply_cached_result(item: RenameItem, result: ProcessingResult) -> None:

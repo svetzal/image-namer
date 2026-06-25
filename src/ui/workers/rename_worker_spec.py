@@ -7,10 +7,9 @@ pytest.importorskip("PySide6")
 from pathlib import Path  # noqa: E402
 from unittest.mock import Mock  # noqa: E402
 
-from constants import LLM_OPERATIONAL_ERRORS  # noqa: E402
-from operations.models import ProcessingResult, RenameStatus  # noqa: E402
+from operations.models import FolderStatistics, ProcessingResult, RenameStatus  # noqa: E402
 from operations.ports import AnalysisCachePort, ImageAnalyzerPort  # noqa: E402
-from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem  # noqa: E402
+from ui.models.ui_models import ItemStatus, RenameItem  # noqa: E402
 from ui.workers.rename_worker import RenameWorker  # noqa: E402
 
 
@@ -54,7 +53,7 @@ def should_skip_llm_for_manually_edited_item(tmp_path, qapp):
     cache.load.assert_not_called()
     assert len(received["item_processed"]) == 1
     assert len(received["progress_updated"]) == 1
-    stats: AnalysisStats = received["finished"][0]
+    stats: FolderStatistics = received["finished"][0]
     assert stats.renamed == 1
 
 
@@ -85,7 +84,7 @@ def should_call_process_single_image_for_normal_item(tmp_path, qapp, mocker):
     assert isinstance(call_args[0][3], set)
     assert len(received["item_processed"]) == 1
     assert len(received["progress_updated"]) == 1
-    stats: AnalysisStats = received["finished"][0]
+    stats: FolderStatistics = received["finished"][0]
     assert stats.renamed == 1
 
 
@@ -113,26 +112,28 @@ def should_emit_error_occurred_when_result_status_is_error(tmp_path, qapp, mocke
     assert item.status == ItemStatus.ERROR
 
 
-def should_handle_llm_exception_and_set_error_stats(tmp_path, qapp, mocker):
+def should_emit_error_stats_when_process_returns_error_status(tmp_path, qapp, mocker):
     item = _make_item(tmp_path, "fail.png")
     analyzer = Mock(spec=ImageAnalyzerPort)
     cache = Mock(spec=AnalysisCachePort)
 
-    error_type = LLM_OPERATIONAL_ERRORS[0]
-    mocker.patch(
-        "ui.workers.rename_worker.process_single_image",
-        side_effect=error_type("LLM failed"),
+    result = ProcessingResult(
+        source="fail.png",
+        proposed="ERROR",
+        final="fail.png",
+        status=RenameStatus.ERROR,
+        path=item.path,
     )
+    mocker.patch("ui.workers.rename_worker.process_single_image", return_value=result)
 
     worker = RenameWorker([item], analyzer, cache)
     received = _capture_signals(worker)
 
     worker.run()
 
-    stats: AnalysisStats = received["finished"][0]
-    assert stats.errors == 1
+    stats: FolderStatistics = received["finished"][0]
+    assert stats.error == 1
     assert item.status == ItemStatus.ERROR
-    assert item.error_message is not None
     assert len(received["error_occurred"]) == 1
     assert len(received["item_processed"]) == 1
 
@@ -153,6 +154,6 @@ def should_stop_before_processing_when_stop_requested(tmp_path, qapp, mocker):
 
     mock_process.assert_not_called()
     assert len(received["finished"]) == 1
-    stats: AnalysisStats = received["finished"][0]
+    stats: FolderStatistics = received["finished"][0]
     assert stats.renamed == 0
-    assert stats.errors == 0
+    assert stats.error == 0

@@ -5,7 +5,7 @@ from pathlib import Path
 from operations.models import ProcessingResult
 from operations.models import RenameStatus
 from ui import status_messages as msg
-from ui.models.ui_models import AnalysisStats, ItemStatus, RenameItem
+from ui.models.ui_models import ItemStatus, RenameItem
 from ui.worker_logic import (
     apply_cached_result,
     apply_processing_result,
@@ -75,21 +75,11 @@ def should_distinguish_unchanged_from_ready():
 
 def should_set_ready_status_for_manually_edited_item():
     item = _make_item()
-    stats = AnalysisStats()
 
-    mark_manually_edited(item, stats)
+    mark_manually_edited(item)
 
     assert item.status == ItemStatus.READY
     assert item.status_message == msg.READY_LOCKED
-
-
-def should_increment_renamed_for_manually_edited_item():
-    item = _make_item()
-    stats = AnalysisStats()
-
-    mark_manually_edited(item, stats)
-
-    assert stats.renamed == 1
 
 
 # ---------------------------------------------------------------------------
@@ -98,70 +88,59 @@ def should_increment_renamed_for_manually_edited_item():
 
 def should_copy_result_fields_onto_item():
     item = _make_item()
-    stats = AnalysisStats()
     result = _make_result(RenameStatus.RENAMED, proposed="best.png", final="best.png", reasoning="good")
 
-    apply_processing_result(item, result, stats)
+    apply_processing_result(item, result)
 
     assert item.proposed_name == "best.png"
     assert item.final_name == "best.png"
     assert item.reasoning == "good"
 
 
-def should_increment_cached_when_result_is_from_cache():
+def should_mark_item_cached_when_result_is_from_cache():
     item = _make_item()
-    stats = AnalysisStats()
     result = _make_result(RenameStatus.RENAMED, cached=True)
 
-    apply_processing_result(item, result, stats)
+    apply_processing_result(item, result)
 
     assert item.cached is True
-    assert stats.cached == 1
 
 
-def should_set_ready_and_increment_renamed_for_renamed_status():
+def should_set_ready_for_renamed_status():
     item = _make_item()
-    stats = AnalysisStats()
     result = _make_result(RenameStatus.RENAMED)
 
-    apply_processing_result(item, result, stats)
+    apply_processing_result(item, result)
 
     assert item.status == ItemStatus.READY
-    assert stats.renamed == 1
 
 
-def should_set_collision_and_increment_renamed_for_collision_status():
+def should_set_collision_status_for_collision():
     item = _make_item()
-    stats = AnalysisStats()
     result = _make_result(RenameStatus.COLLISION, final="new-name-2.png")
 
-    apply_processing_result(item, result, stats)
+    apply_processing_result(item, result)
 
     assert item.status == ItemStatus.COLLISION
     assert "new-name-2.png" in item.status_message
-    assert stats.renamed == 1
 
 
-def should_set_unchanged_and_increment_unchanged_for_unchanged_status():
+def should_set_unchanged_status_for_unchanged():
     item = _make_item()
-    stats = AnalysisStats()
     result = _make_result(RenameStatus.UNCHANGED)
 
-    apply_processing_result(item, result, stats)
+    apply_processing_result(item, result)
 
     assert item.status == ItemStatus.UNCHANGED
-    assert stats.unchanged == 1
 
 
-def should_set_error_and_increment_errors_for_error_status():
+def should_set_error_status_for_error():
     item = _make_item()
-    stats = AnalysisStats()
     result = _make_result(RenameStatus.ERROR)
 
-    apply_processing_result(item, result, stats)
+    apply_processing_result(item, result)
 
     assert item.status == ItemStatus.ERROR
-    assert stats.errors == 1
 
 
 # ---------------------------------------------------------------------------

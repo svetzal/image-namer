@@ -99,15 +99,6 @@ class BatchRenameResult(BaseModel):
     total_refs_updated: int = 0
 
 
-class AnalysisStats(BaseModel):
-    """Summary statistics emitted when LLM analysis batch completes."""
-
-    renamed: int = Field(default=0, description="Files proposed for rename")
-    unchanged: int = Field(default=0, description="Files with suitable current names")
-    cached: int = Field(default=0, description="Results loaded from cache")
-    errors: int = Field(default=0, description="Files that encountered errors")
-
-
 class RenameResult(BaseModel):
     """Result of a single file rename operation."""
 

@@ -141,6 +141,7 @@ class FolderStatistics(BaseModel):
     unchanged: int = Field(default=0, description="Number of files with suitable names")
     collision: int = Field(default=0, description="Number of files with name collisions")
     error: int = Field(default=0, description="Number of files that encountered errors")
+    cached: int = Field(default=0, description="Number of results loaded from cache")
 
 
 class CollectedReferences(BaseModel):

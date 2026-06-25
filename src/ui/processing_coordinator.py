@@ -12,7 +12,8 @@ from operations.adapters import FilesystemAnalysisCache
 from constants import FILESYSTEM_IO_ERRORS, LLM_OPERATIONAL_ERRORS
 from operations.gateway_factory import MissingApiKeyError
 from operations.pipeline_factory import build_analysis_pipeline
-from ui.models.ui_models import AnalysisStats, BatchRenameResult, ItemStatus, RenameItem, RenameResult
+from operations.models import FolderStatistics
+from ui.models.ui_models import BatchRenameResult, ItemStatus, RenameItem, RenameResult
 from ui.rename_actions import perform_batch_rename, rename_single_item
 from ui.workers.cache_loader import CacheLoaderWorker
 from ui.workers.rename_worker import RenameWorker
@@ -168,7 +169,7 @@ class ProcessingCoordinator(QObject):
     def _on_worker_error(self, row: int, error_msg: str) -> None:
         self.error_occurred.emit(row, error_msg)
 
-    def _on_worker_finished(self, stats: AnalysisStats) -> None:
+    def _on_worker_finished(self, stats: FolderStatistics) -> None:
         self.analysis_finished.emit(stats)
 
     # ------------------------------------------------------------------
