@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Updated dependency lockfile to latest compatible versions (anthropic 0.120.2 -> 0.121.0, ast-serialize 0.7.0 -> 0.8.0, librt 0.14.0 -> 0.15.0, platformdirs 4.11.0 -> 4.11.1). No known vulnerabilities found via `pip-audit`.
+
 ### Fixed
 - Batch rename no longer aborts mid-run on a per-file I/O error (permission denied, locked file, disk full); failures are reported individually while successful renames continue. Single-file rename also reports errors gracefully instead of propagating uncaught exceptions.
 - Distinct markdown-reference update failure modes now report distinct reasons: `REASON_NO_REWRITE` when no replacement text could be generated (unknown ref type or filename not found in path), and `REASON_TEXT_NOT_FOUND` when the original reference text was absent from the file content (already updated or stale).
