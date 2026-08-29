@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Updated dependency lockfile to latest compatible versions (anthropic 0.120.2 -> 0.121.0, ast-serialize 0.7.0 -> 0.8.0, librt 0.14.0 -> 0.15.0, platformdirs 4.11.0 -> 4.11.1). No known vulnerabilities found via `pip-audit`.
+- Updated dependency lockfile to latest compatible versions (coverage 7.15.4 -> 7.16.0, openai 3.5.0 -> 3.6.0, pydantic 2.13.4 -> 2.13.5, pydantic-core 2.46.4 -> 2.46.5, typer 0.27.1 -> 0.27.2). No known vulnerabilities found via `pip-audit`; all quality gates (pytest, flake8, mypy) pass unchanged.
 
 ### Fixed
 - Batch rename no longer aborts mid-run on a per-file I/O error (permission denied, locked file, disk full); failures are reported individually while successful renames continue. Single-file rename also reports errors gracefully instead of propagating uncaught exceptions.
