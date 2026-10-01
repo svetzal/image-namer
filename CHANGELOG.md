@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Upgraded mojentic 1.5.0 -> 2.1.0 (minimum requirement raised to `>=2.1.0`). The `LLMBroker`, `MessageBuilder`, `OllamaGateway`, and `OpenAIGateway` APIs used by Image Namer are unchanged, so no call-site changes were needed; all quality gates (pytest, flake8, mypy) pass.
 - Updated dependency lockfile to latest compatible versions (filelock 4.0.1 -> 4.0.3, flake8 7.4.0 -> 7.4.1, httpcore2 2.13.0 -> 2.13.1, httpx2 2.13.0 -> 2.13.1, openai 3.19.0 -> 3.19.2, pytz 2026.3.post1 -> 2026.4). `pydantic-core` remains at 2.46.5 because pydantic 2.13.5 pins it exactly. No known vulnerabilities found via `pip-audit`; all quality gates (pytest, flake8, mypy) pass unchanged.
 - Updated dependency lockfile to latest compatible versions (anthropic 0.120.2 -> 0.121.0, ast-serialize 0.7.0 -> 0.8.0, librt 0.14.0 -> 0.15.0, platformdirs 4.11.0 -> 4.11.1). No known vulnerabilities found via `pip-audit`.
 - Updated dependency lockfile to latest compatible versions (coverage 7.15.4 -> 7.16.0, openai 3.5.0 -> 3.6.0, pydantic 2.13.4 -> 2.13.5, pydantic-core 2.46.4 -> 2.46.5, typer 0.27.1 -> 0.27.2). No known vulnerabilities found via `pip-audit`; all quality gates (pytest, flake8, mypy) pass unchanged.

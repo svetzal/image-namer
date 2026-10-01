@@ -28,7 +28,7 @@ dependencies = [
     "typer>=0.27.2",
     "rich>=15.0.0",
     "pydantic>=2.13.5",
-    "mojentic>=1.5.0",
+    "mojentic>=2.1.0",
     # PySide6 is large; include as optional dependency group "gui" below to keep base install light.
 ]
 
