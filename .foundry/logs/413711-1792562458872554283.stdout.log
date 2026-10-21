@@ -1,0 +1,7 @@
+Name    Version   ID              Fix Versions
+------- --------- --------------- ------------
+certifi 2026.7.22 PYSEC-2026-4320 2026.10.19
+
+Name        Skip Reason
+----------- --------------------------------------------------------------------------
+image-namer Dependency not found on PyPI and could not be audited: image-namer (2.2.0)
