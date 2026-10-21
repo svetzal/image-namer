@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated dependency lockfile to latest compatible versions (coverage 7.15.4 -> 7.16.0, openai 3.5.0 -> 3.6.0, pydantic 2.13.4 -> 2.13.5, pydantic-core 2.46.4 -> 2.46.5, typer 0.27.1 -> 0.27.2). No known vulnerabilities found via `pip-audit`; all quality gates (pytest, flake8, mypy) pass unchanged.
 - Updated dependency lockfile to latest compatible versions (anthropic 1.7.0 -> 1.8.0, flake8 7.3.0 -> 7.4.0, openai 3.16.2 -> 3.19.0, platformdirs 4.11.11 -> 4.11.12, pycodestyle 2.14.0 -> 2.15.0, pyflakes 3.4.0 -> 4.0.0, pymdown-extensions 12.0.1 -> 12.1, serpapi 1.1.1 -> 1.1.2). The major `pyflakes` 4.0 bump surfaced no new lint findings. No known vulnerabilities found via `pip-audit`; all quality gates (pytest, flake8, mypy) pass unchanged.
 
+### Security
+- Upgraded transitive dependency certifi 2026.7.22 -> 2026.10.19 in the lockfile to remediate PYSEC-2026-4320. `pip-audit` now reports no known vulnerabilities; all quality gates (pytest, flake8, mypy, mkdocs) pass unchanged.
+
 ### Fixed
 - Batch rename no longer aborts mid-run on a per-file I/O error (permission denied, locked file, disk full); failures are reported individually while successful renames continue. Single-file rename also reports errors gracefully instead of propagating uncaught exceptions.
 - Distinct markdown-reference update failure modes now report distinct reasons: `REASON_NO_REWRITE` when no replacement text could be generated (unknown ref type or filename not found in path), and `REASON_TEXT_NOT_FOUND` when the original reference text was absent from the file content (already updated or stale).
