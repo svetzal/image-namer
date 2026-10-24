@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated dependency lockfile to latest compatible versions (anthropic 1.7.0 -> 1.8.0, flake8 7.3.0 -> 7.4.0, openai 3.16.2 -> 3.19.0, platformdirs 4.11.11 -> 4.11.12, pycodestyle 2.14.0 -> 2.15.0, pyflakes 3.4.0 -> 4.0.0, pymdown-extensions 12.0.1 -> 12.1, serpapi 1.1.1 -> 1.1.2). The major `pyflakes` 4.0 bump surfaced no new lint findings. No known vulnerabilities found via `pip-audit`; all quality gates (pytest, flake8, mypy) pass unchanged.
 
 ### Security
+- Upgraded transitive dependency filelock 4.0.3 -> 4.2.4 in the lockfile (pulled in via mojentic and pip-audit) to remediate CVE-2026-112940, CVE-2026-112913 and CVE-2026-112907 (fixed in 4.2.1). `pip-audit` now reports no known vulnerabilities; all quality gates (pytest, flake8, mypy, mkdocs) pass unchanged.
 - Upgraded transitive dependency certifi 2026.7.22 -> 2026.10.19 in the lockfile to remediate PYSEC-2026-4320. `pip-audit` now reports no known vulnerabilities; all quality gates (pytest, flake8, mypy, mkdocs) pass unchanged.
 
 ### Fixed
