@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Remediated CVE-2026-114613 in `msgpack` by updating the lockfile from 1.2.2 to 1.2.4 (fixed in 1.2.3). `msgpack` is a transitive dev-only dependency (`pip-audit[filecache]` -> `cachecontrol` -> `msgpack`); no code changes were needed. All quality gates (pytest, flake8, mypy, mkdocs build) pass and `pip-audit` reports no known vulnerabilities.
+
 ### Changed
 - Upgraded mojentic 2.1.0 -> 3.0.0 (minimum requirement raised to `>=3.0.0`). The `LLMBroker(model=, gateway=)`, `LLMBroker.generate_object(messages, object_model=)`, `MessageBuilder(...).add_image(...).build()`, `OllamaGateway()`, and `OpenAIGateway(api_key=)` signatures used by Image Namer are compatible in 3.0.0, so no call-site changes were needed; all quality gates (pytest, flake8, mypy) pass. mojentic 3.0.0 still ships no `py.typed` marker, so the mypy `ignore_missing_imports` override is retained.
 - Upgraded mojentic 1.5.0 -> 2.1.0 (minimum requirement raised to `>=2.1.0`). The `LLMBroker`, `MessageBuilder`, `OllamaGateway`, and `OpenAIGateway` APIs used by Image Namer are unchanged, so no call-site changes were needed; all quality gates (pytest, flake8, mypy) pass.
