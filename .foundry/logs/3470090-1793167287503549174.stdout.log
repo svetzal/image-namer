@@ -1,0 +1,7 @@
+Name    Version ID              Fix Versions
+------- ------- --------------- ------------
+msgpack 1.2.2   CVE-2026-114613 1.2.3
+
+Name Skip Reason
+---- -----------------------------------------------------
+-e - could not deduce package version from URL requirement
