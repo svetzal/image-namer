@@ -16,6 +16,8 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
     # Skip job if actor is github-actions[bot] to ensure agent safety
     if: ${{ github.actor != 'github-actions[bot]' }}
     steps:
@@ -24,7 +26,13 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          enable-caching: true
+          enable-cache: true
+
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3
 
       - name: Install dependencies
         run: uv sync
@@ -62,7 +70,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          enable-caching: true
+          enable-cache: true
 
       - name: Install dependencies
         run: uv sync

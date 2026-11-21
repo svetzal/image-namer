@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded transitive dependency certifi 2026.7.22 -> 2026.10.19 in the lockfile to remediate PYSEC-2026-4320. `pip-audit` now reports no known vulnerabilities; all quality gates (pytest, flake8, mypy, mkdocs) pass unchanged.
 
 ### Fixed
+- CI installs the Qt system libraries and runs Qt tests with `QT_QPA_PLATFORM=offscreen` on Ubuntu runners. Corrected the setup-uv cache input to `enable-cache` in validation and release builds.
 - Batch rename no longer aborts mid-run on a per-file I/O error (permission denied, locked file, disk full); failures are reported individually while successful renames continue. Single-file rename also reports errors gracefully instead of propagating uncaught exceptions.
 - Distinct markdown-reference update failure modes now report distinct reasons: `REASON_NO_REWRITE` when no replacement text could be generated (unknown ref type or filename not found in path), and `REASON_TEXT_NOT_FOUND` when the original reference text was absent from the file content (already updated or stale).
 - Cache-save failures are now signaled to callers via `AnalysisResult.persisted` (`False` when the write failed) instead of being silently swallowed after a log warning.
